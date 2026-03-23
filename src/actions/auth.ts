@@ -2,12 +2,13 @@
 
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
+import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { Redis } from '@upstash/redis';
-import { cookies } from 'next/headers';
+import { deleteSession, setSession } from '@/lib/session';
 
 // Optional: Upstash Redis for idempotency and rate-limiting
-const redis = Redis.fromEnv(); // Require UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
+// const redis = Redis.fromEnv(); // Require UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -31,7 +32,16 @@ const recoverSchema = z.object({
   captchaToken: z.string().min(1, 'Captcha requerido'),
 });
 
-export async function loginAction(prevState: any, formData: FormData) {
+function isPacienteColumnMissingError(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2022';
+}
+
+async function ensurePacienteAuthColumns() {
+  await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email TEXT');
+  await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
+}
+
+export async function loginAction(prevState: unknown, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = loginSchema.parse(rawData);
@@ -49,9 +59,20 @@ export async function loginAction(prevState: any, formData: FormData) {
        if (!outcome.success) return { error: 'Captcha inválido' };
     }
 
-    const paciente = await prisma.paciente.findUnique({
-      where: { email: data.email },
-    });
+    let paciente;
+    try {
+      paciente = await prisma.paciente.findUnique({
+        where: { email: data.email },
+      });
+    } catch (error) {
+      if (!isPacienteColumnMissingError(error)) {
+        throw error;
+      }
+      await ensurePacienteAuthColumns();
+      paciente = await prisma.paciente.findUnique({
+        where: { email: data.email },
+      });
+    }
 
     if (!paciente) {
       return { error: 'Credenciales inválidas' }; // Privacy by design: generic response
@@ -62,13 +83,8 @@ export async function loginAction(prevState: any, formData: FormData) {
       return { error: 'Credenciales inválidas' }; // Privacy by design: generic response
     }
 
-    // Success! Setup session cookies
-    cookies().set('lifemetric_session', paciente.paciente_id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 86400, // 1 day
-    });
+    // Success! Setup signed session cookies
+    await setSession(paciente.paciente_id);
 
     return { success: true };
   } catch (error) {
@@ -78,13 +94,13 @@ export async function loginAction(prevState: any, formData: FormData) {
   }
 }
 
-export async function registerAction(prevState: any, formData: FormData) {
+export async function registerAction(prevState: unknown, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     // Parse number because FormData is string
     const parsedData = { 
         ...rawData, 
-        edad: parseInt(rawData.edad as string, 10) 
+        edad: Number.parseInt(rawData.edad as string, 10) 
     };
     const data = registerSchema.parse(parsedData);
 
@@ -100,9 +116,20 @@ export async function registerAction(prevState: any, formData: FormData) {
        if (!outcome.success) return { error: 'Captcha inválido' };
     }
 
-    const existingUser = await prisma.paciente.findUnique({
-      where: { email: data.email },
-    });
+    let existingUser;
+    try {
+      existingUser = await prisma.paciente.findUnique({
+        where: { email: data.email },
+      });
+    } catch (error) {
+      if (!isPacienteColumnMissingError(error)) {
+        throw error;
+      }
+      await ensurePacienteAuthColumns();
+      existingUser = await prisma.paciente.findUnique({
+        where: { email: data.email },
+      });
+    }
 
     if (existingUser) {
       return { error: 'Este correo electrónico no está disponible.' };
@@ -110,26 +137,41 @@ export async function registerAction(prevState: any, formData: FormData) {
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    const newPaciente = await prisma.paciente.create({
-      data: {
-        nombre: data.nombre,
-        apellido: data.apellido,
-        email: data.email,
-        password_hash: hashedPassword,
-        edad: data.edad,
-        sexo: data.sexo,
-        diagnostico_principal: data.diagnostico,
-        usa_glucometro: false,
-      },
-    });
+    let newPaciente;
+    try {
+      newPaciente = await prisma.paciente.create({
+        data: {
+          nombre: data.nombre,
+          apellido: data.apellido,
+          email: data.email,
+          password_hash: hashedPassword,
+          edad: data.edad,
+          sexo: data.sexo,
+          diagnostico_principal: data.diagnostico,
+          usa_glucometro: false,
+        },
+      });
+    } catch (error) {
+      if (!isPacienteColumnMissingError(error)) {
+        throw error;
+      }
+      await ensurePacienteAuthColumns();
+      newPaciente = await prisma.paciente.create({
+        data: {
+          nombre: data.nombre,
+          apellido: data.apellido,
+          email: data.email,
+          password_hash: hashedPassword,
+          edad: data.edad,
+          sexo: data.sexo,
+          diagnostico_principal: data.diagnostico,
+          usa_glucometro: false,
+        },
+      });
+    }
 
-    // Auto-login after registration
-    cookies().set('lifemetric_session', newPaciente.paciente_id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 86400,
-    });
+    // Auto-login after registration with signed session
+    await setSession(newPaciente.paciente_id);
 
     return { success: true };
   } catch (error) {
@@ -139,7 +181,7 @@ export async function registerAction(prevState: any, formData: FormData) {
   }
 }
 
-export async function recoveryAction(prevState: any, formData: FormData) {
+export async function recoveryAction(prevState: unknown, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = recoverSchema.parse(rawData);
@@ -162,6 +204,13 @@ export async function recoveryAction(prevState: any, formData: FormData) {
     // Privacy by design: always return success generically
     return { success: true, message: 'Si el correo existe, recibirás instrucciones para recuperar tu contraseña.' };
   } catch (error) {
-    return { error: 'Datos no válidos' };
+    if (error instanceof z.ZodError) return { error: 'Datos no válidos' };
+    console.error(error);
+    return { error: 'Ocurrió un error al procesar la solicitud.' };
   }
+}
+
+export async function logoutAction() {
+  await deleteSession();
+  redirect('/login');
 }

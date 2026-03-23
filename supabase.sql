@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS pacientes (
   paciente_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nombre TEXT NOT NULL,
   apellido TEXT NOT NULL,
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
   edad INTEGER NOT NULL,
   sexo TEXT NOT NULL,
   diagnostico_principal TEXT NOT NULL,
@@ -19,6 +21,14 @@ CREATE TABLE IF NOT EXISTS pacientes (
   activo BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE pacientes
+  ADD COLUMN IF NOT EXISTS email TEXT;
+
+ALTER TABLE pacientes
+  ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS pacientes_email_key ON pacientes(email);
 
 CREATE TABLE IF NOT EXISTS comidas (
   comida_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

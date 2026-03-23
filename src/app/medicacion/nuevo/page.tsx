@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSessionPacienteId } from "@/actions/data";
 
 const medicacionSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -27,9 +29,17 @@ export default function NuevaMedicacion() {
       fecha: now.toISOString().slice(0, 10),
       hora: now.toTimeString().slice(0, 5),
       estado_toma: "tomada",
-      paciente_id: "demo-id",
+      paciente_id: "",
     }
   });
+
+  useEffect(() => {
+    async function loadData() {
+      const pId = await getSessionPacienteId();
+      if (pId) setValue("paciente_id", pId);
+    }
+    loadData();
+  }, [setValue]);
 
   const estado = watch("estado_toma");
 
@@ -52,9 +62,9 @@ export default function NuevaMedicacion() {
     <div className="min-h-screen bg-surface-container-low">
       <header className="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <a href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
+          <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
             <span className="material-symbols-outlined">arrow_back</span>
-          </a>
+          </Link>
           <h1 className="text-xl font-bold tracking-tighter text-blue-800">Mi Medicación</h1>
         </div>
       </header>
@@ -75,16 +85,18 @@ export default function NuevaMedicacion() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Medicamento</label>
+                <label htmlFor="medicamento" className="text-sm font-semibold text-slate-600">Medicamento</label>
                 <input
+                  id="medicamento"
                   {...register("medicamento")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                   placeholder="Ej. Metformina"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Dosis</label>
+                <label htmlFor="dosis" className="text-sm font-semibold text-slate-600">Dosis</label>
                 <input
+                  id="dosis"
                   {...register("dosis")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                   placeholder="Ej. 850 mg"

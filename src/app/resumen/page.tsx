@@ -1,43 +1,101 @@
-"use client";
+import { cookies } from "next/headers";
+import { verifySession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
-import { useState, useEffect } from "react";
+export default async function ResumenSemanal() {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get('lifemetric_session')?.value;
+  
+  if (!sessionToken) {
+    redirect('/login');
+  }
 
-export default function ResumenSemanal() {
-  const [loading, setLoading] = useState(true);
+  const payload = await verifySession(sessionToken);
+  if (!payload) {
+    redirect('/login');
+  }
 
-  // Mock data for MVP presentation based on requirements
+  let parsedPayload;
+  try {
+    parsedPayload = JSON.parse(payload);
+  } catch {
+    redirect('/login');
+  }
+
+  const pacienteId = parsedPayload.pacienteId;
+
+  // Let's get the last 7 days date limit
+  const semanaAtras = new Date();
+  semanaAtras.setDate(semanaAtras.getDate() - 7);
+
+  const paciente = await prisma.paciente.findUnique({
+    where: { paciente_id: pacienteId },
+    include: {
+      comidas: {
+        where: { fecha: { gte: semanaAtras } }
+      },
+      habitos: {
+        where: { fecha: { gte: semanaAtras } }
+      },
+      laboratorios: {
+        orderBy: { fecha_estudio: 'desc' },
+        take: 1
+      },
+      medicacion: {
+        where: { fecha: { gte: semanaAtras } }
+      },
+      glucosa: {
+        where: { fecha: { gte: semanaAtras } }
+      }
+    }
+  });
+
+  if (!paciente) {
+    redirect('/login');
+  }
+
+  // Calculate actual numbers using prisma data
+  const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
+  
+  const promedioGlucosa7d = paciente.glucosa.length 
+    ? Math.round(paciente.glucosa.reduce((acc, curr) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
+    : 0;
+
+  const comidasRegistradas = paciente.comidas.length;
+  // Fallback string literal assumption since clasificacion_final is a string. Assuming 'Malo' or similar means inadequate. We'll use a specific condition if possible.
+  const comidasInadecuadas = paciente.comidas.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
+
+  const diasEjercicio = paciente.habitos.filter(h => (h.ejercicio_min || 0) > 0).length;
+  const promedioSueno = paciente.habitos.length 
+    ? Math.round(paciente.habitos.reduce((acc, curr) => acc + Number(curr.sueno_horas || 0), 0) / paciente.habitos.length * 10) / 10
+    : 0;
+  
+  const promedioAgua = paciente.habitos.length 
+    ? Math.round(paciente.habitos.reduce((acc, curr) => acc + (curr.agua_vasos || 0), 0) / paciente.habitos.length)
+    : 0;
+
+  const tomasProgramadas = paciente.medicacion.length || 1; // avoid division by zero
+  const tomasRealizadas = paciente.medicacion.filter(m => m.estado_toma === 'Tomada' || m.estado_toma === 'tomada').length;
+  const adherenciaMedicacion = paciente.medicacion.length === 0 ? 0 : Math.round((tomasRealizadas / tomasProgramadas) * 100);
+
   const data = {
-    paciente: "Juan Prueba",
-    ultima_hba1c: 6.8,
-    promedio_glucosa_7d: 114,
-    promedio_glucosa_30d: 122,
+    paciente: `${paciente.nombre} ${paciente.apellido}`,
+    ultima_hba1c: ultimaHba1c,
+    promedio_glucosa_7d: promedioGlucosa7d,
     comidas: {
-      registradas_semana: 18,
-      inadecuadas: 3,
+      registradas_semana: comidasRegistradas,
+      inadecuadas: comidasInadecuadas,
     },
     habitos: {
-      dias_ejercicio: 4,
-      promedio_sueno: 7.2,
-      promedio_agua: 6,
+      dias_ejercicio: diasEjercicio,
+      promedio_sueno: promedioSueno,
+      promedio_agua: promedioAgua,
     },
-    adherencia_medicacion_pct: 92,
-    alerta_principal: "Picos de glucosa post-cena detectados el fin de semana.",
-    patron_principal: "Mejoría en sensibilidad a la insulina cuando duerme >7 horas."
+    adherencia_medicacion_pct: adherenciaMedicacion,
+    alerta_principal: paciente.glucosa.some(g => g.valor_glucosa > 140) ? "Se detectaron picos de glucosa recientes." : "Tus niveles están en rango.",
+    patron_principal: "Sigue registrando para identificar patrones."
   };
-
-  useEffect(() => {
-    // Simulate data fetch
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">sync</span>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-surface-container-low">

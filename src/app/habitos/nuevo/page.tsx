@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSessionPacienteId } from "@/actions/data";
 
 const habitosSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -21,13 +23,21 @@ type FormValues = z.infer<typeof habitosSchema>;
 
 export default function NuevoHabito() {
   const [loading, setLoading] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(habitosSchema),
     defaultValues: {
       fecha: new Date().toISOString().slice(0, 10),
-      paciente_id: "demo-id",
+      paciente_id: "",
     }
   });
+
+  useEffect(() => {
+    async function loadData() {
+      const pId = await getSessionPacienteId();
+      if (pId) setValue("paciente_id", pId);
+    }
+    loadData();
+  }, [setValue]);
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
@@ -42,9 +52,9 @@ export default function NuevoHabito() {
     <div className="min-h-screen bg-surface-container-low">
       <header className="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <a href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
+          <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
             <span className="material-symbols-outlined">arrow_back</span>
-          </a>
+          </Link>
           <h1 className="text-xl font-bold tracking-tighter text-blue-800">Mis Hábitos</h1>
         </div>
       </header>
@@ -61,11 +71,12 @@ export default function NuevoHabito() {
             <div className="flex items-center gap-4 mb-4">
               <span className="material-symbols-outlined text-4xl text-blue-400 bg-blue-50 p-3 rounded-full">water_drop</span>
               <div>
-                <h3 className="font-bold text-lg">Agua (Vasos)</h3>
+                <h3 className="font-bold text-lg"><label htmlFor="agua_vasos">Agua (Vasos)</label></h3>
                 <p className="text-xs text-slate-500">250ml aprox por vaso</p>
               </div>
             </div>
             <input
+              id="agua_vasos"
               type="number"
               {...register("agua_vasos", { valueAsNumber: true })}
               className="w-full bg-surface border-none rounded-xl py-4 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 text-center text-xl font-bold transition-all"
@@ -77,11 +88,12 @@ export default function NuevoHabito() {
             <div className="flex items-center gap-4 mb-4">
               <span className="material-symbols-outlined text-4xl text-indigo-400 bg-indigo-50 p-3 rounded-full">bedtime</span>
               <div>
-                <h3 className="font-bold text-lg">Sueño (Horas)</h3>
+                <h3 className="font-bold text-lg"><label htmlFor="sueno_horas">Sueño (Horas)</label></h3>
                 <p className="text-xs text-slate-500">Tiempo de descanso nocturno</p>
               </div>
             </div>
             <input
+              id="sueno_horas"
               type="number" step="0.5"
               {...register("sueno_horas", { valueAsNumber: true })}
               className="w-full bg-surface border-none rounded-xl py-4 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 text-center text-xl font-bold transition-all"

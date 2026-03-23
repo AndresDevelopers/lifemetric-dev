@@ -7,6 +7,8 @@ async function main() {
     data: {
       nombre: 'Juan',
       apellido: 'Prueba',
+      email: 'juan.prueba@ejemplo.com',
+      password_hash: '$2a$10$Xm8B3z2pS8sP0pX.pT5p5uYV8uX8uX8uX8uX8uX8uX8uX8uX8uX8u', // Mock hash
       edad: 52,
       sexo: 'Masculino',
       diagnostico_principal: 'Diabetes tipo 2',
@@ -16,17 +18,16 @@ async function main() {
       cintura_inicial_cm: 102,
       objetivo_clinico: 'Bajar glucosa',
       activo: true,
-      // The DB will default to today for fecha_alta
     },
-  })
-  console.log('Paciente de prueba creado con ID:', paciente.paciente_id)
+  });
+  console.log('Paciente de prueba creado con ID:', paciente.paciente_id);
 }
 
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+try {
+  await main();
+} catch (e) {
+  console.error(e);
+  process.exit(1);
+} finally {
+  await prisma.$disconnect();
+}

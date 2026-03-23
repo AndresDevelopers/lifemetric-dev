@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useActionState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState } from 'react';
 import { loginAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 
@@ -11,6 +10,7 @@ export default function LoginPage() {
   const [state, action, isPending] = useActionState(loginAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const router = useRouter();
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
 
   useEffect(() => {
     if (state?.success) {
@@ -19,7 +19,7 @@ export default function LoginPage() {
   }, [state, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-container-low)] p-4 sm:p-8 relative overflow-hidden">
+    <div className="w-full py-12 px-4 sm:px-8 relative grid place-items-start md:place-items-center">
       
       {/* Abstract Background Shapes */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[var(--color-primary-container)] rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob"></div>
@@ -35,7 +35,7 @@ export default function LoginPage() {
           <div className="z-10 relative">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
               <span className="material-symbols-outlined text-5xl">vital_signs</span>
-              Lifemetric
+              {' '}{appName}
             </h1>
             <p className="text-[var(--color-primary-fixed)] text-lg md:text-xl font-medium mb-8 leading-relaxed">
               Monitoreo metabólico avanzado y preciso. <br/> Cuida tu salud con datos clínicos en tiempo real.
@@ -72,7 +72,7 @@ export default function LoginPage() {
             <input type="hidden" name="captchaToken" value={captchaToken} />
 
             <div className="space-y-2 group">
-              <label className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
+              <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
                 Correo Electrónico
               </label>
               <div className="relative">
@@ -80,6 +80,7 @@ export default function LoginPage() {
                   mail
                 </span>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   className="w-full pl-12 pr-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all font-body text-[var(--color-on-surface)]"
@@ -91,7 +92,7 @@ export default function LoginPage() {
 
             <div className="space-y-2 group">
               <div className="flex justify-between items-center text-sm">
-                <label className="font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
+                <label htmlFor="password" className="font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
                   Contraseña
                 </label>
                 <Link href="/recuperar" className="font-medium text-[var(--color-primary)] hover:text-[var(--color-on-primary-fixed-variant)] transition-colors">
@@ -103,6 +104,7 @@ export default function LoginPage() {
                   lock
                 </span>
                 <input
+                  id="password"
                   type="password"
                   name="password"
                   className="w-full pl-12 pr-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all font-body text-[var(--color-on-surface)]"
@@ -122,12 +124,12 @@ export default function LoginPage() {
               {isPending ? (
                 <>
                   <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  Ingresando...
+                  {' '}Ingresando...
                 </>
               ) : (
                 <>
                   Ingresar
-                  <span className="material-symbols-outlined">arrow_forward</span>
+                  {' '}<span className="material-symbols-outlined">arrow_forward</span>
                 </>
               )}
             </button>

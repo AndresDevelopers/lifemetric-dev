@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useActionState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState } from 'react';
 import { registerAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 
@@ -11,6 +10,7 @@ export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const router = useRouter();
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
 
   useEffect(() => {
     if (state?.success) {
@@ -19,7 +19,7 @@ export default function RegisterPage() {
   }, [state, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-container-low)] p-4 sm:p-8 relative overflow-hidden">
+    <div className="w-full py-12 px-4 sm:px-8 relative grid place-items-start md:place-items-center">
       
       {/* Abstract Background Shapes */}
       <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-[var(--color-tertiary-container)] rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob"></div>
@@ -34,10 +34,10 @@ export default function RegisterPage() {
           <div className="z-10 relative">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 flex items-center gap-3">
               <span className="material-symbols-outlined text-4xl">monitor_heart</span>
-              Regístrate
+              {' '}Regístrate
             </h1>
             <p className="text-[var(--color-tertiary-fixed)] text-lg mb-8 leading-relaxed">
-              Únete a Lifemetric y toma el control de tu metabolismo y salud con herramientas avanzadas.
+              Únete a {appName} y toma el control de tu metabolismo y salud con herramientas avanzadas.
             </p>
           </div>
         </div>
@@ -62,42 +62,42 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {/* Nombre */}
                <div className="space-y-1">
-                 <label className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Nombre</label>
-                 <input type="text" name="nombre" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
+                 <label htmlFor="nombre" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Nombre</label>
+                 <input id="nombre" type="text" name="nombre" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
                {/* Apellido */}
                <div className="space-y-1">
-                 <label className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Apellido</label>
-                 <input type="text" name="apellido" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
+                 <label htmlFor="apellido" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Apellido</label>
+                 <input id="apellido" type="text" name="apellido" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {/* Email */}
                <div className="space-y-1">
-                 <label className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Correo Electrónico</label>
-                 <input type="email" name="email" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
+                 <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Correo Electrónico</label>
+                 <input id="email" type="email" name="email" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
                {/* Password */}
                <div className="space-y-1">
-                 <label className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Contraseña</label>
-                 <input type="password" name="password" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder="Min. 6 caracteres" required />
+                 <label htmlFor="password" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Contraseña</label>
+                 <input id="password" type="password" name="password" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder="Min. 6 caracteres" required />
                </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                {/* Edad */}
                <div className="space-y-1">
-                 <label className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Edad</label>
-                 <input type="number" name="edad" min="1" max="150" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
+                 <label htmlFor="edad" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Edad</label>
+                 <input id="edad" type="number" name="edad" min="1" max="150" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
                {/* Sexo */}
                <div className="space-y-1 sm:col-span-2">
-                 <label className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Sexo Biológico</label>
-                 <select name="sexo" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required>
+                 <label htmlFor="sexo" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Sexo Biológico</label>
+                 <select id="sexo" name="sexo" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required>
                     <option value="">Seleccione</option>
                     <option value="Masculino">Masculino</option>
                     <option value="Femenino">Femenino</option>
@@ -106,8 +106,8 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1">
-                <label className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Diagnóstico Principal (Inicial)</label>
-                <input type="text" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder="Ej. Prediabetes, control metabólico..." required />
+                <label htmlFor="diagnostico" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Diagnóstico Principal (Inicial)</label>
+                <input id="diagnostico" type="text" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder="Ej. Prediabetes, control metabólico..." required />
             </div>
 
             <TurnstileWidget onVerify={(t) => setCaptchaToken(t)} />
@@ -120,7 +120,7 @@ export default function RegisterPage() {
               {isPending ? (
                 <>
                   <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  Creando cuenta...
+                  {' '}Creando cuenta...
                 </>
               ) : (
                 'Registrarme'

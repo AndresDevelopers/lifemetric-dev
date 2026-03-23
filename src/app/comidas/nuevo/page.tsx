@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSessionPacienteId } from "@/actions/data";
 
 const comidaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -29,9 +32,17 @@ export default function NuevaComida() {
       fecha: currentDate,
       hora: currentTime,
       tipo_comida: "Desayuno",
-      paciente_id: "demo-id", // mock default
+      paciente_id: "", 
     }
   });
+
+  useEffect(() => {
+    async function loadData() {
+      const pId = await getSessionPacienteId();
+      if (pId) setValue("paciente_id", pId);
+    }
+    loadData();
+  }, [setValue]);
 
   const tipo_comida = watch("tipo_comida");
 
@@ -54,18 +65,20 @@ export default function NuevaComida() {
     <div className="relative min-h-screen">
       {/* Simulation Photo Background */}
       <div className="absolute inset-0 z-0">
-        <img
+        <Image
           className="w-full h-full object-cover opacity-60 dark:opacity-40"
-          alt="Comida"
+          alt="Comida saludable"
           src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80"
+          fill
+          priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent"></div>
       </div>
 
       <header className="fixed top-0 w-full z-40 bg-surface/80 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center gap-3">
-        <a href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
+        <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
           <span className="material-symbols-outlined">arrow_back</span>
-        </a>
+        </Link>
         <h1 className="text-xl font-bold tracking-tighter text-blue-800">Registrar Comida</h1>
       </header>
       

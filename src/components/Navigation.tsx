@@ -2,9 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import { logoutAction } from "@/actions/auth";
 export default function Navigation() {
   const pathname = usePathname();
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Lifemetric";
+
+  const PUBLIC_PATHS = ["/login", "/registro", "/recuperar"];
+  const isPublicPath = pathname && PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+
+  if (isPublicPath) {
+    return null;
+  }
+
 
   const NAV_ITEMS = [
     { name: "Inicio", path: "/", icon: "home_health" },
@@ -48,7 +57,7 @@ export default function Navigation() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-72 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex-col py-4 z-50">
         <div className="text-2xl font-black text-blue-900 dark:text-blue-100 px-6 py-8">
-          MetabolicCare
+          {appName}
         </div>
         <div className="flex-1 space-y-2 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
@@ -74,6 +83,15 @@ export default function Navigation() {
             );
           })}
         </div>
+        <form action={logoutAction} className="px-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="submit"
+            className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all"
+          >
+            <span className="material-symbols-outlined">logout</span>
+            <span className="text-sm font-semibold">Cerrar sesión</span>
+          </button>
+        </form>
       </aside>
       
       {/* Spacer para desktop */}

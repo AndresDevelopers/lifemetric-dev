@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useActionState } from 'react';
 import Link from 'next/link';
-import { useActionState } from 'react';
 import { recoveryAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 
@@ -11,7 +10,7 @@ export default function RecoverPage() {
   const [captchaToken, setCaptchaToken] = useState<string>('');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-surface-container-low)] p-4 sm:p-8 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-container-low)] p-4 sm:p-8 relative overflow-y-auto overflow-x-hidden">
       
       {/* Abstract Background Shapes */}
       <div className="absolute top-[10%] left-[20%] w-[30%] h-[30%] bg-[var(--color-secondary-container)] rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-blob"></div>
@@ -47,7 +46,7 @@ export default function RecoverPage() {
             <input type="hidden" name="captchaToken" value={captchaToken} />
 
             <div className="space-y-2 group">
-              <label className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-secondary)] transition-colors">
+              <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-secondary)] transition-colors">
                 Correo Electrónico
               </label>
               <div className="relative">
@@ -55,6 +54,7 @@ export default function RecoverPage() {
                   mail
                 </span>
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   className="w-full pl-12 pr-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-secondary)] focus:ring-2 focus:ring-[var(--color-secondary)]/20 transition-all font-body text-[var(--color-on-surface)]"
@@ -74,7 +74,7 @@ export default function RecoverPage() {
               {isPending ? (
                 <>
                   <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  Procesando...
+                  {' '}Procesando...
                 </>
               ) : (
                  'Enviar Instrucciones'

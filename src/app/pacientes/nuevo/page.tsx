@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,9 +41,9 @@ export default function NuevoPaciente() {
     <div className="min-h-screen bg-background">
       {/* Top Header */}
       <header className="sticky top-0 w-full z-40 bg-surface/80 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center gap-3 md:hidden">
-        <a href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
+        <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
           <span className="material-symbols-outlined">arrow_back</span>
-        </a>
+        </Link>
         <h1 className="text-xl font-bold tracking-tighter text-blue-800">Alta de Paciente</h1>
       </header>
       
@@ -56,8 +57,9 @@ export default function NuevoPaciente() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Nombre</label>
+                <label htmlFor="nombre" className="text-sm font-semibold text-slate-600">Nombre</label>
                 <input
+                  id="nombre"
                   {...register("nombre")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Ej. Juan"
@@ -66,8 +68,9 @@ export default function NuevoPaciente() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Apellido</label>
+                <label htmlFor="apellido" className="text-sm font-semibold text-slate-600">Apellido</label>
                 <input
+                  id="apellido"
                   {...register("apellido")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Ej. Perez"
@@ -75,8 +78,9 @@ export default function NuevoPaciente() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Edad</label>
+                <label htmlFor="edad" className="text-sm font-semibold text-slate-600">Edad</label>
                 <input
+                  id="edad"
                   type="number"
                   {...register("edad", { valueAsNumber: true })}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
@@ -84,8 +88,9 @@ export default function NuevoPaciente() {
               </div>
               
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Sexo</label>
+                <label htmlFor="sexo" className="text-sm font-semibold text-slate-600">Sexo</label>
                 <select
+                  id="sexo"
                   {...register("sexo")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                 >
@@ -96,8 +101,9 @@ export default function NuevoPaciente() {
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Diagnóstico Principal</label>
+                <label htmlFor="diagnostico_principal" className="text-sm font-semibold text-slate-600">Diagnóstico Principal</label>
                 <input
+                  id="diagnostico_principal"
                   {...register("diagnostico_principal")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Ej. Diabetes tipo 2"
@@ -106,16 +112,18 @@ export default function NuevoPaciente() {
 
               <div className="md:col-span-2 flex items-center gap-3">
                 <input
+                  id="usa_glucometro"
                   type="checkbox"
                   {...register("usa_glucometro")}
                   className="w-5 h-5 rounded text-primary border-outline-variant focus:ring-primary/20 transition-all"
                 />
-                <label className="text-sm font-semibold text-slate-600">¿Usa glucómetro?</label>
+                <label htmlFor="usa_glucometro" className="text-sm font-semibold text-slate-600">¿Usa glucómetro?</label>
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Medicación Base</label>
+                <label htmlFor="medicacion_base" className="text-sm font-semibold text-slate-600">Medicación Base</label>
                 <input
+                  id="medicacion_base"
                   {...register("medicacion_base")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Ej. Metformina 850 mg"
