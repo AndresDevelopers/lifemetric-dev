@@ -5,13 +5,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { createPacienteAction } from "@/actions/paciente";
+import { useRouter } from "next/navigation";
 
-const pacienteSchema = z.object({
+export const pacienteSchema = z.object({
   nombre: z.string().min(2, "Obligatorio"),
   apellido: z.string().min(2, "Obligatorio"),
-  edad: z.number().min(0).max(120),
+  email: z.string().email("Email inválido"),
+  edad: z.number().min(0, "Mínimo 0").max(120, "Máximo 120"),
   sexo: z.enum(["Masculino", "Femenino", "Otro"]),
-  diagnostico_principal: z.string().min(3),
+  diagnostico_principal: z.string().min(3, "Mínimo 3 caracteres"),
   usa_glucometro: z.boolean(),
   medicacion_base: z.string().optional(),
   peso_inicial_kg: z.number().optional(),
@@ -19,22 +22,34 @@ const pacienteSchema = z.object({
   objetivo_clinico: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof pacienteSchema>;
+export type FormValues = z.infer<typeof pacienteSchema>;
 
 export default function NuevoPaciente() {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(pacienteSchema),
+    defaultValues: {
+      usa_glucometro: false,
+    }
   });
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
-    // TODO: Connect to Server Action / Prisma
-    console.log("Submit", data);
-    setTimeout(() => {
+    try {
+      const result = await createPacienteAction(data);
+      if (result.success) {
+        alert("Paciente guardado exitosamente");
+        router.push("/resumen");
+      } else {
+        alert(result.error || "Error al guardar el paciente");
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      alert("Ocurrió un error inesperado");
+    } finally {
       setLoading(false);
-      alert("Paciente guardado (simulación)");
-    }, 1000);
+    }
   };
 
   return (
@@ -75,6 +90,18 @@ export default function NuevoPaciente() {
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Ej. Perez"
                 />
+                {errors.apellido && <span className="text-error text-xs">{errors.apellido.message}</span>}
+              </div>
+
+              <div className="md:col-span-2 flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-600">Correo Electrónico</label>
+                <input
+                  type="email"
+                  {...register("email")}
+                  className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="ejemplo@correo.com"
+                />
+                {errors.email && <span className="text-error text-xs">{errors.email.message}</span>}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -85,6 +112,7 @@ export default function NuevoPaciente() {
                   {...register("edad", { valueAsNumber: true })}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                 />
+                {errors.edad && <span className="text-error text-xs">{errors.edad.message}</span>}
               </div>
               
               <div className="flex flex-col gap-2">
@@ -98,6 +126,7 @@ export default function NuevoPaciente() {
                   <option value="Femenino">Femenino</option>
                   <option value="Otro">Otro</option>
                 </select>
+                {errors.sexo && <span className="text-error text-xs">{errors.sexo.message}</span>}
               </div>
 
               <div className="md:col-span-2 flex flex-col gap-2">
@@ -108,6 +137,7 @@ export default function NuevoPaciente() {
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Ej. Diabetes tipo 2"
                 />
+                {errors.diagnostico_principal && <span className="text-error text-xs">{errors.diagnostico_principal.message}</span>}
               </div>
 
               <div className="md:col-span-2 flex items-center gap-3">
@@ -127,6 +157,36 @@ export default function NuevoPaciente() {
                   {...register("medicacion_base")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Ej. Metformina 850 mg"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-600">Peso Inicial (kg)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  {...register("peso_inicial_kg", { valueAsNumber: true })}
+                  className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-600">Cintura Inicial (cm)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  {...register("cintura_inicial_cm", { valueAsNumber: true })}
+                  className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+
+              <div className="md:col-span-2 flex flex-col gap-2">
+                <label className="text-sm font-semibold text-slate-600">Objetivo Clínico</label>
+                <textarea
+                  {...register("objetivo_clinico")}
+                  className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="Ej. Control de niveles de glucosa en ayuno"
+                  rows={3}
                 />
               </div>
 
