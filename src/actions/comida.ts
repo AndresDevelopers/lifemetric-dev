@@ -7,6 +7,7 @@ interface ComidaInput {
   fecha: string;
   hora: string;
   tipo_comida: string;
+  foto_url?: string;
   nota?: string;
   alimento_principal?: string;
   kcal_estimadas?: number;
@@ -52,6 +53,7 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
         fecha: new Date(data.fecha),
         hora: new Date(`1970-01-01T${data.hora}:00Z`),
         tipo_comida: data.tipo_comida,
+        foto_url: data.foto_url,
         nota: data.nota,
         alimento_principal: data.alimento_principal,
         kcal_estimadas: data.kcal_estimadas,

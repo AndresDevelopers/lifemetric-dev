@@ -5,8 +5,10 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSessionPacienteId } from "@/actions/data";
+import { clasificarYGuardarComida } from "@/actions/comida";
+import { supabase } from "@/lib/supabase";
 
 const comidaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -15,6 +17,7 @@ const comidaSchema = z.object({
   tipo_comida: z.enum(["Desayuno", "Comida", "Cena", "Colacion"]),
   nota: z.string().optional(),
   alimento_principal: z.string().optional(),
+  foto_url: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof comidaSchema>;
@@ -46,13 +49,98 @@ export default function NuevaComida() {
 
   const tipo_comida = watch("tipo_comida");
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleFile = (file: File) => {
+    if (file.type.startsWith("image/")) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      alert("Por favor, selecciona una imagen.");
+    }
+  };
+
+  const uploadImage = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `comidas/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('comidas')
+      .upload(filePath, file);
+
+    if (error) {
+      console.error('Error subiendo imagen: ', error);
+      throw error;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('comidas')
+      .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl;
+  };
+
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
-    console.log("Submit", data);
-    setTimeout(() => {
+    try {
+      let foto_url = data.foto_url;
+      if (imageFile) {
+        foto_url = await uploadImage(imageFile);
+      }
+
+      const submissionData = { ...data, foto_url };
+      const response = await clasificarYGuardarComida(submissionData);
+
+      if (response.success) {
+        alert("Comida registrada exitosamente");
+        // Reset form or navigate away
+        setImageFile(null);
+        setImagePreview(null);
+        setValue("alimento_principal", "");
+        setValue("nota", "");
+      } else {
+        alert(response.error || "Fallo al guardar la comida");
+      }
+    } catch (error) {
+      console.error("Error submitting:", error);
+      alert("Hubo un error al guardar la comida");
+    } finally {
       setLoading(false);
-      alert("Comida registrada (simulación)");
-    }, 1000);
+    }
   };
 
   const getTipoStyle = (tipo: string) => {
@@ -120,7 +208,51 @@ export default function NuevaComida() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-4">
+            <div className="mt-6 flex flex-col gap-2">
+              <span className="text-label-sm font-bold uppercase tracking-widest text-slate-500">
+                Foto de la comida (Opcional)
+              </span>
+              <div
+                className={`relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all ${dragActive ? 'border-primary bg-primary/10' : 'border-slate-300 bg-surface-container-highest/50'} ${imagePreview ? 'p-2' : 'h-40'}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleChange}
+                />
+
+                {imagePreview ? (
+                  <div className="relative w-full h-48 rounded-xl overflow-hidden">
+                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageFile(null);
+                        setImagePreview(null);
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center text-slate-500 pointer-events-none">
+                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">add_a_photo</span>
+                    <p className="text-sm font-medium text-center">Arrastra y suelta tu imagen aquí<br/>o haz clic para seleccionar</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-6">
               <span className="text-label-sm font-bold uppercase tracking-widest text-slate-500">
                 Alimento Principal / Notas
               </span>
