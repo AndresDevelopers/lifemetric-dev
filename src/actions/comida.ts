@@ -1,9 +1,6 @@
 "use server";
 
-import { PrismaClient } from "@prisma/client";
-
-// Solo instanciamos un cliente temporalmente si no hay uno global
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function clasificarYGuardarComida(data: any) {
   // Lógica de clasificación (MVP Médico)
