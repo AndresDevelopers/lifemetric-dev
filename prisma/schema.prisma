@@ -1,9 +1,10 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
 }
 
 model Paciente {
@@ -121,7 +122,7 @@ model Laboratorio {
 
 model Medicacion {
   registro_medicacion_id String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  paciente_id            String   @db.Uuid
+  paciente_id            String    @db.Uuid
   fecha                  DateTime @db.Date
   hora                   DateTime @db.Time
   medicamento            String

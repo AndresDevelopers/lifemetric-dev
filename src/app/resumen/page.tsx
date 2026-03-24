@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import HistorialComidas from "@/components/resumen/HistorialComidas";
 
 export default async function ResumenSemanal() {
   const cookieStore = await cookies();
@@ -29,11 +30,18 @@ export default async function ResumenSemanal() {
   const semanaAtras = new Date();
   semanaAtras.setDate(semanaAtras.getDate() - 7);
 
+  const treintaDiasAtras = new Date();
+  treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
+
   const paciente = await prisma.paciente.findUnique({
     where: { paciente_id: pacienteId },
     include: {
       comidas: {
-        where: { fecha: { gte: semanaAtras } }
+        where: { fecha: { gte: treintaDiasAtras } },
+        orderBy: [
+          { fecha: 'desc' },
+          { hora: 'desc' }
+        ]
       },
       habitos: {
         where: { fecha: { gte: semanaAtras } }
@@ -62,9 +70,11 @@ export default async function ResumenSemanal() {
     ? Math.round(paciente.glucosa.reduce((acc, curr) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
     : 0;
 
-  const comidasRegistradas = paciente.comidas.length;
-  // Fallback string literal assumption since clasificacion_final is a string. Assuming 'Malo' or similar means inadequate. We'll use a specific condition if possible.
-  const comidasInadecuadas = paciente.comidas.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
+  // Metrics should still be based on the last 7 days
+  const comidas7d = paciente.comidas.filter(c => new Date(c.fecha) >= semanaAtras);
+  const comidasRegistradas = comidas7d.length;
+  // Fallback string literal assumption since clasificacion_final is a string. Assuming 'Pobre' or similar means inadequate.
+  const comidasInadecuadas = comidas7d.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
 
   const diasEjercicio = paciente.habitos.filter(h => (h.ejercicio_min || 0) > 0).length;
   const promedioSueno = paciente.habitos.length 
@@ -202,6 +212,11 @@ export default async function ResumenSemanal() {
             <div className="flex items-end gap-1"><span className="text-3xl font-black text-slate-800">{data.adherencia_medicacion_pct}</span><span className="text-sm font-bold text-slate-400 pb-1">%</span></div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 mb-2">Adherencia Meds</span>
           </div>
+        </div>
+
+        {/* Nueva sección: Historial de Comidas con filtro */}
+        <div className="pt-8 border-t border-slate-100">
+          <HistorialComidas initialComidas={paciente.comidas} />
         </div>
 
       </div>
