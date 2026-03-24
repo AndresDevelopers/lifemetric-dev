@@ -7,6 +7,12 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { deleteSession, setSession } from '@/lib/session';
 
+export type AuthActionState = {
+  error?: string;
+  success?: boolean;
+  message?: string;
+} | undefined;
+
 // Optional: Upstash Redis for idempotency and rate-limiting
 // const redis = Redis.fromEnv(); // Require UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
 
@@ -41,7 +47,7 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
 }
 
-export async function loginAction(prevState: unknown, formData: FormData) {
+export async function loginAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = loginSchema.parse(rawData);
@@ -94,7 +100,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
   }
 }
 
-export async function registerAction(prevState: unknown, formData: FormData) {
+export async function registerAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     // Parse number because FormData is string
@@ -181,7 +187,7 @@ export async function registerAction(prevState: unknown, formData: FormData) {
   }
 }
 
-export async function recoveryAction(prevState: unknown, formData: FormData) {
+export async function recoveryAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = recoverSchema.parse(rawData);
