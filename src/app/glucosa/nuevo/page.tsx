@@ -48,7 +48,6 @@ export default function NuevaGlucosa() {
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
-    console.log("Submit", data);
     
     // Clasifica glucosa según ayuno/post, aquí podríamos aplicar lógica
     setTimeout(() => {
