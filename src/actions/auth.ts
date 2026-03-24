@@ -31,7 +31,15 @@ const recoverSchema = z.object({
   captchaToken: z.string().min(1, 'Captcha requerido'),
 });
 
-export async function loginAction(prevState: any, formData: FormData) {
+export type AuthActionState =
+  | {
+      success?: boolean;
+      error?: string;
+      message?: string;
+    }
+  | undefined;
+
+export async function loginAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = loginSchema.parse(rawData);
@@ -78,7 +86,7 @@ export async function loginAction(prevState: any, formData: FormData) {
   }
 }
 
-export async function registerAction(prevState: any, formData: FormData) {
+export async function registerAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     // Parse number because FormData is string
@@ -139,7 +147,7 @@ export async function registerAction(prevState: any, formData: FormData) {
   }
 }
 
-export async function recoveryAction(prevState: any, formData: FormData) {
+export async function recoveryAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = recoverSchema.parse(rawData);
