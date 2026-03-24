@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect, useRef } from "react";
 import { getSessionPacienteId } from "@/actions/data";
 import { clasificarYGuardarComida } from "@/actions/comida";
+import { useLocale } from "@/components/providers/LocaleProvider";
 import { supabase } from "@/lib/supabase";
 
 const comidaSchema = z.object({
@@ -24,6 +25,8 @@ type FormValues = z.infer<typeof comidaSchema>;
 
 export default function NuevaComida() {
   const [loading, setLoading] = useState(false);
+  const { messages } = useLocale();
+  const foodMessages = messages.foodForm;
   
   const now = new Date();
   const currentDate = now.toISOString().slice(0, 10);
@@ -89,7 +92,7 @@ export default function NuevaComida() {
       };
       reader.readAsDataURL(file);
     } else {
-      alert("Por favor, selecciona una imagen.");
+      alert(foodMessages.imageOnly);
     }
   };
 
@@ -126,18 +129,17 @@ export default function NuevaComida() {
       const response = await clasificarYGuardarComida(submissionData);
 
       if (response.success) {
-        alert("Comida registrada exitosamente");
-        // Reset form or navigate away
+        alert(foodMessages.saveSuccess);
         setImageFile(null);
         setImagePreview(null);
         setValue("alimento_principal", "");
         setValue("nota", "");
       } else {
-        alert(response.error || "Fallo al guardar la comida");
+        alert(response.error || foodMessages.saveError);
       }
     } catch (error) {
       console.error("Error submitting:", error);
-      alert("Hubo un error al guardar la comida");
+      alert(foodMessages.saveError);
     } finally {
       setLoading(false);
     }
@@ -151,11 +153,10 @@ export default function NuevaComida() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Simulation Photo Background */}
       <div className="absolute inset-0 z-0">
         <Image
           className="w-full h-full object-cover opacity-60 dark:opacity-40"
-          alt="Comida saludable"
+          alt={foodMessages.healthyFoodAlt}
           src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80"
           fill
           priority
@@ -167,22 +168,22 @@ export default function NuevaComida() {
         <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
-        <h1 className="text-xl font-bold tracking-tighter text-blue-800">Registrar Comida</h1>
+        <h1 className="text-xl font-bold tracking-tighter text-blue-800">{foodMessages.title}</h1>
       </header>
       
       <main className="relative z-10 flex flex-col h-full justify-end pt-24 pb-24 md:pb-12 px-6 max-w-2xl mx-auto">
         <div className="mb-6 flex gap-3 overflow-x-auto pb-2 no-scrollbar">
           <button type="button" onClick={() => setValue("tipo_comida", "Desayuno")} className={`flex-shrink-0 font-bold px-6 py-3 rounded-full active:scale-95 transition-all flex items-center gap-2 ${getTipoStyle("Desayuno")}`}>
-            <span className="material-symbols-outlined">breakfast_dining</span> Desayuno
+            <span className="material-symbols-outlined">breakfast_dining</span> {foodMessages.breakfast}
           </button>
           <button type="button" onClick={() => setValue("tipo_comida", "Comida")} className={`flex-shrink-0 font-bold px-6 py-3 rounded-full active:scale-95 transition-all flex items-center gap-2 ${getTipoStyle("Comida")}`}>
-            <span className="material-symbols-outlined">restaurant</span> Comida
+            <span className="material-symbols-outlined">restaurant</span> {foodMessages.lunch}
           </button>
           <button type="button" onClick={() => setValue("tipo_comida", "Cena")} className={`flex-shrink-0 font-bold px-6 py-3 rounded-full active:scale-95 transition-all flex items-center gap-2 ${getTipoStyle("Cena")}`}>
-            <span className="material-symbols-outlined">dinner_dining</span> Cena
+            <span className="material-symbols-outlined">dinner_dining</span> {foodMessages.dinner}
           </button>
           <button type="button" onClick={() => setValue("tipo_comida", "Colacion")} className={`flex-shrink-0 font-bold px-6 py-3 rounded-full active:scale-95 transition-all flex items-center gap-2 ${getTipoStyle("Colacion")}`}>
-            <span className="material-symbols-outlined">cookie</span> Colación
+            <span className="material-symbols-outlined">cookie</span> {foodMessages.snack}
           </button>
         </div>
 
@@ -191,7 +192,7 @@ export default function NuevaComida() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Fecha</label>
+                <label className="text-sm font-semibold text-slate-600">{foodMessages.date}</label>
                 <input
                   type="date"
                   {...register("fecha")}
@@ -199,7 +200,7 @@ export default function NuevaComida() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-600">Hora</label>
+                <label className="text-sm font-semibold text-slate-600">{foodMessages.time}</label>
                 <input
                   type="time"
                   {...register("hora")}
@@ -210,7 +211,7 @@ export default function NuevaComida() {
 
             <div className="mt-6 flex flex-col gap-2">
               <span className="text-label-sm font-bold uppercase tracking-widest text-slate-500">
-                Foto de la comida (Opcional)
+                {foodMessages.mealPhoto} ({messages.common.optional})
               </span>
               <div
                 className={`relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all ${dragActive ? 'border-primary bg-primary/10' : 'border-slate-300 bg-surface-container-highest/50'} ${imagePreview ? 'p-2' : 'h-40'}`}
@@ -230,7 +231,7 @@ export default function NuevaComida() {
 
                 {imagePreview ? (
                   <div className="relative w-full h-48 rounded-xl overflow-hidden">
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                    <Image src={imagePreview} alt={foodMessages.mealPhoto} fill className="object-cover" />
                     <button
                       type="button"
                       className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
@@ -246,7 +247,7 @@ export default function NuevaComida() {
                 ) : (
                   <div className="flex flex-col items-center text-slate-500 pointer-events-none">
                     <span className="material-symbols-outlined text-4xl mb-2 opacity-50">add_a_photo</span>
-                    <p className="text-sm font-medium text-center">Arrastra y suelta tu imagen aquí<br/>o haz clic para seleccionar</p>
+                    <p className="text-sm font-medium text-center">{foodMessages.dragAndDrop}<br/>{foodMessages.clickToSelect}</p>
                   </div>
                 )}
               </div>
@@ -254,7 +255,7 @@ export default function NuevaComida() {
 
             <div className="flex items-center justify-between mt-6">
               <span className="text-label-sm font-bold uppercase tracking-widest text-slate-500">
-                Alimento Principal / Notas
+                {foodMessages.mainFoodAndNotes}
               </span>
             </div>
             
@@ -262,7 +263,7 @@ export default function NuevaComida() {
               <input
                 {...register("alimento_principal")}
                 className="w-full bg-surface-container-highest/50 border-none rounded-2xl py-4 px-5 text-on-surface placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 transition-all"
-                placeholder="Ej. Pollo con vegetales"
+                placeholder={foodMessages.mainFoodPlaceholder}
               />
             </div>
 
@@ -270,7 +271,7 @@ export default function NuevaComida() {
               <input
                 {...register("nota")}
                 className="w-full bg-surface-container-highest/50 border-none rounded-2xl py-4 px-5 text-on-surface placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 transition-all"
-                placeholder="¿Cómo te sentiste? (opcional)"
+                placeholder={foodMessages.notePlaceholder}
               />
             </div>
 
@@ -282,7 +283,7 @@ export default function NuevaComida() {
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {loading ? "hourglass_empty" : "check_circle"}
               </span>
-              <span className="text-lg">{loading ? "Guardando..." : "Guardar Registro"}</span>
+              <span className="text-lg">{loading ? foodMessages.submitting : foodMessages.submit}</span>
             </button>
           </form>
         </div>

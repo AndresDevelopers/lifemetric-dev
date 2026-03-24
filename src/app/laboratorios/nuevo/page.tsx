@@ -6,6 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { getSessionPacienteId } from "@/actions/data";
+import { useLocale } from "@/components/providers/LocaleProvider";
 
 const labSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -22,6 +23,8 @@ type FormValues = z.infer<typeof labSchema>;
 
 export default function SubirLaboratorios() {
   const [loading, setLoading] = useState(false);
+  const { messages } = useLocale();
+  const labsMessages = messages.labsForm;
   const now = new Date();
   
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
@@ -45,7 +48,7 @@ export default function SubirLaboratorios() {
     console.log("Submit", data);
     setTimeout(() => {
       setLoading(false);
-      alert("Laboratorios registrados exitosamente");
+      alert(labsMessages.success);
     }, 1500);
   };
 
@@ -56,7 +59,7 @@ export default function SubirLaboratorios() {
           <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
-          <h1 className="text-xl font-bold tracking-tighter text-blue-800">Laboratorios</h1>
+          <h1 className="text-xl font-bold tracking-tighter text-blue-800">{labsMessages.title}</h1>
         </div>
       </header>
 
@@ -68,12 +71,12 @@ export default function SubirLaboratorios() {
               <span className="material-symbols-outlined text-5xl text-teal-600 bg-teal-50 p-4 rounded-full mb-4" style={{ fontVariationSettings: "'FILL' 1" }}>
                 science
               </span>
-              <h2 className="text-2xl font-bold text-slate-800">Añadir Resultados de Laboratorio</h2>
-              <p className="text-slate-500 text-sm mt-1">Sube tus análisis y registra los principales biomarcadores metabólicos.</p>
+              <h2 className="text-2xl font-bold text-slate-800">{labsMessages.heading}</h2>
+              <p className="text-slate-500 text-sm mt-1">{labsMessages.subtitle}</p>
             </div>
 
             <div className="flex flex-col gap-2">
-              <label htmlFor="fecha_estudio" className="text-sm font-semibold text-slate-600">Fecha del Estudio</label>
+              <label htmlFor="fecha_estudio" className="text-sm font-semibold text-slate-600">{labsMessages.studyDate}</label>
               <input
                 id="fecha_estudio"
                 type="date"
@@ -82,11 +85,10 @@ export default function SubirLaboratorios() {
               />
             </div>
 
-            {/* Perfil Glucémico */}
             <div className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100">
               <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined">bloodtype</span>
-                Perfil Glucémico
+                {labsMessages.glycemicProfile}
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
@@ -100,7 +102,7 @@ export default function SubirLaboratorios() {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="glucosa_ayuno" className="text-xs font-semibold text-slate-600">Glucosa Ayuno (mg/dL)</label>
+                  <label htmlFor="glucosa_ayuno" className="text-xs font-semibold text-slate-600">{labsMessages.fastingGlucose}</label>
                   <input
                     id="glucosa_ayuno"
                     type="number"
@@ -112,15 +114,14 @@ export default function SubirLaboratorios() {
               </div>
             </div>
 
-            {/* Perfil Lipídico */}
             <div className="bg-orange-50/50 p-5 rounded-3xl border border-orange-100 mt-4">
               <h3 className="font-bold text-orange-900 mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined">monitor_heart</span>
-                Perfil Lipídico
+                {labsMessages.lipidProfile}
               </h3>
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="trigliceridos" className="text-xs font-semibold text-slate-600">Triglicéridos</label>
+                  <label htmlFor="trigliceridos" className="text-xs font-semibold text-slate-600">{labsMessages.triglycerides}</label>
                   <input
                     id="trigliceridos"
                     type="number"
@@ -130,7 +131,7 @@ export default function SubirLaboratorios() {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="hdl" className="text-xs font-semibold text-slate-600">HDL (Bueno)</label>
+                  <label htmlFor="hdl" className="text-xs font-semibold text-slate-600">{labsMessages.hdl}</label>
                   <input
                     id="hdl"
                     type="number"
@@ -140,7 +141,7 @@ export default function SubirLaboratorios() {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="ldl" className="text-xs font-semibold text-slate-600">LDL (Malo)</label>
+                  <label htmlFor="ldl" className="text-xs font-semibold text-slate-600">{labsMessages.ldl}</label>
                   <input
                     id="ldl"
                     type="number"
@@ -152,13 +153,12 @@ export default function SubirLaboratorios() {
               </div>
             </div>
 
-            {/* Subida de Archivos */}
             <div className="flex flex-col gap-2 pt-2">
-              <label htmlFor="archivo_input" className="text-sm font-semibold text-slate-600">Adjuntar PDF/Foto de los resultados</label>
+              <label htmlFor="archivo_input" className="text-sm font-semibold text-slate-600">{labsMessages.attachResults}</label>
               <div className="w-full border-2 border-dashed border-teal-200 rounded-3xl p-8 hover:bg-teal-50 transition-colors flex flex-col items-center justify-center cursor-pointer text-teal-600">
                 <span className="material-symbols-outlined text-4xl mb-2">upload_file</span>
-                <span className="text-sm font-bold">Haz clic para subir archivo</span>
-                <span className="text-xs text-teal-500/70 mt-1">PDF, JPG o PNG máximo 10MB</span>
+                <span className="text-sm font-bold">{labsMessages.clickToUpload}</span>
+                <span className="text-xs text-teal-500/70 mt-1">{labsMessages.uploadHint}</span>
                 <input id="archivo_input" type="file" className="hidden" />
               </div>
             </div>
@@ -169,7 +169,7 @@ export default function SubirLaboratorios() {
               className="w-full mt-8 bg-gradient-to-r from-teal-600 to-teal-800 text-white font-bold py-5 rounded-2xl shadow-xl hover:shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3"
             >
               <span className="material-symbols-outlined">{loading ? "hourglass_empty" : "upload"}</span>
-              <span className="text-lg">{loading ? "Procesando Análisis..." : "Guardar Laboratorios"}</span>
+              <span className="text-lg">{loading ? labsMessages.submitting : labsMessages.submit}</span>
             </button>
           </form>
         </div>

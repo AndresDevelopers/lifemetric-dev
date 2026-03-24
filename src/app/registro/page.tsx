@@ -5,12 +5,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { registerAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLocale } from '@/components/providers/LocaleProvider';
+import { translateTemplate } from '@/lib/i18n';
 
 export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const router = useRouter();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
+  const { locale, messages } = useLocale();
+  const registerMessages = messages.auth.register;
 
   useEffect(() => {
     if (state?.success) {
@@ -34,19 +39,24 @@ export default function RegisterPage() {
           <div className="z-10 relative">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 flex items-center gap-3">
               <span className="material-symbols-outlined text-4xl">monitor_heart</span>
-              {' '}Regístrate
+              {' '}{registerMessages.heroTitle}
             </h1>
             <p className="text-[var(--color-tertiary-fixed)] text-lg mb-8 leading-relaxed">
-              Únete a {appName} y toma el control de tu metabolismo y salud con herramientas avanzadas.
+              {translateTemplate(registerMessages.heroSubtitle, { appName })}
             </p>
           </div>
         </div>
 
-        {/* Right Side: Register Form */}
         <div className="md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-[var(--color-surface-container-lowest)]/80 backdrop-blur-xl">
+          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)]/60 p-4">
+            <LanguageSwitcher className="justify-between" />
+            <p className="text-xs text-[var(--color-on-surface-variant)]">
+              {messages.common.languageHelper}
+            </p>
+          </div>
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-[var(--color-on-surface)] mb-1">Crea tu cuenta</h2>
-            <p className="text-[var(--color-on-surface-variant)] text-sm">Completa tus datos iniciales de paciente</p>
+            <h2 className="text-2xl font-bold text-[var(--color-on-surface)] mb-1">{registerMessages.title}</h2>
+            <p className="text-[var(--color-on-surface-variant)] text-sm">{registerMessages.subtitle}</p>
           </div>
 
           {state?.error && (
@@ -58,56 +68,51 @@ export default function RegisterPage() {
 
           <form action={action} className="space-y-4">
             <input type="hidden" name="captchaToken" value={captchaToken} />
+            <input type="hidden" name="locale" value={locale} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {/* Nombre */}
                <div className="space-y-1">
-                 <label htmlFor="nombre" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Nombre</label>
+                 <label htmlFor="nombre" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.firstName}</label>
                  <input id="nombre" type="text" name="nombre" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
-               {/* Apellido */}
                <div className="space-y-1">
-                 <label htmlFor="apellido" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Apellido</label>
+                 <label htmlFor="apellido" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.lastName}</label>
                  <input id="apellido" type="text" name="apellido" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {/* Email */}
                <div className="space-y-1">
-                 <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Correo Electrónico</label>
+                 <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.email}</label>
                  <input id="email" type="email" name="email" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
-               {/* Password */}
                <div className="space-y-1">
-                 <label htmlFor="password" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Contraseña</label>
-                 <input id="password" type="password" name="password" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder="Min. 6 caracteres" required />
+                 <label htmlFor="password" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.password}</label>
+                 <input id="password" type="password" name="password" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={registerMessages.passwordPlaceholder} required />
                </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-               {/* Edad */}
                <div className="space-y-1">
-                 <label htmlFor="edad" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Edad</label>
+                 <label htmlFor="edad" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.age}</label>
                  <input id="edad" type="number" name="edad" min="1" max="150" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
-               {/* Sexo */}
                <div className="space-y-1 sm:col-span-2">
-                 <label htmlFor="sexo" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Sexo Biológico</label>
+                 <label htmlFor="sexo" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.biologicalSex}</label>
                  <select id="sexo" name="sexo" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required>
-                    <option value="">Seleccione</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Femenino">Femenino</option>
+                    <option value="">{messages.common.select}</option>
+                    <option value="Masculino">{registerMessages.male}</option>
+                    <option value="Femenino">{registerMessages.female}</option>
                  </select>
                </div>
             </div>
 
             <div className="space-y-1">
-                <label htmlFor="diagnostico" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">Diagnóstico Principal (Inicial)</label>
-                <input id="diagnostico" type="text" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder="Ej. Prediabetes, control metabólico..." required />
+                <label htmlFor="diagnostico" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.diagnosis}</label>
+                <input id="diagnostico" type="text" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={registerMessages.diagnosisPlaceholder} required />
             </div>
 
             <TurnstileWidget onVerify={(t) => setCaptchaToken(t)} />
@@ -120,17 +125,20 @@ export default function RegisterPage() {
               {isPending ? (
                 <>
                   <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  {' '}Creando cuenta...
+                  {' '}{registerMessages.submitting}
                 </>
               ) : (
-                'Registrarme'
+                registerMessages.submit
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-[var(--color-on-surface-variant)] text-sm">
-              ¿Ya tienes una cuenta? <Link href="/login" className="font-semibold text-[var(--color-tertiary)] hover:underline ml-1">Inicia sesión</Link>
+              {registerMessages.alreadyHaveAccount}{' '}
+              <Link href="/login" className="font-semibold text-[var(--color-tertiary)] hover:underline ml-1">
+                {registerMessages.loginLink}
+              </Link>
             </p>
           </div>
         </div>

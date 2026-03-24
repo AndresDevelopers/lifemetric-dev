@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { deleteSession, setSession } from '@/lib/session';
 
 export type AuthActionState = {
@@ -20,6 +21,7 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   captchaToken: z.string().min(1, 'Captcha requerido'),
+  locale: z.string().optional(),
 });
 
 const registerSchema = z.object({
@@ -31,11 +33,13 @@ const registerSchema = z.object({
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
   captchaToken: z.string().min(1, 'Captcha requerido'),
+  locale: z.string().optional(),
 });
 
 const recoverSchema = z.object({
   email: z.string().email(),
   captchaToken: z.string().min(1, 'Captcha requerido'),
+  locale: z.string().optional(),
 });
 
 function isPacienteColumnMissingError(error: unknown): boolean {
@@ -51,9 +55,9 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = loginSchema.parse(rawData);
+    const locale = normalizeLocale(data.locale);
+    const authMessages = getMessages(locale).auth.messages;
 
-    // Rate Limiting could be added here using Upstash Redis
-    // Verify Turnstile (Mock verification if no secret key)
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
        const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -62,7 +66,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
        });
        const outcome = await res.json();
-       if (!outcome.success) return { error: 'Captcha inválido' };
+       if (!outcome.success) return { error: authMessages.invalidCaptcha };
     }
 
     let paciente;
@@ -81,36 +85,37 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     }
 
     if (!paciente) {
-      return { error: 'Credenciales inválidas' }; // Privacy by design: generic response
+      return { error: authMessages.invalidCredentials };
     }
 
     const isValid = await bcrypt.compare(data.password, paciente.password_hash);
     if (!isValid) {
-      return { error: 'Credenciales inválidas' }; // Privacy by design: generic response
+      return { error: authMessages.invalidCredentials };
     }
 
-    // Success! Setup signed session cookies
     await setSession(paciente.paciente_id);
 
     return { success: true };
   } catch (error) {
-    if (error instanceof z.ZodError) return { error: 'Datos no válidos' };
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const authMessages = getMessages(locale).auth.messages;
+    if (error instanceof z.ZodError) return { error: authMessages.invalidData };
     console.error(error);
-    return { error: 'Ocurrió un error en el servidor.' };
+    return { error: authMessages.serverError };
   }
 }
 
 export async function registerAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
-    // Parse number because FormData is string
-    const parsedData = { 
-        ...rawData, 
-        edad: Number.parseInt(rawData.edad as string, 10) 
+    const parsedData = {
+        ...rawData,
+        edad: Number.parseInt(rawData.edad as string, 10)
     };
     const data = registerSchema.parse(parsedData);
+    const locale = normalizeLocale(data.locale);
+    const authMessages = getMessages(locale).auth.messages;
 
-    // Verify Turnstile
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
        const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -119,7 +124,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
        });
        const outcome = await res.json();
-       if (!outcome.success) return { error: 'Captcha inválido' };
+       if (!outcome.success) return { error: authMessages.invalidCaptcha };
     }
 
     let existingUser;
@@ -138,7 +143,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     }
 
     if (existingUser) {
-      return { error: 'Este correo electrónico no está disponible.' };
+      return { error: authMessages.registerEmailUnavailable };
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -176,14 +181,15 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       });
     }
 
-    // Auto-login after registration with signed session
     await setSession(newPaciente.paciente_id);
 
     return { success: true };
   } catch (error) {
-    if (error instanceof z.ZodError) return { error: 'Datos de registro no válidos' };
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const authMessages = getMessages(locale).auth.messages;
+    if (error instanceof z.ZodError) return { error: authMessages.invalidRegisterData };
     console.error(error);
-    return { error: 'Error al registrar al paciente.' };
+    return { error: authMessages.registerError };
   }
 }
 
@@ -191,8 +197,9 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = recoverSchema.parse(rawData);
+    const locale = normalizeLocale(data.locale);
+    const authMessages = getMessages(locale).auth.messages;
 
-    // Verify Turnstile
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
        const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -201,18 +208,16 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
        });
        const outcome = await res.json();
-       if (!outcome.success) return { error: 'Captcha inválido' };
+       if (!outcome.success) return { error: authMessages.invalidCaptcha };
     }
 
-    // Process recovery conceptually
-    // Usually, we'd send an email with a reset link
-    
-    // Privacy by design: always return success generically
-    return { success: true, message: 'Si el correo existe, recibirás instrucciones para recuperar tu contraseña.' };
+    return { success: true, message: authMessages.recoverSuccess };
   } catch (error) {
-    if (error instanceof z.ZodError) return { error: 'Datos no válidos' };
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const authMessages = getMessages(locale).auth.messages;
+    if (error instanceof z.ZodError) return { error: authMessages.invalidData };
     console.error(error);
-    return { error: 'Ocurrió un error al procesar la solicitud.' };
+    return { error: authMessages.recoveryError };
   }
 }
 

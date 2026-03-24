@@ -5,12 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loginAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 export default function LoginPage() {
   const [state, action, isPending] = useActionState(loginAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const router = useRouter();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
+  const { locale, messages } = useLocale();
+  const loginMessages = messages.auth.login;
 
   useEffect(() => {
     if (state?.success) {
@@ -38,13 +42,13 @@ export default function LoginPage() {
               {' '}{appName}
             </h1>
             <p className="text-[var(--color-primary-fixed)] text-lg md:text-xl font-medium mb-8 leading-relaxed">
-              Monitoreo metabólico avanzado y preciso. <br/> Cuida tu salud con datos clínicos en tiempo real.
+              {messages.common.appDescription} <br/> {messages.common.appDescriptionDetail}
             </p>
           </div>
 
           <div className="z-10 relative mt-12 hidden md:block">
             <div className="bg-white/10 p-6 rounded-2xl backdrop-blur-md border border-white/10">
-              <p className="text-sm font-medium text-[var(--color-primary-fixed)] mb-2 uppercase tracking-wider">Métricas de Hoy</p>
+              <p className="text-sm font-medium text-[var(--color-primary-fixed)] mb-2 uppercase tracking-wider">{loginMessages.metricsToday}</p>
               <div className="flex gap-4 items-end">
                 <div className="text-3xl font-bold">95 <span className="text-lg font-normal text-[var(--color-primary-fixed)]">mg/dL</span></div>
                 <div className="h-8 w-[2px] bg-white/20"></div>
@@ -54,11 +58,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Side: Login Form */}
         <div className="md:w-1/2 p-10 md:p-16 flex flex-col justify-center bg-[var(--color-surface-container-lowest)]/80 backdrop-blur-xl">
           <div className="mb-10 text-center md:text-left">
-            <h2 className="text-3xl font-bold text-[var(--color-on-surface)] mb-2">Bienvenido</h2>
-            <p className="text-[var(--color-on-surface-variant)]">Ingresa a tu portal de monitoreo</p>
+            <h2 className="text-3xl font-bold text-[var(--color-on-surface)] mb-2">{loginMessages.title}</h2>
+            <p className="text-[var(--color-on-surface-variant)]">{loginMessages.subtitle}</p>
           </div>
 
           {state?.error && (
@@ -70,10 +73,11 @@ export default function LoginPage() {
 
           <form action={action} className="space-y-6">
             <input type="hidden" name="captchaToken" value={captchaToken} />
+            <input type="hidden" name="locale" value={locale} />
 
             <div className="space-y-2 group">
               <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
-                Correo Electrónico
+                {loginMessages.email}
               </label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-outline)] group-focus-within:text-[var(--color-primary)] transition-colors">
@@ -84,7 +88,7 @@ export default function LoginPage() {
                   type="email"
                   name="email"
                   className="w-full pl-12 pr-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all font-body text-[var(--color-on-surface)]"
-                  placeholder="tu@email.com"
+                  placeholder={locale === 'es' ? 'tu@email.com' : 'you@email.com'}
                   required
                 />
               </div>
@@ -93,10 +97,10 @@ export default function LoginPage() {
             <div className="space-y-2 group">
               <div className="flex justify-between items-center text-sm">
                 <label htmlFor="password" className="font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
-                  Contraseña
+                  {loginMessages.password}
                 </label>
                 <Link href="/recuperar" className="font-medium text-[var(--color-primary)] hover:text-[var(--color-on-primary-fixed-variant)] transition-colors">
-                  ¿Olvidaste tu contraseña?
+                  {loginMessages.forgotPassword}
                 </Link>
               </div>
               <div className="relative">
@@ -124,21 +128,30 @@ export default function LoginPage() {
               {isPending ? (
                 <>
                   <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                  {' '}Ingresando...
+                  {' '}{loginMessages.submitting}
                 </>
               ) : (
                 <>
-                  Ingresar
+                  {loginMessages.submit}
                   {' '}<span className="material-symbols-outlined">arrow_forward</span>
                 </>
               )}
             </button>
           </form>
 
-          {/* Fallback/Register layout */}
           <div className="mt-8 text-center">
             <p className="text-[var(--color-on-surface-variant)] text-sm">
-              ¿No tienes cuenta? <Link href="/registro" className="font-semibold text-[var(--color-primary)] hover:underline ml-1">Regístrate como paciente</Link>
+              {loginMessages.noAccount}{' '}
+              <Link href="/registro" className="font-semibold text-[var(--color-primary)] hover:underline ml-1">
+                {loginMessages.registerLink}
+              </Link>
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-col items-center gap-3 text-center">
+            <LanguageSwitcher className="justify-center" />
+            <p className="max-w-xs text-xs text-[var(--color-on-surface-variant)]">
+              {messages.common.languageHelper}
             </p>
           </div>
         </div>

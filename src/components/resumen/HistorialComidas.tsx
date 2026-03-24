@@ -2,13 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-
-/**
- * HistorialComidas
- * 
- * Componente cliente que muestra el historial de comidas del paciente con un filtro por fecha.
- * Reutiliza los tokens de diseño y estética del proyecto.
- */
+import { useLocale } from '@/components/providers/LocaleProvider';
+import { translateFoodClassification, translateMealType } from '@/lib/i18n';
 
 interface Comida {
   comida_id: string;
@@ -25,13 +20,13 @@ interface Comida {
 export default function HistorialComidas({ initialComidas }: { initialComidas: Comida[] }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const { locale, messages } = useLocale();
+  const historyMessages = messages.foodHistory;
 
-  // Asegurar que el componente esté montado para usar Portals de forma segura en Next.js
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Bloqueo de scroll cuando el modal está activo para mejorar la inmersión (SXO/Premium)
   useEffect(() => {
     if (selectedImage) {
       document.body.style.overflow = 'hidden';
@@ -43,7 +38,6 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
     };
   }, [selectedImage]);
   
-  // Obtenemos el día de hoy en formato local YYYY-MM-DD para el input tipo 'date'
   const getTodayStr = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -54,11 +48,9 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
 
   const [filterDate, setFilterDate] = useState<string>(getTodayStr());
 
-  // Filtrado de las comidas basado en la fecha seleccionada
   const filteredComidas = useMemo(() => {
     return initialComidas.filter((comida) => {
       const date = new Date(comida.fecha);
-      // Para Prisma @db.Date, el valor llega como medianoche UTC
       const year = date.getUTCFullYear();
       const month = String(date.getUTCMonth() + 1).padStart(2, '0');
       const day = String(date.getUTCDate()).padStart(2, '0');
@@ -67,7 +59,6 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
     });
   }, [initialComidas, filterDate]);
 
-  // Lógica visual para iconos y colores según el tipo de comida
   const getIcon = (tipo: string) => {
     const t = (tipo || '').toLowerCase();
     if (t.includes('desayuno')) return 'wb_sunny';
@@ -93,7 +84,6 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
     return 'bg-emerald-500';
   };
 
-  // Renderizado del modal usando un Portal para que esté siempre 'adelante' (Z-index global)
   const renderLightbox = () => {
     if (!selectedImage || !mounted) return null;
 
@@ -103,13 +93,11 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         onClick={() => setSelectedImage(null)}
       >
-        {/* CSS inyectado para ocultar el resto de la UI */}
         <style dangerouslySetInnerHTML={{ __html: `
           body { overflow: hidden !important; }
           nav, aside, header { display: none !important; opacity: 0 !important; pointer-events: none !important; }
         `}} />
 
-        {/* Boton de cierre PEQUEÑO a la IZQUIERDA con blur oscuro (Fijo siempre visible) */}
         <div className="fixed top-8 left-8 z-[2147483647]">
           <button 
             className="bg-black/40 hover:bg-black/60 text-white p-3 rounded-2xl backdrop-blur-xl border border-white/10 shadow-2xl transition-all active:scale-90 flex items-center justify-center"
@@ -117,17 +105,16 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
               e.stopPropagation();
               setSelectedImage(null);
             }}
-            title="Cerrar"
+            title={messages.common.close}
           >
             <span className="material-symbols-outlined text-[20px] font-black">close</span>
           </button>
         </div>
 
-        {/* Área de visualización: justify-start con padding simétrico para soportar scroll en PC/Tablet */}
         <div className="flex-1 w-full flex flex-col items-center justify-start pt-24 pb-24 px-4 md:px-20 min-h-screen">
           <img 
             src={selectedImage} 
-            alt="Comida ampliada" 
+            alt={historyMessages.enlargedFood}
             className="w-full max-w-5xl h-auto object-contain shadow-[0_0_120px_rgba(255,255,255,0.05)] rounded-[2.5rem] transition-all duration-700 animate-in zoom-in-95 border border-white/5"
             onClick={(e) => e.stopPropagation()} 
           />
@@ -143,8 +130,8 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-black text-slate-800 tracking-tight">Historial de Alimentación</h3>
-          <p className="text-sm font-medium text-slate-500">Consulta lo que has registrado cada día</p>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight">{historyMessages.title}</h3>
+          <p className="text-sm font-medium text-slate-500">{historyMessages.subtitle}</p>
         </div>
         
         <div className="flex items-center gap-3 bg-white p-2 pl-4 pr-3 rounded-2xl shadow-sm border border-slate-200 focus-within:border-primary-container transition-all group hover:border-slate-300">
@@ -176,13 +163,13 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <h4 className="font-extrabold text-slate-800 truncate leading-tight">{comida.tipo_comida}</h4>
+                  <h4 className="font-extrabold text-slate-800 truncate leading-tight">{translateMealType(comida.tipo_comida, locale)}</h4>
                   <span className="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 bg-slate-50 text-slate-400 rounded-lg shrink-0 border border-slate-100">
-                    {new Date(comida.hora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(comida.hora).toLocaleTimeString(locale === 'es' ? 'es-ES' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <p className="text-[13px] text-slate-600 font-medium truncate">
-                  {comida.alimento_principal || 'Sin descripción detallada'}
+                  {comida.alimento_principal || historyMessages.noDescription}
                 </p>
                 {comida.nota && (
                   <p className="text-[11px] text-primary/70 mt-1 flex items-center gap-1 italic font-medium">
@@ -200,7 +187,7 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
                     setSelectedImage(comida.foto_url as string);
                   }}
                   className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all ml-2 border border-blue-100 flex items-center justify-center shadow-sm active:scale-90 group/photo shrink-0"
-                  title="Ver foto de la comida"
+                  title={historyMessages.viewMealPhoto}
                 >
                   <span className="material-symbols-outlined text-[24px] md:text-[28px] group-hover/photo:scale-110 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>
                     image
@@ -214,7 +201,7 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
                     ? 'bg-rose-50 text-rose-600 border-rose-100'
                     : 'bg-emerald-50 text-emerald-600 border-emerald-100'
                 }`}>
-                  {comida.clasificacion_final || 'Normal'}
+                  {translateFoodClassification(comida.clasificacion_final, locale)}
                 </div>
                 <span className="text-[15px] font-black text-slate-800 tracking-tighter">
                   {comida.kcal_estimadas || 0} <span className="text-[10px] text-slate-400 uppercase font-black">kcal</span>
@@ -229,15 +216,15 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
                 ramen_dining
               </span>
             </div>
-            <h5 className="text-lg font-bold text-slate-800">Día sin registros</h5>
+            <h5 className="text-lg font-bold text-slate-800">{historyMessages.noRecordsTitle}</h5>
             <p className="text-slate-500 text-sm max-w-[240px] mt-1 font-medium italic">
-              "La constancia es la base del éxito metabólico"
+              "{historyMessages.noRecordsQuote}"
             </p>
             <a 
               href="/comidas/nuevo"
               className="mt-6 bg-primary text-white px-8 py-3 rounded-full font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-2"
             >
-              Registrar comida
+              {historyMessages.registerMeal}
               <span className="material-symbols-outlined text-xs">arrow_forward</span>
             </a>
           </div>

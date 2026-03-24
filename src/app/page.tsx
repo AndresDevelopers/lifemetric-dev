@@ -1,12 +1,28 @@
 import Link from 'next/link';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import {
+  LOCALE_COOKIE_NAME,
+  LOCALE_EXPLICIT_COOKIE_NAME,
+  getMessages,
+  inferLocaleFromRequest,
+  translateTemplate,
+} from '@/lib/i18n';
 import { verifySession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 
 export default async function Home() {
   const cookieStore = await cookies();
+  const headerStore = await headers();
   const sessionToken = cookieStore.get('lifemetric_session')?.value;
+  const locale = inferLocaleFromRequest({
+    cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
+    explicitCookie: cookieStore.get(LOCALE_EXPLICIT_COOKIE_NAME)?.value,
+    acceptLanguage: headerStore.get('accept-language'),
+    country: headerStore.get('x-vercel-ip-country') ?? headerStore.get('cf-ipcountry'),
+    city: headerStore.get('x-vercel-ip-city') ?? headerStore.get('cf-ipcity'),
+  });
+  const messages = getMessages(locale);
 
   if (!sessionToken) {
     redirect('/login');
@@ -37,10 +53,10 @@ export default async function Home() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto flex flex-col gap-8">
       <header>
         <h1 className="text-4xl font-extrabold text-blue-900 dark:text-blue-200">
-          Hola, {paciente.nombre} 👋
+          {translateTemplate(messages.home.greeting, { name: paciente.nombre })}
         </h1>
         <p className="text-slate-500 mt-2 text-lg">
-          Recomendaciones clínicas activas para tí hoy.
+          {messages.home.subtitle}
         </p>
       </header>
 
@@ -56,8 +72,8 @@ export default async function Home() {
             restaurant
           </span>
           <div>
-            <h2 className="text-xl font-bold">Registrar Comida</h2>
-            <p className="text-slate-500 text-sm mt-1">Con auto-reconocimiento IA</p>
+            <h2 className="text-xl font-bold">{messages.home.foodTitle}</h2>
+            <p className="text-slate-500 text-sm mt-1">{messages.home.foodSubtitle}</p>
           </div>
         </Link>
 
@@ -71,8 +87,8 @@ export default async function Home() {
             glucose
           </span>
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Registrar Glucosa</h2>
-            <p className="text-slate-500 text-sm mt-1">Lleva el control de tus niveles</p>
+            <h2 className="text-xl font-bold text-slate-800">{messages.home.glucoseTitle}</h2>
+            <p className="text-slate-500 text-sm mt-1">{messages.home.glucoseSubtitle}</p>
           </div>
         </Link>
 
@@ -86,8 +102,8 @@ export default async function Home() {
             settings_accessibility
           </span>
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Hábitos Diarios</h2>
-            <p className="text-slate-500 text-sm mt-1">Sueño, agua y actividad</p>
+            <h2 className="text-xl font-bold text-slate-800">{messages.home.habitsTitle}</h2>
+            <p className="text-slate-500 text-sm mt-1">{messages.home.habitsSubtitle}</p>
           </div>
         </Link>
       </div>

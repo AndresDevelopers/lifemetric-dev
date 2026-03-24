@@ -1,14 +1,44 @@
 import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server'; // Added this import as NextResponse is used
+import { NextResponse } from 'next/server';
 import { verifySession } from '@/lib/session';
+import {
+  LOCALE_COOKIE_NAME,
+  LOCALE_EXPLICIT_COOKIE_NAME,
+  inferLocaleFromRequest,
+  isExplicitLocaleSelection,
+} from '@/lib/i18n';
 
-// Public paths that do not require authentication
 const publicPaths = ['/login', '/registro', '/recuperar'];
 
-export async function proxy(request: NextRequest) { // Added 'async' keyword
+function applyLocaleCookie(request: NextRequest, response: NextResponse) {
+  const explicitCookie = request.cookies.get(LOCALE_EXPLICIT_COOKIE_NAME)?.value;
+  const cookieLocale = request.cookies.get(LOCALE_COOKIE_NAME)?.value;
+
+  if (isExplicitLocaleSelection(explicitCookie) && cookieLocale) {
+    return response;
+  }
+
+  const locale = inferLocaleFromRequest({
+    cookieLocale,
+    explicitCookie,
+    acceptLanguage: request.headers.get('accept-language'),
+    country: request.headers.get('x-vercel-ip-country') ?? request.headers.get('cf-ipcountry'),
+    city: request.headers.get('x-vercel-ip-city') ?? request.headers.get('cf-ipcity'),
+  });
+
+  response.cookies.set(LOCALE_COOKIE_NAME, locale, {
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  return response;
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static assets, public folder, and API routes if needed
   if (
     pathname.startsWith('/_next') ||
     pathname.includes('/public/') ||
@@ -18,28 +48,23 @@ export async function proxy(request: NextRequest) { // Added 'async' keyword
     return NextResponse.next();
   }
 
-  // Check if it's a public path
-  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
-
-  // Get session cookie and verify it
+  const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
   const sessionToken = request.cookies.get('lifemetric_session')?.value;
   const session = sessionToken ? await verifySession(sessionToken) : null;
- 
-  // If not authenticated and trying to access a private route, redirect to login
+
   if (!session && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    return NextResponse.redirect(url);
+    return applyLocaleCookie(request, NextResponse.redirect(url));
   }
 
-  // If authenticated and trying to access login/register, redirect to home
   if (session && isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
-    return NextResponse.redirect(url);
+    return applyLocaleCookie(request, NextResponse.redirect(url));
   }
 
-  return NextResponse.next();
+  return applyLocaleCookie(request, NextResponse.next());
 }
 
 export const config = {
