@@ -139,15 +139,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-[var(--color-on-surface-variant)] text-sm">
-              {loginMessages.noAccount}{' '}
-              <Link href="/registro" className="font-semibold text-[var(--color-primary)] hover:underline ml-1">
-                {loginMessages.registerLink}
-              </Link>
-            </p>
-          </div>
-
           <div className="mt-8 flex flex-col items-center gap-3 text-center">
             <LanguageSwitcher className="justify-center" />
             <p className="max-w-xs text-xs text-[var(--color-on-surface-variant)]">

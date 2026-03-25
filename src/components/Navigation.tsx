@@ -11,7 +11,7 @@ export default function Navigation() {
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Lifemetric";
   const { messages } = useLocale();
 
-  const PUBLIC_PATHS = ["/login", "/registro", "/recuperar"];
+  const PUBLIC_PATHS = ["/login", "/recuperar"];
   const isPublicPath = pathname && PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   if (isPublicPath) {
@@ -23,37 +23,47 @@ export default function Navigation() {
     { name: messages.navigation.food, path: "/comidas/nuevo", icon: "restaurant" },
     { name: messages.navigation.glucose, path: "/glucosa/nuevo", icon: "glucose" },
     { name: messages.navigation.habits, path: "/habitos/nuevo", icon: "settings_accessibility" },
-    { name: messages.navigation.patients, path: "/pacientes/nuevo", icon: "person_add" },
     { name: messages.navigation.summary, path: "/resumen", icon: "insights" },
   ];
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-6 pt-3 bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-3xl border-t border-slate-100 dark:border-slate-800 md:hidden">
+      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-1 pb-6 pt-3 bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-3xl border-t border-slate-100 dark:border-slate-800 md:hidden">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.path;
           return (
             <Link
               href={item.path}
               key={item.path}
-              className={`flex flex-col items-center justify-center px-3 py-1.5 transition-transform active:scale-90 rounded-2xl ${
+              className={`flex-1 flex flex-col items-center justify-center py-1.5 transition-transform active:scale-90 rounded-2xl ${
                 isActive
                   ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
                   : "text-slate-400 dark:text-slate-500 hover:text-blue-500"
               }`}
             >
               <span
-                className="material-symbols-outlined"
+                className="material-symbols-outlined text-[20px]"
                 style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
               >
                 {item.icon}
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-widest mt-1">
+              <span className="text-[7.5px] font-bold uppercase tracking-tighter mt-1 text-center line-clamp-1">
                 {item.name}
               </span>
             </Link>
           );
         })}
+        <form action={logoutAction} className="flex-1">
+          <button
+            type="submit"
+            className="w-full flex flex-col items-center justify-center py-1.5 transition-transform active:scale-90 rounded-2xl text-red-500 dark:text-red-400"
+          >
+            <span className="material-symbols-outlined text-[20px]">logout</span>
+            <span className="text-[7.5px] font-bold uppercase tracking-tighter mt-1 text-center line-clamp-1">
+              {messages.navigation.logout}
+            </span>
+          </button>
+        </form>
       </nav>
 
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-72 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex-col py-4 z-50">

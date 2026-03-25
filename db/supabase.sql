@@ -2,6 +2,7 @@
 
 -- Habilitar extensión para UUIDs
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS pacientes (
   paciente_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -109,3 +110,32 @@ CREATE TABLE IF NOT EXISTS laboratorios (
   archivo_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+CREATE OR REPLACE FUNCTION public.authenticate_paciente(
+  p_email TEXT,
+  p_password TEXT
+)
+RETURNS TABLE (
+  paciente_id UUID,
+  email TEXT,
+  nombre TEXT,
+  apellido TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    pacientes.paciente_id,
+    pacientes.email,
+    pacientes.nombre,
+    pacientes.apellido
+  FROM pacientes
+  WHERE lower(pacientes.email) = lower(p_email)
+    AND pacientes.activo = true
+    AND pacientes.password_hash = crypt(p_password, pacientes.password_hash)
+  LIMIT 1;
+END;
+$$;
