@@ -3,6 +3,7 @@ import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
+import SummaryHeader from "@/components/resumen/SummaryHeader";
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -10,7 +11,15 @@ import {
   inferLocaleFromRequest,
 } from "@/lib/i18n";
 
-export default async function ResumenSemanal() {
+export default async function ResumenSemanal({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }> 
+}) {
+  const sp = await searchParams;
+  const fromParam = sp.from as string | undefined;
+  const toParam = sp.to as string | undefined;
+
   const cookieStore = await cookies();
   const headerStore = await headers();
   const sessionToken = cookieStore.get('lifemetric_session')?.value;
@@ -41,8 +50,15 @@ export default async function ResumenSemanal() {
 
   const pacienteId = parsedPayload.pacienteId;
 
-  const semanaAtras = new Date();
-  semanaAtras.setDate(semanaAtras.getDate() - 7);
+  const hoy = new Date();
+  const unaSemanaAtras = new Date();
+  unaSemanaAtras.setDate(hoy.getDate() - 7);
+
+  const startDate = fromParam ? new Date(fromParam + 'T00:00:00Z') : unaSemanaAtras;
+  const endDate = toParam ? new Date(toParam + 'T23:59:59Z') : hoy;
+
+  const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = endDate.toISOString().split('T')[0];
 
   const treintaDiasAtras = new Date();
   treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
@@ -58,17 +74,17 @@ export default async function ResumenSemanal() {
         ]
       },
       habitos: {
-        where: { fecha: { gte: semanaAtras } }
+        where: { fecha: { gte: startDate, lte: endDate } }
       },
       laboratorios: {
         orderBy: { fecha_estudio: 'desc' },
         take: 1
       },
       medicacion: {
-        where: { fecha: { gte: semanaAtras } }
+        where: { fecha: { gte: startDate, lte: endDate } }
       },
       glucosa: {
-        where: { fecha: { gte: semanaAtras } }
+        where: { fecha: { gte: startDate, lte: endDate } }
       }
     }
   });
@@ -79,13 +95,16 @@ export default async function ResumenSemanal() {
 
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
   
-  const promedioGlucosa7d = paciente.glucosa.length 
+  const promedioGlucosa = paciente.glucosa.length 
     ? Math.round(paciente.glucosa.reduce((acc, curr) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
     : 0;
 
-  const comidas7d = paciente.comidas.filter(c => new Date(c.fecha) >= semanaAtras);
-  const comidasRegistradas = comidas7d.length;
-  const comidasInadecuadas = comidas7d.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
+  const filteredComidas = paciente.comidas.filter(c => {
+    const d = new Date(c.fecha);
+    return d >= startDate && d <= endDate;
+  });
+  const comidasRegistradas = filteredComidas.length;
+  const comidasInadecuadas = filteredComidas.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
 
   const diasEjercicio = paciente.habitos.filter(h => (h.ejercicio_min || 0) > 0).length;
   const promedioSueno = paciente.habitos.length 
@@ -103,7 +122,7 @@ export default async function ResumenSemanal() {
   const data = {
     paciente: `${paciente.nombre} ${paciente.apellido}`,
     ultima_hba1c: ultimaHba1c,
-    promedio_glucosa_7d: promedioGlucosa7d,
+    promedio_glucosa: promedioGlucosa,
     comidas: {
       registradas_semana: comidasRegistradas,
       inadecuadas: comidasInadecuadas,
@@ -120,13 +139,10 @@ export default async function ResumenSemanal() {
 
   return (
     <div className="min-h-screen bg-surface-container-low">
-      <header className="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tighter text-blue-800">{messages.summary.title}</h1>
-        <div className="flex items-center gap-2 text-slate-500">
-          <span className="text-sm font-bold bg-white px-3 py-1 rounded-full shadow-sm">{messages.summary.last7Days}</span>
-          <span className="material-symbols-outlined text-primary cursor-pointer hover:bg-slate-200 rounded-full p-2 transition-colors">calendar_month</span>
-        </div>
-      </header>
+      <SummaryHeader 
+        initialFrom={startDateStr} 
+        initialTo={endDateStr} 
+      />
       
       <div className="p-6 md:p-10 max-w-4xl mx-auto pb-32 md:pb-12 space-y-6">
         
@@ -141,7 +157,7 @@ export default async function ResumenSemanal() {
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1">
                 <p className="text-blue-200 text-xs font-semibold">{messages.summary.averageGlucose}</p>
                 <div className="flex items-end gap-1 mt-1">
-                  <span className="text-3xl font-black">{data.promedio_glucosa_7d}</span>
+                  <span className="text-3xl font-black">{data.promedio_glucosa}</span>
                   <span className="text-sm pb-1">mg/dL</span>
                 </div>
               </div>

@@ -59,7 +59,7 @@ export default function NuevoPaciente() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 w-full z-40 bg-surface/80 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center gap-3 md:hidden">
-        <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
+        <Link href="/" className="hidden text-on-surface p-2 rounded-full hover:bg-slate-200">
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
         <h1 className="text-xl font-bold tracking-tighter text-blue-800">{patientMessages.title}</h1>

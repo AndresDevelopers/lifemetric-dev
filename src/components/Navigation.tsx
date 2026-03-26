@@ -7,7 +7,7 @@ import { logoutAction } from "@/actions/auth";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLocale } from "@/components/providers/LocaleProvider";
 
-type UserName = { nombre: string; apellido: string };
+type UserName = { nombre: string; apellido: string; avatar_url?: string | null };
 
 function getInitials(user: UserName): string {
   return `${user.nombre.charAt(0)}${user.apellido.charAt(0)}`.toUpperCase();
@@ -42,9 +42,9 @@ export default function Navigation({ userName }: NavigationProps) {
 
   const NAV_ITEMS = [
     { name: messages.navigation.home, path: "/", icon: "home_health" },
-    { name: messages.navigation.food, path: "/comidas/nuevo", icon: "restaurant" },
-    { name: messages.navigation.glucose, path: "/glucosa/nuevo", icon: "glucose" },
     { name: messages.navigation.habits, path: "/habitos/nuevo", icon: "settings_accessibility" },
+    { name: messages.navigation.food, path: "/comidas/nuevo", icon: "add_circle" },
+    { name: messages.navigation.glucose, path: "/glucosa/nuevo", icon: "glucose" },
     { name: messages.navigation.summary, path: "/resumen", icon: "insights" },
   ];
 
@@ -68,7 +68,11 @@ export default function Navigation({ userName }: NavigationProps) {
               className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg ring-2 ring-white dark:ring-slate-900 select-none"
               style={avatarStyle}
             >
-              {initials}
+              {userName.avatar_url ? (
+                <img src={userName.avatar_url} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                initials
+              )}
             </div>
           </button>
 
@@ -85,10 +89,14 @@ export default function Navigation({ userName }: NavigationProps) {
               <div className="absolute bottom-6 left-4 right-4 bg-white dark:bg-slate-800 rounded-3xl p-4 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
                 <div className="flex items-center gap-4 px-4 py-6 border-b border-slate-100 dark:border-slate-700/50 mb-2">
                   <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-md"
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-md overflow-hidden"
                     style={avatarStyle}
                   >
-                    {initials}
+                    {userName.avatar_url ? (
+                      <img src={userName.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      initials
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">
@@ -132,28 +140,62 @@ export default function Navigation({ userName }: NavigationProps) {
       )}
 
       {/* ── Mobile: bottom nav ── */}
-      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-6 pt-3 bg-white/80 dark:bg-slate-950/80 backdrop-blur-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-3xl border-t border-slate-100 dark:border-slate-800 md:hidden">
-        {NAV_ITEMS.map((item) => {
+      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-end px-2 pb-6 pt-2 bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-[40px] border-t border-slate-200/50 dark:border-slate-800/50 md:hidden">
+        {NAV_ITEMS.map((item, index) => {
           const isActive = pathname === item.path;
+          const isCenter = index === 2; // Food (Add button)
+
+          if (isCenter) {
+            return (
+              <Link
+                href={item.path}
+                key={item.path}
+                className="relative -top-5 flex flex-col items-center justify-center group"
+                aria-label={item.name}
+              >
+                <div className={`
+                  w-14 h-14 rounded-[22px] flex items-center justify-center 
+                  shadow-2xl shadow-blue-500/20 dark:shadow-blue-500/30
+                  ${isActive 
+                    ? 'bg-blue-600' 
+                    : 'bg-gradient-to-br from-blue-600 to-blue-500'}
+                  transition-all duration-300 active:scale-90 group-hover:scale-110
+                `}>
+                  <span className="material-symbols-outlined text-white text-[32px] font-bold">
+                    add
+                  </span>
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-widest mt-2 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
+                  {item.name}
+                </span>
+              </Link>
+            );
+          }
+
           return (
             <Link
               href={item.path}
               key={item.path}
-              className={`flex-1 flex flex-col items-center justify-center py-2 transition-transform active:scale-90 rounded-2xl ${
+              className={`flex-1 flex flex-col items-center justify-center py-4 transition-all active:scale-95 ${
                 isActive
-                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                  : "text-slate-400 dark:text-slate-500 hover:text-blue-500"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-slate-400 dark:text-slate-600"
               }`}
             >
-              <span
-                className="material-symbols-outlined text-[24px]"
-                style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
-              >
-                {item.icon}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-tight mt-1 text-center line-clamp-1">
-                {item.name}
-              </span>
+              <div className={`
+                flex flex-col items-center transition-all duration-300
+                ${isActive ? 'scale-110' : ''}
+              `}>
+                <span
+                  className="material-symbols-outlined text-[26px]"
+                  style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+                >
+                  {item.icon}
+                </span>
+                <span className={`text-[9.5px] font-bold uppercase tracking-tight mt-1.5 ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                  {item.name}
+                </span>
+              </div>
             </Link>
           );
         })}
@@ -169,10 +211,14 @@ export default function Navigation({ userName }: NavigationProps) {
               className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all group"
             >
               <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md select-none flex-shrink-0 group-hover:scale-105 transition-transform"
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md select-none flex-shrink-0 group-hover:scale-105 transition-transform overflow-hidden"
                 style={avatarStyle}
               >
-                {initials}
+                {userName.avatar_url ? (
+                  <img src={userName.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">

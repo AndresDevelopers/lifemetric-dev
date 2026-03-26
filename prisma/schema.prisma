@@ -1,138 +1,78 @@
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+}
+
 model Paciente {
-  paciente_id           String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  nombre                String
-  apellido              String
-  email                 String       @unique
-  password_hash         String
-  edad                  Int
-  sexo                  String
+  paciente_id          String    @id @default(uuid())
+  email                String    @unique
+  nombre               String
+  apellido             String
+  password_hash        String
+  edad                 Int
+  sexo                 String    // 'M' o 'F'
+  fecha_nacimiento     DateTime?
+  avatar_url           String?
   diagnostico_principal String
-  usa_glucometro        Boolean      @default(false)
-  medicacion_base       String?
-  peso_inicial_kg       Decimal?     @db.Decimal(5, 2)
-  cintura_inicial_cm    Decimal?     @db.Decimal(5, 2)
-  objetivo_clinico      String?
-  fecha_alta            DateTime     @default(dbgenerated("CURRENT_DATE")) @db.Date
-  activo                Boolean      @default(true)
-  created_at            DateTime     @default(now()) @db.Timestamptz(6)
+  usa_glucometro       Boolean   @default(false)
+  medicacion_base      String?
+  metas_salud          String?
+  peso_inicial         Float?
+  estura               Float?
+  nivel_actividad      String?
+  created_at           DateTime  @default(now())
 
-  comidas               Comida[]
-  glucosa               Glucosa[]
-  habitos               Habito[]
-  laboratorios          Laboratorio[]
-  medicacion            Medicacion[]
+  sesiones             Sesion[]
+  comidas              Comida[]
+  glucosas             Glucosa[]
+  habitos              Habito[]
+}
 
-  @@map("pacientes")
+model Sesion {
+  sesion_id   String   @id @default(uuid())
+  paciente_id String
+  token       String   @unique
+  expires_at  DateTime
+  created_at  DateTime @default(now())
+
+  paciente    Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
 }
 
 model Comida {
-  comida_id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  paciente_id                String    @db.Uuid
-  fecha                      DateTime  @db.Date
-  hora                       DateTime  @db.Time
-  tipo_comida                String
-  foto_url                   String?
-  nota                       String?
-  alimento_principal         String?
-  kcal_estimadas             Int?
-  proteina_g                 Decimal?  @db.Decimal(5, 2)
-  carbohidratos_g            Decimal?  @db.Decimal(5, 2)
-  grasa_g                    Decimal?  @db.Decimal(5, 2)
-  fibra_g                    Decimal?  @db.Decimal(5, 2)
-  clasificacion_proteina     String?
-  clasificacion_carbohidrato String?
-  clasificacion_fibra        String?
-  clasificacion_final        String?
-  created_at                 DateTime  @default(now()) @db.Timestamptz(6)
+  comida_id   String   @id @default(uuid())
+  paciente_id String
+  nombre      String
+  calorias    Int?
+  carbohidratos Int?
+  proteinas   Int?
+  grasas      Int?
+  fecha       DateTime @default(now())
+  notas       String?
 
-  paciente Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
-  glucosas Glucosa[]
-
-  @@map("comidas")
+  paciente    Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
 }
 
 model Glucosa {
-  glucosa_id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  paciente_id           String    @db.Uuid
-  fecha                 DateTime  @db.Date
-  hora                  DateTime  @db.Time
-  tipo_glucosa          String
-  valor_glucosa         Int
-  comida_relacionada_id String?   @db.Uuid
-  delta_glucosa         Int?
-  clasificacion_glucosa String?
-  created_at            DateTime  @default(now()) @db.Timestamptz(6)
+  glucosa_id  String   @id @default(uuid())
+  paciente_id String
+  valor       Int
+  momento     String   // 'ayunas', 'post-prandial', etc.
+  fecha       DateTime @default(now())
+  notas       String?
 
-  comida   Comida?  @relation(fields: [comida_relacionada_id], references: [comida_id], onDelete: SetNull)
-  paciente Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
-
-  @@map("glucosa")
+  paciente    Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
 }
 
 model Habito {
-  habito_id     String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  paciente_id   String   @db.Uuid
-  fecha         DateTime @db.Date
-  sueno_horas   Decimal? @db.Decimal(4, 2)
-  agua_vasos    Int?
-  ejercicio_min Int?
-  pa_sistolica  Int?
-  pa_diastolica Int?
-  pulso         Int?
-  peso_kg       Decimal? @db.Decimal(5, 2)
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  habito_id   String   @id @default(uuid())
+  paciente_id String
+  tipo        String   // 'agua', 'ejercicio', 'sueno'
+  valor       Float
+  unidad      String
+  fecha       DateTime @default(now())
 
-  paciente Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
-
-  @@map("habitos")
-}
-
-model Laboratorio {
-  laboratorio_id String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  paciente_id    String   @db.Uuid
-  fecha_estudio  DateTime @db.Date
-  hba1c          Decimal? @db.Decimal(4, 2)
-  glucosa_ayuno  Int?
-  insulina       Decimal? @db.Decimal(5, 2)
-  trigliceridos  Int?
-  hdl            Int?
-  ldl            Int?
-  alt            Int?
-  ast            Int?
-  tsh            Decimal? @db.Decimal(5, 2)
-  pcr_us         Decimal? @db.Decimal(5, 2)
-  creatinina     Decimal? @db.Decimal(5, 2)
-  acido_urico    Decimal? @db.Decimal(5, 2)
-  archivo_url    String?
-  created_at     DateTime @default(now()) @db.Timestamptz(6)
-
-  paciente Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
-
-  @@map("laboratorios")
-}
-
-model Medicacion {
-  registro_medicacion_id String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  paciente_id            String    @db.Uuid
-  fecha                  DateTime @db.Date
-  hora                   DateTime @db.Time
-  medicamento            String
-  dosis                  String
-  estado_toma            String
-  comentarios            String?
-  created_at             DateTime @default(now()) @db.Timestamptz(6)
-
-  paciente Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
-
-  @@map("medicacion")
+  paciente    Paciente @relation(fields: [paciente_id], references: [paciente_id], onDelete: Cascade)
 }

@@ -269,3 +269,60 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
     return { error: 'Error' };
   }
 }
+
+const profileSchema = z.object({
+  nombre: z.string().min(2),
+  apellido: z.string().min(2),
+  email: z.string().email(),
+  sexo: z.string().min(1),
+  fecha_nacimiento: z.string().optional(),
+  avatar_url: z.string().optional(),
+});
+
+export async function updateProfileAction(prevState: AuthActionState, formData: FormData) {
+  try {
+    const pacienteId = await getSessionPacienteId();
+    if (!pacienteId) redirect('/login');
+
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const messages = getMessages(locale);
+    
+    const rawData = Object.fromEntries(formData.entries());
+    const data = profileSchema.parse(rawData);
+
+    // Check if email is already taken by another user if it changed
+    if (data.email) {
+      const currentPaciente = await prisma.paciente.findUnique({
+        where: { paciente_id: pacienteId },
+        select: { email: true }
+      });
+
+      if (currentPaciente?.email !== data.email) {
+        const existingUser = await prisma.paciente.findUnique({
+          where: { email: data.email },
+        });
+        if (existingUser) {
+          return { error: messages.auth.messages.registerEmailUnavailable };
+        }
+      }
+    }
+
+    await prisma.paciente.update({
+      where: { paciente_id: pacienteId },
+      data: {
+        nombre: data.nombre,
+        apellido: data.apellido,
+        email: data.email,
+        sexo: data.sexo,
+        fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : null,
+        avatar_url: data.avatar_url,
+      },
+    });
+
+    return { success: true, message: messages.settings.profileUpdated };
+  } catch (error) {
+    console.error(error);
+    if (error instanceof z.ZodError) return { error: 'Invalid data' };
+    return { error: 'Error updating profile' };
+  }
+}

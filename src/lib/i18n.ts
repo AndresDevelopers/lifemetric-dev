@@ -111,15 +111,24 @@ const messages = {
       greeting: 'Hola, {name} 👋',
       subtitle: 'Recomendaciones clínicas activas para ti hoy.',
       foodTitle: 'Registrar comida',
-      foodSubtitle: 'Con auto-reconocimiento IA',
+      foodSubtitle: 'Lleva el control de tu alimentación',
       glucoseTitle: 'Registrar glucosa',
       glucoseSubtitle: 'Lleva el control de tus niveles',
       habitsTitle: 'Hábitos diarios',
       habitsSubtitle: 'Sueño, agua y actividad',
+      medicationTitle: 'Mi medicación',
+      medicationSubtitle: 'Dosis programadas para hoy',
+      labsTitle: 'Laboratorios',
+      labsSubtitle: 'Sube resultados de análisis',
+      quickActions: 'Acciones Rápidas',
+      healthOverview: 'Resumen de Salud',
     },
     summary: {
       title: 'Resumen semanal',
       last7Days: 'Últimos 7 días',
+      customRange: 'Rango personalizado',
+      rangeFrom: 'Desde',
+      rangeTo: 'Hasta',
       patientReport: 'Paciente / Reporte de progreso',
       averageGlucose: 'Promedio glucosa (7d)',
       lastHbA1c: 'Última HbA1c',
@@ -145,6 +154,9 @@ const messages = {
       noRecordsTitle: 'Día sin registros',
       noRecordsQuote: 'La constancia es la base del éxito metabólico',
       registerMeal: 'Registrar comida',
+      selectDayWithData: 'Días con registros',
+      selectMonth: 'Mes',
+      selectYear: 'Año',
       normal: 'Normal',
       poor: 'Deficiente',
       bad: 'Mala',
@@ -278,6 +290,17 @@ const messages = {
       deleteAccountSubmit: 'Eliminar permanentemente',
       passwordChanged: 'Contraseña actualizada con éxito',
       accountDeleted: 'Cuenta eliminada. Lamentamos verte partir.',
+      profileUpdated: 'Perfil actualizado con éxito',
+      fields: {
+        firstName: 'Nombre',
+        lastName: 'Apellido',
+        email: 'Correo electrónico',
+        avatar: 'Imagen de perfil',
+        birthday: 'Fecha de nacimiento',
+        gender: 'Sexo',
+        genderMale: 'Masculino',
+        genderFemale: 'Femenino',
+      }
     },
   },
   en: {
@@ -369,15 +392,24 @@ const messages = {
       greeting: 'Hi, {name} 👋',
       subtitle: 'Active clinical recommendations for you today.',
       foodTitle: 'Log meal',
-      foodSubtitle: 'With AI auto-recognition',
+      foodSubtitle: 'Track your daily nutrition',
       glucoseTitle: 'Log glucose',
       glucoseSubtitle: 'Track your levels',
       habitsTitle: 'Daily habits',
       habitsSubtitle: 'Sleep, water and activity',
+      medicationTitle: 'My medication',
+      medicationSubtitle: 'Doses scheduled for today',
+      labsTitle: 'Labs',
+      labsSubtitle: 'Upload test results',
+      quickActions: 'Quick Actions',
+      healthOverview: 'Health Overview',
     },
     summary: {
       title: 'Weekly summary',
       last7Days: 'Last 7 days',
+      customRange: 'Custom range',
+      rangeFrom: 'From',
+      rangeTo: 'To',
       patientReport: 'Patient / Progress report',
       averageGlucose: 'Average glucose (7d)',
       lastHbA1c: 'Last HbA1c',
@@ -403,6 +435,9 @@ const messages = {
       noRecordsTitle: 'No records for this day',
       noRecordsQuote: 'Consistency is the foundation of metabolic success',
       registerMeal: 'Log meal',
+      selectDayWithData: 'Days with entries',
+      selectMonth: 'Month',
+      selectYear: 'Year',
       normal: 'Normal',
       poor: 'Poor',
       bad: 'Bad',
@@ -536,6 +571,17 @@ const messages = {
       deleteAccountSubmit: 'Permanently delete',
       passwordChanged: 'Password updated successfully',
       accountDeleted: 'Account deleted. We are sorry to see you go.',
+      profileUpdated: 'Profile updated successfully',
+      fields: {
+        firstName: 'First Name',
+        lastName: 'Last Name',
+        email: 'Email address',
+        avatar: 'Profile Picture',
+        birthday: 'Date of Birth',
+        gender: 'Gender',
+        genderMale: 'Male',
+        genderFemale: 'Female',
+      }
     },
   },
 } as const;
@@ -653,7 +699,7 @@ export function translateFoodClassification(value: string | null | undefined, lo
   }
 
   if (normalized === 'regular') {
-    return locale === 'es' ? 'Regular' : 'Regular';
+    return 'Regular';
   }
 
   if (normalized === 'saludable (bajo índice)') {

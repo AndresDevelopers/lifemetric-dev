@@ -1,7 +1,14 @@
-import { defineConfig } from '@prisma/sdk'; // Or wherever defineConfig was moved to in v7
+import 'dotenv/config';
 
-export default {
-  datasource: {
-    url: process.env.DATABASE_URL,
+import { defineConfig, env } from 'prisma/config';
+
+export default defineConfig({
+  schema: 'prisma/schema.prisma',
+  migrations: {
+    seed: 'ts-node prisma/seed.ts',
   },
-};
+  datasource: {
+    url: env('DATABASE_URL'),
+    shadowDatabaseUrl: env('DIRECT_URL'),
+  },
+});

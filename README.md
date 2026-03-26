@@ -20,6 +20,10 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Prisma 7 setup
+
+Prisma CLI now reads connection settings from [`prisma.config.ts`](./prisma.config.ts). Keep `DATABASE_URL` and `DIRECT_URL` in your `.env` files, and do not define `datasource.url` inside [`prisma/schema.prisma`](./prisma/schema.prisma).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

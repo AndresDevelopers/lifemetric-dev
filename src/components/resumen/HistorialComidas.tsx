@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { translateFoodClassification, translateMealType } from '@/lib/i18n';
@@ -17,7 +17,7 @@ interface Comida {
   foto_url: string | null;
 }
 
-export default function HistorialComidas({ initialComidas }: { initialComidas: Comida[] }) {
+export default function HistorialComidas({ initialComidas }: { readonly initialComidas: readonly Comida[] }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const { locale, messages } = useLocale();
@@ -46,7 +46,101 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
     return `${year}-${month}-${day}`;
   };
 
-  const [filterDate, setFilterDate] = useState<string>(getTodayStr());
+  const [filterDate, setFilterDate] = useState<string>(() => {
+    if (initialComidas.length > 0) {
+      const firstComida = initialComidas[0];
+      const date = new Date(firstComida.fecha);
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return getTodayStr();
+  });
+
+  const [viewMonth, setViewMonth] = useState<number>(() => {
+    return new Date(filterDate + 'T00:00:00Z').getUTCMonth();
+  });
+  const [viewYear, setViewYear] = useState<number>(() => {
+    return new Date(filterDate + 'T00:00:00Z').getUTCFullYear();
+  });
+
+  // Sync view when filterDate changes (e.g. from data)
+  useEffect(() => {
+    const d = new Date(filterDate + 'T00:00:00Z');
+    setViewMonth(d.getUTCMonth());
+    setViewYear(d.getUTCFullYear());
+  }, [filterDate]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const comida of initialComidas) {
+      years.add(new Date(comida.fecha).getUTCFullYear());
+    }
+    // Add current year if not present
+    years.add(new Date().getUTCFullYear());
+    return Array.from(years).sort((a, b) => b - a);
+  }, [initialComidas]);
+
+  const availableMonths = useMemo(() => {
+    const months = [];
+    const localeName = locale === 'es' ? 'es-ES' : 'en-US';
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(2000, i, 1);
+      months.push({
+        value: i,
+        label: d.toLocaleDateString(localeName, { month: 'long' })
+      });
+    }
+    return months;
+  }, [locale]);
+
+  const datesWithData = useMemo(() => {
+    const dates = new Set<string>();
+    for (const comida of initialComidas) {
+      const d = new Date(comida.fecha);
+      const year = d.getUTCFullYear();
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      dates.add(`${year}-${month}-${day}`);
+    }
+    return dates;
+  }, [initialComidas]);
+
+  const monthDays = useMemo(() => {
+    const days = [];
+    // Number of days in viewYear/viewMonth
+    const date = new Date(viewYear, viewMonth + 1, 0);
+    const numDays = date.getDate();
+    
+    for (let i = 1; i <= numDays; i++) {
+      const d = new Date(viewYear, viewMonth, i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const dayNum = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${dayNum}`;
+      
+      days.push({
+        dateStr,
+        dayName: d.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', { weekday: 'short' }),
+        dayNumber: d.getDate(),
+        hasData: datesWithData.has(dateStr),
+        isToday: dateStr === getTodayStr()
+      });
+    }
+    return days;
+  }, [datesWithData, locale, viewMonth, viewYear]);
+
+  useEffect(() => {
+    if (mounted && scrollRef.current) {
+      const activeElement = scrollRef.current.querySelector('[data-active="true"]');
+      if (activeElement) {
+        activeElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+  }, [mounted, filterDate]);
 
   const filteredComidas = useMemo(() => {
     return initialComidas.filter((comida) => {
@@ -84,14 +178,28 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
     return 'bg-emerald-500';
   };
 
+  const getDateButtonClass = (dayDateStr: string, hasData: boolean) => {
+    if (filterDate === dayDateStr) {
+      return 'bg-primary text-white shadow-xl shadow-primary/25 scale-105 z-10';
+    }
+    if (hasData) {
+      return 'bg-white text-slate-600 border border-slate-100 hover:border-primary/30 hover:bg-primary/5 active:scale-95';
+    }
+    return 'bg-slate-50 text-slate-300 border border-transparent opacity-40 cursor-not-allowed grayscale';
+  };
+
   const renderLightbox = () => {
     if (!selectedImage || !mounted) return null;
 
     return createPortal(
       <div 
-        className="fixed inset-0 z-[2147483647] flex flex-col bg-black animate-in fade-in duration-300 overflow-y-auto overflow-x-hidden"
+        className="fixed inset-0 z-[2147483647] flex flex-col bg-black animate-in fade-in duration-300 overflow-y-auto overflow-x-hidden cursor-zoom-out"
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         onClick={() => setSelectedImage(null)}
+        onKeyDown={(e) => { if (e.key === 'Escape') setSelectedImage(null); }}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
       >
         <style dangerouslySetInnerHTML={{ __html: `
           body { overflow: hidden !important; }
@@ -117,6 +225,8 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
             alt={historyMessages.enlargedFood}
             className="w-full max-w-5xl h-auto object-contain shadow-[0_0_120px_rgba(255,255,255,0.05)] rounded-[2.5rem] transition-all duration-700 animate-in zoom-in-95 border border-white/5"
             onClick={(e) => e.stopPropagation()} 
+            onKeyDown={(e) => e.stopPropagation()}
+            role="presentation"
           />
         </div>
       </div>,
@@ -128,20 +238,81 @@ export default function HistorialComidas({ initialComidas }: { initialComidas: C
     <section className="space-y-6 pb-12">
       {renderLightbox()}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-2xl font-black text-slate-800 tracking-tight">{historyMessages.title}</h3>
-          <p className="text-sm font-medium text-slate-500">{historyMessages.subtitle}</p>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white/40 p-6 rounded-[2.5rem] border border-slate-200/50 backdrop-blur-sm shadow-sm transition-all hover:bg-white/60">
+          <div>
+            <h3 className="text-3xl font-black text-slate-800 tracking-tight mb-1">{historyMessages.title}</h3>
+            <p className="text-sm font-semibold text-slate-400 italic">{historyMessages.subtitle}</p>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+              <span className="material-symbols-outlined text-[16px] text-primary/60 ml-1">calendar_month</span>
+              <select 
+                value={viewMonth}
+                onChange={(e) => setViewMonth(Number(e.target.value))}
+                className="bg-transparent text-sm font-black text-slate-700 focus:outline-none pr-6 appearance-none cursor-pointer uppercase tracking-tighter"
+              >
+                {availableMonths.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+              <span className="material-symbols-outlined text-[16px] text-primary/60 ml-1">history</span>
+              <select 
+                value={viewYear}
+                onChange={(e) => setViewYear(Number(e.target.value))}
+                className="bg-transparent text-sm font-black text-slate-700 focus:outline-none pr-6 appearance-none cursor-pointer uppercase tracking-tighter"
+              >
+                {availableYears.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-3 bg-white p-2 pl-4 pr-3 rounded-2xl shadow-sm border border-slate-200 focus-within:border-primary-container transition-all group hover:border-slate-300">
-          <span className="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors text-xl">calendar_month</span>
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer min-w-[124px]"
-          />
+
+        <div className="relative group/scroller">
+          <div 
+            ref={scrollRef}
+            className="flex gap-4 overflow-x-auto pb-8 pt-4 no-scrollbar -mx-6 px-8 touch-pan-x active:cursor-grabbing scroll-smooth"
+          >
+            {monthDays.map((day) => (
+              <button
+                key={day.dateStr}
+                data-active={filterDate === day.dateStr}
+                onClick={() => day.hasData && setFilterDate(day.dateStr)}
+                disabled={!day.hasData}
+                className={`flex flex-col items-center min-w-[72px] h-[100px] py-4 rounded-3xl transition-all duration-300 relative group shrink-0 ${getDateButtonClass(day.dateStr, day.hasData)}`}
+              >
+                {day.isToday && (
+                  <span className={`absolute -top-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                    filterDate === day.dateStr ? 'bg-white text-primary' : 'bg-primary text-white shadow-lg'
+                  }`}>
+                    {messages.common.today}
+                  </span>
+                )}
+                <span className={`text-[11px] font-black uppercase tracking-widest mb-1.5 ${
+                  filterDate === day.dateStr ? 'text-primary-fixed opacity-90' : 'text-slate-400 group-hover:text-primary transition-colors'
+                }`}>
+                  {day.dayName}
+                </span>
+                <span className="text-2xl font-black">{day.dayNumber}</span>
+                {day.hasData && filterDate !== day.dateStr && (
+                  <div className="absolute bottom-3.5 h-1.5 w-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]"></div>
+                )}
+                {day.hasData && filterDate === day.dateStr && (
+                  <div className="absolute bottom-3.5 h-1 w-4 bg-white/30 rounded-full"></div>
+                )}
+              </button>
+            ))}
+          </div>
+          
+          {/* Subtle overflow indicators */}
+          <div className="absolute left-0 top-0 bottom-6 w-12 bg-gradient-to-r from-slate-50 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
         </div>
       </div>
 

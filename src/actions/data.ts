@@ -26,11 +26,27 @@ export async function getSessionPaciente() {
   try {
     const paciente = await prisma.paciente.findUnique({
       where: { paciente_id: pacienteId },
-      select: { nombre: true, apellido: true },
+      select: { 
+        nombre: true, 
+        apellido: true, 
+        email: true, 
+        sexo: true, 
+        fecha_nacimiento: true, 
+        avatar_url: true 
+      },
     });
     return paciente;
-  } catch {
-    return null;
+  } catch (error) {
+    console.error("Error fetching patient, returning fallback:", error);
+    // Fallback para evitar bloqueo de UI si la DB no está sincronizada
+    return {
+      nombre: "Usuario",
+      apellido: "",
+      email: "",
+      sexo: "M",
+      fecha_nacimiento: null,
+      avatar_url: null
+    };
   }
 }
 

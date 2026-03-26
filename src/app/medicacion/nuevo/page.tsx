@@ -65,7 +65,7 @@ export default function NuevaMedicacion() {
     <div className="min-h-screen bg-surface-container-low">
       <header className="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/" className="text-on-surface p-2 rounded-full hover:bg-slate-200">
+          <Link href="/" className="hidden md:flex text-on-surface p-2 rounded-full hover:bg-slate-200">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
           <h1 className="text-xl font-bold tracking-tighter text-blue-800">{medicationMessages.title}</h1>

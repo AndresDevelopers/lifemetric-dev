@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client'
+import { createPrismaClient } from '../src/lib/prisma'
 
-const prisma = new PrismaClient()
+const prisma = createPrismaClient()
 
 async function main() {
   const paciente = await prisma.paciente.create({
@@ -14,10 +14,10 @@ async function main() {
       diagnostico_principal: 'Diabetes tipo 2',
       usa_glucometro: true,
       medicacion_base: 'Metformina 850 mg c/12 h',
-      peso_inicial_kg: 84,
-      cintura_inicial_cm: 102,
-      objetivo_clinico: 'Bajar glucosa',
-      activo: true,
+      metas_salud: 'Bajar glucosa y mejorar habitos de movimiento',
+      peso_inicial: 84,
+      estura: 1.72,
+      nivel_actividad: 'moderado',
     },
   });
   console.log('Paciente de prueba creado con ID:', paciente.paciente_id);
