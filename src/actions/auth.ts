@@ -7,15 +7,13 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { deleteSession, setSession } from '@/lib/session';
+import { getSessionPacienteId } from './data';
 
 export type AuthActionState = {
   error?: string;
   success?: boolean;
   message?: string;
 } | undefined;
-
-// Optional: Upstash Redis for idempotency and rate-limiting
-// const redis = Redis.fromEnv(); // Require UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -224,4 +222,50 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
 export async function logoutAction() {
   await deleteSession();
   redirect('/login');
+}
+
+export async function changePasswordAction(prevState: AuthActionState, formData: FormData) {
+  try {
+    const pacienteId = await getSessionPacienteId();
+    if (!pacienteId) redirect('/login');
+
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const messages = getMessages(locale);
+    
+    const newPassword = formData.get('password')?.toString();
+    if (!newPassword || newPassword.length < 6) {
+      return { error: messages.auth.register.passwordPlaceholder };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.paciente.update({
+      where: { paciente_id: pacienteId },
+      data: { password_hash: hashedPassword },
+    });
+
+    return { success: true, message: messages.settings.passwordChanged };
+  } catch (error) {
+    console.error(error);
+    return { error: 'Error' };
+  }
+}
+
+export async function deleteAccountAction(prevState: AuthActionState, formData: FormData) {
+  try {
+    const pacienteId = await getSessionPacienteId();
+    if (!pacienteId) redirect('/login');
+
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const messages = getMessages(locale);
+
+    await prisma.paciente.delete({
+      where: { paciente_id: pacienteId },
+    });
+
+    await deleteSession();
+    return { success: true, message: messages.settings.accountDeleted };
+  } catch (error) {
+    console.error(error);
+    return { error: 'Error' };
+  }
 }

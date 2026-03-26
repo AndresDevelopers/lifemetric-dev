@@ -4,7 +4,6 @@ import React, { useState, useActionState } from 'react';
 import Link from 'next/link';
 import { recoveryAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
 export default function RecoverPage() {
@@ -20,12 +19,6 @@ export default function RecoverPage() {
       <div className="absolute top-[10%] left-[20%] w-[30%] h-[30%] bg-[var(--color-secondary-container)] rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-blob"></div>
 
       <div className="glass-surface w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-white/20 relative z-10 transition-all duration-500 hover:shadow-[var(--color-secondary-fixed-dim)]/20 hover:shadow-3xl p-8 md:p-12">
-        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)]/60 p-4">
-          <LanguageSwitcher className="justify-between" />
-          <p className="text-xs text-[var(--color-on-surface-variant)]">
-            {messages.common.languageHelper}
-          </p>
-        </div>
         <div className="text-center mb-8">
             <span className="material-symbols-outlined text-5xl mb-4 text-[var(--color-secondary)]">lock_reset</span>
             <h1 className="text-3xl font-bold tracking-tight mb-2 text-[var(--color-on-surface)]">

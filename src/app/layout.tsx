@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
+import { getSessionPaciente } from "@/actions/data";
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -35,6 +36,8 @@ export default async function RootLayout({
     city: headerStore.get("x-vercel-ip-city") ?? headerStore.get("cf-ipcity"),
   });
 
+  const user = await getSessionPaciente();
+
   return (
     <html lang={locale} className={`${inter.variable} antialiased light`}>
       <head>
@@ -45,7 +48,7 @@ export default async function RootLayout({
       </head>
       <body className="font-body min-h-screen flex flex-col md:flex-row bg-[var(--color-surface-container-low)]">
         <LocaleProvider initialLocale={locale}>
-          <Navigation />
+          <Navigation userName={user ?? undefined} />
           <main className="flex-1 w-full relative">
             {children}
           </main>

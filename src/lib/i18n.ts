@@ -1,4 +1,4 @@
-export const LOCALE_COOKIE_NAME = 'lifemetric_locale';
+export const LOCALE_COOKIE_NAME = 'lifemetric';
 export const LOCALE_EXPLICIT_COOKIE_NAME = 'lifemetric_locale_explicit';
 
 export type Locale = 'es' | 'en';
@@ -15,49 +15,10 @@ export const defaultLocale: Locale = 'en';
 
 const supportedLocales = new Set<Locale>(['es', 'en']);
 const spanishSpeakingCountries = new Set([
-  'AR',
-  'BO',
-  'CL',
-  'CO',
-  'CR',
-  'CU',
-  'DO',
-  'EC',
-  'ES',
-  'GQ',
-  'GT',
-  'HN',
-  'MX',
-  'NI',
-  'PA',
-  'PE',
-  'PR',
-  'PY',
-  'SV',
-  'UY',
-  'VE',
+  'AR', 'BO', 'CL', 'CO', 'CR', 'CU', 'DO', 'EC', 'ES', 'GQ', 'GT', 'HN', 'MX', 'NI', 'PA', 'PE', 'PR', 'PY', 'SV', 'UY', 'VE',
 ]);
 const spanishSpeakingCities = new Set([
-  'barcelona',
-  'bogota',
-  'buenos aires',
-  'caracas',
-  'cdmx',
-  'guadalajara',
-  'guayaquil',
-  'lima',
-  'madrid',
-  'medellin',
-  'mexico city',
-  'monterrey',
-  'montevideo',
-  'quito',
-  'rosario',
-  'san jose',
-  'santiago',
-  'santo domingo',
-  'sevilla',
-  'valencia',
+  'barcelona', 'bogota', 'buenos aires', 'caracas', 'cdmx', 'guadalajara', 'guayaquil', 'lima', 'madrid', 'medellin', 'mexico city', 'monterrey', 'montevideo', 'quito', 'rosario', 'san jose', 'santiago', 'santo domingo', 'sevilla', 'valencia',
 ]);
 
 const messages = {
@@ -307,6 +268,17 @@ const messages = {
       unexpectedError: 'Ocurrió un error inesperado',
       emailTaken: 'El correo electrónico ya está registrado.',
     },
+    settings: {
+      title: 'Ajustes de perfil',
+      changePassword: 'Cambiar contraseña',
+      newPassword: 'Nueva contraseña',
+      deleteEmailConfirm: 'Escribe tu correo para confirmar',
+      deleteAccount: 'Eliminar cuenta',
+      deleteAccountConfirm: '¿Estás seguro? Esta acción no se puede deshacer y eliminará todos tus registros médicos.',
+      deleteAccountSubmit: 'Eliminar permanentemente',
+      passwordChanged: 'Contraseña actualizada con éxito',
+      accountDeleted: 'Cuenta eliminada. Lamentamos verte partir.',
+    },
   },
   en: {
     common: {
@@ -554,6 +526,17 @@ const messages = {
       unexpectedError: 'An unexpected error occurred',
       emailTaken: 'This email address is already registered.',
     },
+    settings: {
+      title: 'Profile Settings',
+      changePassword: 'Change password',
+      newPassword: 'New password',
+      deleteEmailConfirm: 'Type your email to confirm',
+      deleteAccount: 'Delete account',
+      deleteAccountConfirm: 'Are you sure? This action cannot be undone and will delete all your medical records.',
+      deleteAccountSubmit: 'Permanently delete',
+      passwordChanged: 'Password updated successfully',
+      accountDeleted: 'Account deleted. We are sorry to see you go.',
+    },
   },
 } as const;
 
@@ -635,9 +618,10 @@ export function persistLocale(locale: Locale, explicit = true) {
 }
 
 export function translateTemplate(template: string, values: Record<string, string | number>) {
-  return Object.entries(values).reduce((result, [key, value]) => {
-    return result.replaceAll(`{${key}}`, String(value));
+  const result = Object.entries(values).reduce((acc, [key, value]) => {
+    return acc.replaceAll(`{${key}}`, String(value));
   }, template);
+  return result;
 }
 
 export function translateMealType(value: string, locale: Locale): string {

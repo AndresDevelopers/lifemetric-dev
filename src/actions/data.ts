@@ -19,6 +19,21 @@ export async function getSessionPacienteId() {
   }
 }
 
+export async function getSessionPaciente() {
+  const pacienteId = await getSessionPacienteId();
+  if (!pacienteId) return null;
+
+  try {
+    const paciente = await prisma.paciente.findUnique({
+      where: { paciente_id: pacienteId },
+      select: { nombre: true, apellido: true },
+    });
+    return paciente;
+  } catch {
+    return null;
+  }
+}
+
 export async function getComidasDeHoy() {
   const pacienteId = await getSessionPacienteId();
   if (!pacienteId) return [];

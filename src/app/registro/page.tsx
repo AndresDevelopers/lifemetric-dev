@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { registerAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { translateTemplate } from '@/lib/i18n';
 
@@ -48,12 +47,6 @@ export default function RegisterPage() {
         </div>
 
         <div className="md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-[var(--color-surface-container-lowest)]/80 backdrop-blur-xl">
-          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)]/60 p-4">
-            <LanguageSwitcher className="justify-between" />
-            <p className="text-xs text-[var(--color-on-surface-variant)]">
-              {messages.common.languageHelper}
-            </p>
-          </div>
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-[var(--color-on-surface)] mb-1">{registerMessages.title}</h2>
             <p className="text-[var(--color-on-surface-variant)] text-sm">{registerMessages.subtitle}</p>

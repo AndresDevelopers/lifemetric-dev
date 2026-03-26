@@ -138,6 +138,19 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+          
+          <div className="mt-8 pt-6 border-t border-[var(--color-outline-variant)] text-center">
+            <p className="text-[var(--color-on-surface-variant)] mb-2">
+              {loginMessages.noAccount}
+            </p>
+            <Link 
+              href="/registro" 
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-[var(--color-primary)] text-[var(--color-primary)] font-semibold hover:bg-[var(--color-primary)] hover:text-white transition-all active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-xl">person_add</span>
+              {loginMessages.registerLink}
+            </Link>
+          </div>
 
           <div className="mt-8 flex flex-col items-center gap-3 text-center">
             <LanguageSwitcher className="justify-center" />
