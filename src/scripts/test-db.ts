@@ -1,7 +1,6 @@
 import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
 
 config();
 
@@ -9,8 +8,11 @@ async function test() {
   const connectionString = process.env.DATABASE_URL;
   console.log('Testing with URL (masked):', connectionString?.substring(0, 20) + '...');
   
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool as any);
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is required');
+  }
+
+  const adapter = new PrismaPg({ connectionString });
   const prisma = new PrismaClient({ adapter });
 
   try {
@@ -19,7 +21,7 @@ async function test() {
   } catch (error) {
     console.error('Connection failed:', error);
   } finally {
-    await pool.end();
+    await prisma.$disconnect();
   }
 }
 

@@ -69,7 +69,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
 
     let paciente;
     try {
-      paciente = await prisma.paciente.findUnique({
+      paciente = await prisma.paciente.findFirst({
         where: { email: data.email },
       });
     } catch (error) {
@@ -77,7 +77,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
         throw error;
       }
       await ensurePacienteAuthColumns();
-      paciente = await prisma.paciente.findUnique({
+      paciente = await prisma.paciente.findFirst({
         where: { email: data.email },
       });
     }
@@ -127,7 +127,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     let existingUser;
     try {
-      existingUser = await prisma.paciente.findUnique({
+      existingUser = await prisma.paciente.findFirst({
         where: { email: data.email },
       });
     } catch (error) {
@@ -135,7 +135,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         throw error;
       }
       await ensurePacienteAuthColumns();
-      existingUser = await prisma.paciente.findUnique({
+      existingUser = await prisma.paciente.findFirst({
         where: { email: data.email },
       });
     }
@@ -298,7 +298,7 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
       });
 
       if (currentPaciente?.email !== data.email) {
-        const existingUser = await prisma.paciente.findUnique({
+        const existingUser = await prisma.paciente.findFirst({
           where: { email: data.email },
         });
         if (existingUser) {
@@ -314,8 +314,6 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
         apellido: data.apellido,
         email: data.email,
         sexo: data.sexo,
-        fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : null,
-        avatar_url: data.avatar_url,
       },
     });
 

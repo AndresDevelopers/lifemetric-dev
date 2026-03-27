@@ -1,40 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lifemetric
 
-## Getting Started
+Aplicacion Next.js 16 para seguimiento metabolico con Prisma y PostgreSQL.
 
-First, run the development server:
+## Desarrollo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install --frozen-lockfile
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La app de desarrollo corre en [http://localhost:3003](http://localhost:3003).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Prisma
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Este proyecto usa `prisma.config.ts` como fuente de configuracion. `DATABASE_URL` y `DIRECT_URL` deben vivir en archivos `.env`; no se definen dentro de `prisma/schema.prisma`.
 
-## Prisma 7 setup
+El esquema de Prisma debe mantenerse alineado con las tablas reales existentes en PostgreSQL:
 
-Prisma CLI now reads connection settings from [`prisma.config.ts`](./prisma.config.ts). Keep `DATABASE_URL` and `DIRECT_URL` in your `.env` files, and do not define `datasource.url` inside [`prisma/schema.prisma`](./prisma/schema.prisma).
+- `Paciente` -> `pacientes`
+- `Comida` -> `comidas`
+- `Glucosa` -> `glucosa`
+- `Habito` -> `habitos`
+- `Laboratorio` -> `laboratorios`
+- `RegistroMedicacion` -> `medicacion`
 
-## Learn More
+Despues de cualquier cambio en `prisma/schema.prisma`, regenera el cliente:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm prisma generate
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Si necesitas introspectar el esquema desde la base, usa una conexion directa compatible con migraciones/introspection en `DIRECT_URL`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Validacion
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm test
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm build
+```

@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
 import SummaryHeader from "@/components/resumen/SummaryHeader";
 import {
@@ -10,6 +11,17 @@ import {
   getMessages,
   inferLocaleFromRequest,
 } from "@/lib/i18n";
+
+function formatLabValue(
+  value: number | string | null | undefined,
+  suffix?: string,
+) {
+  if (value === null || value === undefined) {
+    return "--";
+  }
+
+  return suffix ? `${value} ${suffix}` : String(value);
+}
 
 export default async function ResumenSemanal({ 
   searchParams 
@@ -77,8 +89,9 @@ export default async function ResumenSemanal({
         where: { fecha: { gte: startDate, lte: endDate } }
       },
       laboratorios: {
+        where: { fecha_estudio: { gte: startDate, lte: endDate } },
         orderBy: { fecha_estudio: 'desc' },
-        take: 1
+        take: 6
       },
       medicacion: {
         where: { fecha: { gte: startDate, lte: endDate } }
@@ -94,6 +107,7 @@ export default async function ResumenSemanal({
   }
 
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
+  const ultimoLaboratorio = paciente.laboratorios[0] ?? null;
   
   const promedioGlucosa = paciente.glucosa.length 
     ? Math.round(paciente.glucosa.reduce((acc, curr) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
@@ -235,6 +249,139 @@ export default async function ResumenSemanal({
             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 mb-2">{messages.summary.medicationAdherence}</span>
           </div>
         </div>
+
+        <section className="pt-8 border-t border-slate-100 space-y-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">{messages.summary.laboratorySection}</h3>
+              <p className="text-sm text-slate-500 mt-1">{messages.summary.historySubtitle}</p>
+            </div>
+            <Link
+              href="/laboratorios/nuevo"
+              className="inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-teal-200 transition hover:bg-teal-700"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              {messages.summary.uploadLabs}
+            </Link>
+          </div>
+
+          {ultimoLaboratorio ? (
+            <>
+              <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+                <article className="rounded-[2rem] border border-cyan-100 bg-gradient-to-br from-cyan-50 via-sky-50 to-white p-6 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">{messages.summary.latestResults}</p>
+                      <h4 className="mt-2 text-2xl font-bold text-slate-900">{messages.summary.glycemicProfile}</h4>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {messages.summary.studyDate}: {new Date(ultimoLaboratorio.fecha_estudio).toLocaleDateString(locale)}
+                      </p>
+                    </div>
+                    <span className="material-symbols-outlined rounded-2xl bg-white/80 p-3 text-cyan-700 shadow-sm">bloodtype</span>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-2 gap-4">
+                    <div className="rounded-2xl bg-white/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">HbA1c</p>
+                      <p className="mt-2 text-3xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.hba1c ? Number(ultimoLaboratorio.hba1c) : null, "%")}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.fastingGlucose}</p>
+                      <p className="mt-2 text-3xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.glucosa_ayuno, "mg/dL")}</p>
+                    </div>
+                  </div>
+                </article>
+
+                <article className="rounded-[2rem] border border-orange-100 bg-gradient-to-br from-orange-50 via-amber-50 to-white p-6 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-700">{messages.summary.latestResults}</p>
+                      <h4 className="mt-2 text-2xl font-bold text-slate-900">{messages.summary.lipidProfile}</h4>
+                      <p className="mt-1 text-sm text-slate-500">{messages.summary.studyDate}: {new Date(ultimoLaboratorio.fecha_estudio).toLocaleDateString(locale)}</p>
+                    </div>
+                    <span className="material-symbols-outlined rounded-2xl bg-white/80 p-3 text-orange-700 shadow-sm">monitor_heart</span>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-3 gap-3">
+                    <div className="rounded-2xl bg-white/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.triglycerides}</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.trigliceridos, "mg/dL")}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.hdl}</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.hdl, "mg/dL")}</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.ldl}</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.ldl, "mg/dL")}</p>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900">{messages.summary.historyTitle}</h4>
+                    <p className="mt-1 text-sm text-slate-500">{messages.summary.historySubtitle}</p>
+                  </div>
+                  <span className="material-symbols-outlined rounded-2xl bg-slate-100 p-3 text-slate-700">history</span>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {paciente.laboratorios.map((laboratorio) => (
+                    <div
+                      key={laboratorio.laboratorio_id}
+                      className="grid gap-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 md:grid-cols-[1.1fr_1fr_auto]"
+                    >
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">
+                          {new Date(laboratorio.fecha_estudio).toLocaleDateString(locale)}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{messages.summary.studyDate}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm text-slate-700 md:grid-cols-4">
+                        <span>HbA1c: {formatLabValue(laboratorio.hba1c ? Number(laboratorio.hba1c) : null, "%")}</span>
+                        <span>{messages.summary.fastingGlucose}: {formatLabValue(laboratorio.glucosa_ayuno, "mg/dL")}</span>
+                        <span>{messages.summary.triglycerides}: {formatLabValue(laboratorio.trigliceridos, "mg/dL")}</span>
+                        <span>{messages.summary.hdl}/{messages.summary.ldl}: {formatLabValue(laboratorio.hdl, "")} / {formatLabValue(laboratorio.ldl, "mg/dL")}</span>
+                      </div>
+                      {laboratorio.archivo_url ? (
+                        <a
+                          href={laboratorio.archivo_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 self-start rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">attach_file</span>
+                          {messages.summary.viewAttachment}
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-2 self-start rounded-xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-500">
+                          <span className="material-symbols-outlined text-[18px]">draft</span>
+                          {messages.summary.noAttachment}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </>
+          ) : (
+            <article className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+              <span className="material-symbols-outlined rounded-full bg-slate-100 p-4 text-4xl text-slate-500">science</span>
+              <h4 className="mt-4 text-xl font-bold text-slate-900">{messages.summary.noLabs}</h4>
+              <p className="mt-2 text-sm text-slate-500">{messages.summary.historySubtitle}</p>
+              <Link
+                href="/laboratorios/nuevo"
+                className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-teal-200 transition hover:bg-teal-700"
+              >
+                <span className="material-symbols-outlined text-[18px]">upload</span>
+                {messages.summary.uploadLabs}
+              </Link>
+            </article>
+          )}
+        </section>
 
         <div className="pt-8 border-t border-slate-100">
           <HistorialComidas initialComidas={paciente.comidas} />

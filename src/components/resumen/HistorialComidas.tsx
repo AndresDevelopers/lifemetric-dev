@@ -19,13 +19,8 @@ interface Comida {
 
 export default function HistorialComidas({ initialComidas }: { readonly initialComidas: readonly Comida[] }) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   const { locale, messages } = useLocale();
   const historyMessages = messages.foodHistory;
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (selectedImage) {
@@ -64,13 +59,6 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
   const [viewYear, setViewYear] = useState<number>(() => {
     return new Date(filterDate + 'T00:00:00Z').getUTCFullYear();
   });
-
-  // Sync view when filterDate changes (e.g. from data)
-  useEffect(() => {
-    const d = new Date(filterDate + 'T00:00:00Z');
-    setViewMonth(d.getUTCMonth());
-    setViewYear(d.getUTCFullYear());
-  }, [filterDate]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -134,13 +122,13 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
   }, [datesWithData, locale, viewMonth, viewYear]);
 
   useEffect(() => {
-    if (mounted && scrollRef.current) {
+    if (scrollRef.current) {
       const activeElement = scrollRef.current.querySelector('[data-active="true"]');
       if (activeElement) {
         activeElement.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
       }
     }
-  }, [mounted, filterDate]);
+  }, [filterDate]);
 
   const filteredComidas = useMemo(() => {
     return initialComidas.filter((comida) => {
@@ -189,7 +177,7 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
   };
 
   const renderLightbox = () => {
-    if (!selectedImage || !mounted) return null;
+    if (!selectedImage || typeof document === 'undefined') return null;
 
     return createPortal(
       <div 
@@ -283,7 +271,12 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
               <button
                 key={day.dateStr}
                 data-active={filterDate === day.dateStr}
-                onClick={() => day.hasData && setFilterDate(day.dateStr)}
+                onClick={() => {
+                  if (!day.hasData) return;
+                  setFilterDate(day.dateStr);
+                  setViewMonth(new Date(`${day.dateStr}T00:00:00Z`).getUTCMonth());
+                  setViewYear(new Date(`${day.dateStr}T00:00:00Z`).getUTCFullYear());
+                }}
                 disabled={!day.hasData}
                 className={`flex flex-col items-center min-w-[72px] h-[100px] py-4 rounded-3xl transition-all duration-300 relative group shrink-0 ${getDateButtonClass(day.dateStr, day.hasData)}`}
               >

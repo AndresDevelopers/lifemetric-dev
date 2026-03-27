@@ -1,11 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { pacienteSchema } from "@/app/pacientes/nuevo/page";
 import { z } from "zod";
-
-type CreatePacienteData = z.infer<typeof pacienteSchema>;
 
 export async function createPacienteAction(rawData: unknown) {
   try {
@@ -35,14 +34,14 @@ export async function createPacienteAction(rawData: unknown) {
     });
 
     return { success: true, id: newPaciente.paciente_id };
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return { success: false, error: "Datos de formulario inválidos." };
     }
 
     console.error("Error creating paciente:", error);
 
-    if (error.code === 'P2002') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { success: false, error: "El correo electrónico ya está registrado." };
     }
 

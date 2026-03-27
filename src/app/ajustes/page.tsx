@@ -6,6 +6,8 @@ import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { changePasswordAction, deleteAccountAction, logoutAction, updateProfileAction } from '@/actions/auth';
 import { getSessionPaciente } from '@/actions/data';
 
+type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
+
 export default function AjustesPage() {
   const searchParams = useSearchParams();
   const locale = normalizeLocale(searchParams.get('lang'));
@@ -16,7 +18,7 @@ export default function AjustesPage() {
   const [profileState, profileFormAction, isProfilePending] = useActionState(updateProfileAction, undefined);
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SettingsUser>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
