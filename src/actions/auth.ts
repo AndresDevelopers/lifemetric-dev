@@ -63,7 +63,7 @@ async function sendRecoveryEmailIfAccountExists(email: string, locale: 'es' | 'e
 }
 
 function isPacienteColumnMissingError(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2022';
+  return error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === 'P2022';
 }
 
 async function ensurePacienteAuthColumns() {
