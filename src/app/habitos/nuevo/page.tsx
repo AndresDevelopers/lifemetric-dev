@@ -52,20 +52,24 @@ export default function NuevoHabito() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-container-low">
-      <header className="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="hidden md:flex text-on-surface p-2 rounded-full hover:bg-slate-200">
+    <div className="relative min-h-screen bg-surface-container-low overflow-hidden">
+      {/* ── Background Blobs for Premium Feel ── */}
+      <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] bg-blue-200/30 blur-[100px] rounded-full animate-blob z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-200/20 blur-[120px] rounded-full animate-blob animation-delay-4000 z-0" />
+
+      <header className="sticky top-0 w-full z-40 bg-surface/80 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center justify-between border-b border-slate-200/50">
+        <div className="relative z-10 flex items-center gap-3">
+          <Link href="/" className="hidden md:flex text-on-surface p-2 rounded-full hover:bg-white/50 transition-all active:scale-90 shadow-sm border border-slate-200/20">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
-          <h1 className="text-xl font-bold tracking-tighter text-blue-800">{habitsMessages.title}</h1>
+          <h1 className="text-xl font-black uppercase tracking-tighter text-blue-900">{habitsMessages.title}</h1>
         </div>
       </header>
       
-      <div className="p-6 md:p-10 max-w-2xl mx-auto pb-32 md:pb-12">
-        <div className="md:mb-8 text-center md:text-left mb-6">
-          <h2 className="text-3xl font-bold text-slate-800">{habitsMessages.heading}</h2>
-          <p className="text-slate-500 mt-2">{habitsMessages.subtitle}</p>
+      <div className="relative z-10 p-6 md:p-10 max-w-2xl mx-auto pb-32 md:pb-12">
+        <div className="md:mb-10 text-center md:text-left mb-8">
+          <h2 className="text-4xl font-black text-slate-900 tracking-tight uppercase">{habitsMessages.heading}</h2>
+          <p className="text-slate-500 mt-2 font-medium">{habitsMessages.subtitle}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

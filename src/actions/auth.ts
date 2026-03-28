@@ -9,6 +9,7 @@ import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { deleteSession, setSession } from '@/lib/session';
 import { getSessionPacienteId } from './data';
 import { sendNewsletterSubscriptionEmail, sendPasswordRecoveryEmail } from '@/lib/email';
+import { checkRateLimit } from '@/lib/redis';
 
 export type AuthActionState = {
   error?: string;
@@ -78,6 +79,9 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     const locale = normalizeLocale(data.locale);
     const authMessages = getMessages(locale).auth.messages;
 
+    const isAllowed = await checkRateLimit(`login:${data.email}`);
+    if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
+
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
        try {
@@ -142,6 +146,9 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     const data = registerSchema.parse(parsedData);
     const locale = normalizeLocale(data.locale);
     const authMessages = getMessages(locale).auth.messages;
+
+    const isAllowed = await checkRateLimit(`register:${data.email}`);
+    if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
@@ -234,6 +241,9 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
     const data = recoverSchema.parse(rawData);
     const locale = normalizeLocale(data.locale);
     const authMessages = getMessages(locale).auth.messages;
+
+    const isAllowed = await checkRateLimit(`recovery:${data.email}`);
+    if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
@@ -401,5 +411,27 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
     console.error(error);
     if (error instanceof z.ZodError) return { error: 'Invalid data' };
     return { error: 'Error updating profile' };
+  }
+}
+
+export async function updateLanguageAction(prevState: AuthActionState, formData: FormData) {
+  try {
+    const pacienteId = await getSessionPacienteId();
+    if (!pacienteId) redirect('/login');
+
+    const idioma = formData.get('idioma')?.toString();
+    if (!idioma || !['es', 'en'].includes(idioma)) {
+      return { error: 'Invalid language' };
+    }
+
+    await prisma.paciente.update({
+      where: { paciente_id: pacienteId },
+      data: { idioma },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: 'Error' };
   }
 }

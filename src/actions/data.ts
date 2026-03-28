@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { intelligentCache } from "@/lib/redis";
 
 export async function getSessionPacienteId() {
   const cookieStore = await cookies();
@@ -24,16 +25,23 @@ export async function getSessionPaciente() {
   if (!pacienteId) return null;
 
   try {
-    const paciente = await prisma.paciente.findUnique({
-      where: { paciente_id: pacienteId },
-      select: {
-        nombre: true,
-        apellido: true,
-        email: true,
-        sexo: true,
-        newsletter_suscrito: true,
+    const paciente = await intelligentCache(
+      `paciente-${pacienteId}`,
+      async () => {
+        return await prisma.paciente.findUnique({
+          where: { paciente_id: pacienteId },
+          select: {
+            paciente_id: true,
+            nombre: true,
+            apellido: true,
+            email: true,
+            sexo: true,
+            newsletter_suscrito: true,
+          },
+        });
       },
-    });
+      { revalidate: 300, tags: [`paciente-${pacienteId}`] }
+    );
     return paciente
       ? {
           ...paciente,

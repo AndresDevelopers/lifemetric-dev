@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { estimateMedicationFromImage } from "@/lib/ai/gemini";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/redis";
+import { getSessionPacienteId } from "@/actions/data";
 
 const medicacionInputSchema = z.object({
   paciente_id: z.string().uuid(),
@@ -26,6 +28,16 @@ export async function inferMedicationFromPhoto(input: z.infer<typeof medicationP
   }
 
   try {
+    const pacienteId = await getSessionPacienteId();
+    if (!pacienteId) {
+       return { success: false as const, error: "not_authorized" };
+    }
+    
+    const isAllowed = await checkRateLimit(`medication_ai:${pacienteId}`);
+    if (!isAllowed) {
+       return { success: false as const, error: "ai_rate_limited" };
+    }
+
     const aiResult = await estimateMedicationFromImage(parsedInput.data);
     if (!aiResult) {
       return { success: false as const, error: "ai_unavailable" };

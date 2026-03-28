@@ -2,12 +2,18 @@
 
 import { generateGeminiText } from "@/lib/ai/gemini";
 import { getSessionPaciente } from "@/actions/data";
+import { checkRateLimit } from "@/lib/redis";
 
 export async function chatWithAIAction(userMessage: string, chatHistory: { role: 'user' | 'ai', content: string }[] = []) {
   try {
     const session = await getSessionPaciente();
     if (!session) {
       return { success: false, text: "No autorizado" };
+    }
+
+    const isAllowed = await checkRateLimit(`chat_api:${session.email}`);
+    if (!isAllowed) {
+      return { success: false, text: "Por el momento hay demasiadas consultas. Por favor, intenta de nuevo en unos segundos." };
     }
 
     // Build context-aware prompt with system instructions

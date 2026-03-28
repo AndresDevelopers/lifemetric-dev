@@ -203,7 +203,7 @@ export default function Navigation({ userName }: NavigationProps) {
       </nav>
 
       {/* ── Desktop: sidebar ── */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-72 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex-col py-4 z-50">
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-72 border-r border-slate-200/50 dark:border-slate-800 bg-surface-container-low dark:bg-slate-900 flex-col py-4 z-50">
         {/* Profile card */}
         {userName ? (
           <div className="px-3 pt-4 mb-4">
@@ -245,10 +245,10 @@ export default function Navigation({ userName }: NavigationProps) {
               <Link
                 href={item.path}
                 key={item.path}
-                className={`flex items-center gap-4 mx-3 px-4 py-3 rounded-lg transition-all hover:translate-x-1 cursor-pointer ${
+                className={`flex items-center gap-4 mx-3 px-4 py-3.5 rounded-2xl transition-all hover:translate-x-1 cursor-pointer font-bold ${
                   isActive
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800/50"
                 }`}
               >
                 <span

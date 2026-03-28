@@ -27,7 +27,7 @@ type FormValues = z.infer<typeof medicacionSchema>;
 export default function NuevaMedicacion() {
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,7 +35,7 @@ export default function NuevaMedicacion() {
   const medicationMessages = messages.medicationForm;
   const now = new Date();
 
-  const { register, handleSubmit, setValue, control, watch } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, control } = useForm<FormValues>({
     resolver: zodResolver(medicacionSchema),
     defaultValues: {
       fecha: now.toISOString().slice(0, 10),
@@ -54,7 +54,6 @@ export default function NuevaMedicacion() {
   }, [setValue]);
 
   const estado = useWatch({ control, name: "estado_toma" });
-  const comentarios = watch("comentarios");
 
   const getEstadoStyle = (tipo: string) => {
     return estado === tipo
@@ -76,14 +75,14 @@ export default function NuevaMedicacion() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    if (e.dataTransfer.files?.[0]) {
       void handleFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
+    if (e.target.files?.[0]) {
       void handleFile(e.target.files[0]);
     }
   };
@@ -105,7 +104,7 @@ export default function NuevaMedicacion() {
       return;
     }
 
-    setImageFile(file);
+
     const reader = new FileReader();
     reader.onload = (event) => {
       setImagePreview(event.target?.result as string);
@@ -177,7 +176,6 @@ export default function NuevaMedicacion() {
       setValue("medicamento", "");
       setValue("dosis", "");
       setValue("comentarios", "");
-      setImageFile(null);
       setImagePreview(null);
     } catch {
       alert(medicationMessages.saveError);
@@ -220,6 +218,15 @@ export default function NuevaMedicacion() {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={medicationMessages.photoLabel}
               >
                 <input
                   ref={fileInputRef}
@@ -237,7 +244,6 @@ export default function NuevaMedicacion() {
                       className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setImageFile(null);
                         setImagePreview(null);
                       }}
                     >

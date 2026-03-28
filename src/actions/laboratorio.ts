@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSessionPacienteId } from "@/actions/data";
 import { generateGeminiText } from "@/lib/ai/gemini";
+import { checkRateLimit } from "@/lib/redis";
 
 const autofillSchema = z.object({
   fileBase64: z.string().min(10),
@@ -35,6 +36,15 @@ export async function autofillLaboratorioFromDocumentAction(rawData: unknown) {
 
   if (!process.env.GEMINI_API_KEY) {
     return { success: false, error: "Gemini no está configurado." } as const;
+  }
+
+  const pacienteId = await getSessionPacienteId();
+  if (!pacienteId) {
+     return { success: false, error: "No autorizado" } as const;
+  }
+  const isAllowed = await checkRateLimit(`autofill_lab:${pacienteId}`);
+  if (!isAllowed) {
+    return { success: false, error: "Demasiadas consultas de AI. Intente más tarde." } as const;
   }
 
   const prompt =

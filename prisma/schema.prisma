@@ -24,6 +24,7 @@ model Paciente {
   email                  String
   password_hash          String
   newsletter_suscrito    Boolean             @default(true)
+  idioma                 String              @default("es")
   comidas                Comida[]
   glucosa                Glucosa[]
   habitos                Habito[]

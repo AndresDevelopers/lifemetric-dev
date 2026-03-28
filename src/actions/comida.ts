@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { estimateMealFromImage } from "@/lib/ai/gemini";
+import { checkRateLimit } from "@/lib/redis";
 
 interface ComidaInput {
   paciente_id: string;
@@ -45,15 +46,21 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
   let aiData: Partial<ComidaInput> = {};
 
   if (data.foto_url && (!data.alimento_principal || !data.kcal_estimadas)) {
+    const isAllowed = await checkRateLimit(`estimate_meal:${data.paciente_id}`);
+    
     let estimate = null;
+    if (isAllowed) {
     try {
       estimate = await estimateMealFromImage({
         imageUrl: data.foto_url,
         locale: "es",
         notes: data.nota,
       });
-    } catch (error) {
-      console.error("Error estimando comida con IA:", error);
+      } catch (error) {
+        console.error("Error estimando comida con IA:", error);
+      }
+    } else {
+      console.warn("Rate limit exceeded for meal estimation, falling back to manual entry");
     }
 
     if (estimate) {

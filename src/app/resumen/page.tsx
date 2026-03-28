@@ -193,7 +193,7 @@ export default async function ResumenSemanal({
 
   // Run AI vision extraction sequentially (to avoid concurrent 429s) 
   // and only for labs that don't have extracted values yet
-  const labVisionResults: any[] = [];
+  const labVisionResults: Array<Record<string, number | null> | null> = [];
   let visionErrorEncountered = false;
 
   for (const lab of paciente.laboratorios) {
@@ -570,17 +570,17 @@ export default async function ResumenSemanal({
                     const visionRes = labVisionResults[idx];
                     const effectiveData = visionRes || {
                       hba1c: laboratorio.hba1c ? Number(laboratorio.hba1c) : null,
-                      glucosa_ayuno: laboratorio.glucosa_ayuno,
-                      trigliceridos: laboratorio.trigliceridos,
-                      hdl: laboratorio.hdl,
-                      ldl: laboratorio.ldl,
-                      insulina: laboratorio.insulina,
-                      alt: laboratorio.alt,
-                      ast: laboratorio.ast,
-                      tsh: laboratorio.tsh,
-                      creatinina: laboratorio.creatinina,
-                      acido_urico: laboratorio.acido_urico,
-                      pcr_us: laboratorio.pcr_us,
+                      glucosa_ayuno: laboratorio.glucosa_ayuno ? Number(laboratorio.glucosa_ayuno) : null,
+                      trigliceridos: laboratorio.trigliceridos ? Number(laboratorio.trigliceridos) : null,
+                      hdl: laboratorio.hdl ? Number(laboratorio.hdl) : null,
+                      ldl: laboratorio.ldl ? Number(laboratorio.ldl) : null,
+                      insulina: laboratorio.insulina ? Number(laboratorio.insulina) : null,
+                      alt: laboratorio.alt ? Number(laboratorio.alt) : null,
+                      ast: laboratorio.ast ? Number(laboratorio.ast) : null,
+                      tsh: laboratorio.tsh ? Number(laboratorio.tsh) : null,
+                      creatinina: laboratorio.creatinina ? Number(laboratorio.creatinina) : null,
+                      acido_urico: laboratorio.acido_urico ? Number(laboratorio.acido_urico) : null,
+                      pcr_us: laboratorio.pcr_us ? Number(laboratorio.pcr_us) : null,
                     };
                     const chips = buildLabChips(effectiveData, laboratorio, messages.summary.labValues);
                     return (

@@ -3,28 +3,40 @@
 
 import { useActionState, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getMessages, normalizeLocale } from '@/lib/i18n';
-import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
 import {
   changePasswordAction,
   deleteAccountAction,
-  logoutAction,
   subscribeToEmailsAction,
   updateProfileAction,
+  updateLanguageAction,
 } from '@/actions/auth';
 import { getSessionPaciente } from '@/actions/data';
+import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
+import { getMessages, normalizeLocale, getBrowserLocale, persistLocale, type Locale } from '@/lib/i18n';
 
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
 
 export default function AjustesPage() {
   const searchParams = useSearchParams();
-  const locale = normalizeLocale(searchParams.get('lang'));
+  const [locale, setLocale] = useState<Locale>('es');
+  
+  useEffect(() => {
+    // If we have it in the URL, use it. Otherwise, use cookie/browser default.
+    const urlLang = searchParams.get('lang');
+    if (urlLang) {
+      setLocale(normalizeLocale(urlLang));
+    } else {
+      setLocale(getBrowserLocale());
+    }
+  }, [searchParams]);
+
   const messages = getMessages(locale);
   
   const [passwordState, passwordFormAction, isPasswordPending] = useActionState(changePasswordAction, undefined);
   const [deleteState, deleteFormAction, isDeletePending] = useActionState(deleteAccountAction, undefined);
   const [profileState, profileFormAction, isProfilePending] = useActionState(updateProfileAction, undefined);
   const [subscriptionState, subscriptionFormAction, isSubscriptionPending] = useActionState(subscribeToEmailsAction, undefined);
+  const [languageState, languageFormAction, isLanguagePending] = useActionState(updateLanguageAction, undefined);
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [user, setUser] = useState<SettingsUser>(null);
@@ -37,10 +49,22 @@ export default function AjustesPage() {
       if (data) {
         setUser(data);
         if (data.avatar_url) setAvatarPreview(data.avatar_url);
+        if (data.idioma) setLocale(data.idioma as Locale);
       }
     }
     loadUser();
   }, []);
+
+  const handleLanguageChange = (newLocale: Locale) => {
+    setLocale(newLocale);
+    persistLocale(newLocale);
+    
+    // Automatically persist to DB
+    const formData = new FormData();
+    formData.append('idioma', newLocale);
+    formData.append('locale', newLocale);
+    languageFormAction(formData);
+  };
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -71,32 +95,30 @@ export default function AjustesPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-surface-container-low">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-20 lg:pb-0 lg:pl-64">
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="relative min-h-screen bg-surface-container-low overflow-hidden pb-20 lg:pb-0 lg:pl-64">
+      {/* ── Background Blobs for Premium Feel ── */}
+      <div className="absolute top-[-5%] left-[-5%] w-[30%] h-[30%] bg-blue-200/30 blur-[100px] rounded-full animate-blob z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-200/20 blur-[120px] rounded-full animate-blob animation-delay-4000 z-0" />
+
+      <div className="relative z-10 max-w-2xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-10">
+          <h1 className="text-2xl font-black text-blue-900 uppercase tracking-tighter">
             {messages.settings.title}
           </h1>
-          <button
-            onClick={() => globalThis.history.back()}
-            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Profile Section */}
-          <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-6">
-              {messages.auth.register.title}
+          <section className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-white">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-8">
+              {messages.settings.profileInfo}
             </h2>
             
             <form action={profileFormAction} className="space-y-6">
@@ -105,9 +127,11 @@ export default function AjustesPage() {
               
               {/* Avatar Upload */}
               <div className="flex flex-col items-center">
-                <div 
+                <button 
+                  type="button"
                   onClick={handleAvatarClick}
-                  className="relative group cursor-pointer"
+                  className="relative group cursor-pointer focus:outline-none focus:ring-4 focus:ring-blue-500/20 rounded-full transition-all active:scale-95"
+                  aria-label={messages.settings.changeAvatar}
                 >
                   <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-600 group-hover:border-blue-500 transition-colors">
                     {avatarPreview ? (
@@ -119,7 +143,7 @@ export default function AjustesPage() {
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 rounded-full transition-opacity">
                     <span className="material-symbols-outlined text-white">edit</span>
                   </div>
-                </div>
+                </button>
                 <input 
                   type="file" 
                   ref={fileInputRef}
@@ -215,10 +239,14 @@ export default function AjustesPage() {
           </section>
 
 
-          <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-4">{messages.settings.emailSubscriptionTitle}</h2>
-            <p className="text-sm text-slate-500 mb-4">{messages.settings.emailSubscriptionDescription}</p>
-            <form action={subscriptionFormAction} className="space-y-3">
+          <section className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-white">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
+              {messages.settings.emailSubscriptionTitle}
+            </h2>
+            <p className="text-sm font-medium text-slate-500 mb-6 leading-relaxed">
+              {messages.settings.emailSubscriptionDescription}
+            </p>
+            <form action={subscriptionFormAction} className="space-y-4">
               <input type="hidden" name="locale" value={locale} />
               <input type="hidden" name="newsletterSubscribed" value={String(!!user.newsletter_suscrito)} />
               <input
@@ -226,39 +254,41 @@ export default function AjustesPage() {
                 name="email"
                 defaultValue={user.email}
                 required
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 dark:bg-slate-700/50 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
               />
-              <label htmlFor="newsletterToggleSettings" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+              <label htmlFor="newsletterToggleSettings" className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
                 <input
                   id="newsletterToggleSettings"
                   type="checkbox"
                   checked={!!user.newsletter_suscrito}
                   onChange={(event) => setUser((prev) => (prev ? { ...prev, newsletter_suscrito: event.target.checked } : prev))}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-5 w-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 transition-all"
                 />
-                <span>{messages.settings.emailSubscriptionToggle}</span>
+                <span className="text-sm font-bold text-slate-700">{messages.settings.emailSubscriptionToggle}</span>
               </label>
+              
+              {subscriptionState?.success && <p className="text-sm font-bold text-emerald-600 px-2">{messages.settings.emailSubscriptionSuccess}</p>}
+              {subscriptionState?.error && <p className="text-sm font-bold text-red-600 px-2">{subscriptionState.error}</p>}
+
               <button
                 type="submit"
                 disabled={isSubscriptionPending}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-60"
+                className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-slate-800 transition-all disabled:opacity-50 active:scale-[0.98] mt-2 uppercase tracking-widest text-xs"
               >
                 {isSubscriptionPending ? messages.common.saving : messages.common.save}
               </button>
-              {subscriptionState?.success && <p className="text-sm text-emerald-600">{messages.settings.emailSubscriptionSuccess}</p>}
-              {subscriptionState?.error && <p className="text-sm text-red-600">{subscriptionState.error}</p>}
             </form>
           </section>
 
           {/* Change Password Section */}
-          <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-4">
+          <section className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-white">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
               {messages.settings.changePassword}
             </h2>
             <form action={passwordFormAction} className="space-y-4">
               <input type="hidden" name="locale" value={locale} />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">
                   {messages.settings.newPassword}
                 </label>
                 <input
@@ -266,21 +296,21 @@ export default function AjustesPage() {
                   name="password"
                   required
                   autoComplete="new-password"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
                   placeholder="••••••••"
                 />
               </div>
 
               {passwordState?.error && (
-                <p className="text-sm text-red-500 font-medium">{passwordState.error}</p>
+                <p className="text-sm font-bold text-red-500 px-2">{passwordState.error}</p>
               )}
               {passwordState?.success && (
-                <p className="text-sm text-green-500 font-medium">{passwordState.message}</p>
+                <p className="text-sm font-bold text-green-500 px-2">{passwordState.message}</p>
               )}
               <button
                 type="submit"
                 disabled={isPasswordPending}
-                className="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50"
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-4 rounded-2xl transition-all disabled:opacity-50 active:scale-[0.98] uppercase tracking-widest text-xs"
               >
                 {isPasswordPending ? messages.common.saving : messages.common.save}
               </button>
@@ -288,67 +318,45 @@ export default function AjustesPage() {
           </section>
 
           {/* Delete Account Section */}
-          <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-red-100 dark:border-red-900/10">
-            <h2 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
+          <section className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-red-100/50 border border-red-50">
+            <h2 className="text-xs font-black text-red-400 uppercase tracking-widest mb-2">
               {messages.settings.deleteAccount}
             </h2>
-            <p className="text-sm text-gray-600 dark:text-slate-400 mb-6">
+            <p className="text-sm font-medium text-slate-500 mb-8 leading-relaxed">
               {messages.settings.deleteAccountConfirm}
             </p>
 
-            {!showDeleteConfirm ? (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-red-600 hover:text-red-700 font-bold transition-colors"
-              >
-                {messages.settings.deleteAccount}
-              </button>
-            ) : (
-              <form action={deleteFormAction} className="space-y-4">
+            {showDeleteConfirm ? (
+              <form action={deleteFormAction} className="space-y-4 flex flex-col items-center">
                 <input type="hidden" name="locale" value={locale} />
                 <button
                   type="submit"
                   disabled={isDeletePending}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-2xl transition-all disabled:opacity-50 shadow-lg shadow-red-500/20"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-2xl transition-all disabled:opacity-50 shadow-xl shadow-red-500/20 uppercase tracking-widest text-xs"
                 >
                   {isDeletePending ? messages.common.saving : messages.settings.deleteAccountSubmit}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="w-full text-slate-500 dark:text-slate-400 py-2 font-medium"
+                  className="mt-2 text-slate-400 font-bold hover:text-slate-600 transition-colors uppercase tracking-widest text-[10px]"
                 >
                   {messages.common.back}
                 </button>
               </form>
+            ) : (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full py-4 rounded-2xl border-2 border-red-100 text-red-600 font-black uppercase tracking-widest text-xs hover:bg-red-50 transition-all active:scale-95"
+              >
+                {messages.settings.deleteAccount}
+              </button>
             )}
             {deleteState?.error && (
-              <p className="text-sm text-red-500 mt-2 font-medium">{deleteState.error}</p>
+              <p className="text-sm font-bold text-red-500 mt-4 px-2">{deleteState.error}</p>
             )}
           </section>
 
-          {/* Logout Section */}
-          <section className="pt-4">
-            <form action={logoutAction}>
-              <label htmlFor="newsletterToggle" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                <input
-                  id="newsletterToggle"
-                  type="checkbox"
-                  checked={!!user.newsletter_suscrito}
-                  onChange={(event) => setUser((prev) => (prev ? { ...prev, newsletter_suscrito: event.target.checked } : prev))}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span>{messages.settings.emailSubscriptionToggle}</span>
-              </label>
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-3xl bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 font-bold border border-gray-100 dark:border-slate-700 shadow-sm active:scale-95 transition-all group"
-              >
-                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">logout</span>
-                {messages.navigation.logout}
-              </button>
-            </form>
-          </section>
         </div>
       </div>
     </div>

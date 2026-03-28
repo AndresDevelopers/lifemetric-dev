@@ -38,6 +38,7 @@ const suggestionsSchema = z.object({
 export const medicationVisionSchema = z.object({
   medicamento: z.string().min(2).optional(),
   descripcion_para_que_sirve: z.string().min(8).optional(),
+  dosis: z.string().optional(),
 });
 
 export const labVisionSchema = z.object({
@@ -209,8 +210,8 @@ export async function estimateMedicationFromImage(params: {
 
   const prompt =
     params.locale === 'es'
-      ? `Analiza la foto de un medicamento: ${params.imageUrl}. Identifica el nombre comercial o genérico más probable y una descripción breve de para qué sirve. Devuelve SOLO JSON con claves medicamento y descripcion_para_que_sirve.`
-      : `Analyze this medication photo: ${params.imageUrl}. Identify the most likely brand or generic medication and provide a short description of what it is used for. Return ONLY JSON with keys medicamento and descripcion_para_que_sirve.`;
+      ? `Analiza la foto de un medicamento: ${params.imageUrl}. Identifica el nombre comercial o genérico más probable, la dosis si aparece, y una descripción breve de para qué sirve. Devuelve SOLO JSON con claves medicamento, descripcion_para_que_sirve y dosis.`
+      : `Analyze this medication photo: ${params.imageUrl}. Identify the most likely brand or generic medication, the dose if visible, and provide a short description of what it is used for. Return ONLY JSON with keys medicamento, descripcion_para_que_sirve and dosis.`;
 
   try {
     const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 250 });
