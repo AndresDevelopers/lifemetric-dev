@@ -13,6 +13,43 @@ import {
   inferLocaleFromRequest,
 } from "@/lib/i18n";
 
+function escapeCsvValue(value: string | number): string {
+  const normalized = String(value).replace(/"/g, "\"\"");
+  return `"${normalized}"`;
+}
+
+function buildSummaryCsv(params: {
+  patient: string;
+  rangeFrom: string;
+  rangeTo: string;
+  averageGlucose: number;
+  latestHba1c: number;
+  mealsLogged: number;
+  mealsInadequate: number;
+  exerciseDays: number;
+  averageSleep: number;
+  averageWater: number;
+  medicationAdherence: number;
+}) {
+  const rows: Array<Array<string | number>> = [
+    ["patient", params.patient],
+    ["range_from", params.rangeFrom],
+    ["range_to", params.rangeTo],
+    ["average_glucose_mg_dl", params.averageGlucose],
+    ["latest_hba1c_pct", params.latestHba1c],
+    ["meals_logged", params.mealsLogged],
+    ["inadequate_meals", params.mealsInadequate],
+    ["exercise_days", params.exerciseDays],
+    ["average_sleep_hours", params.averageSleep],
+    ["average_water_glasses", params.averageWater],
+    ["medication_adherence_pct", params.medicationAdherence],
+  ];
+
+  return rows
+    .map((columns) => columns.map((column) => escapeCsvValue(column)).join(","))
+    .join("\n");
+}
+
 function formatLabValue(
   value: number | string | null | undefined,
   suffix?: string,
@@ -181,6 +218,22 @@ export default async function ResumenSemanal({
     data: aiSuggestionPayload,
   });
 
+  const csvContent = buildSummaryCsv({
+    patient: data.paciente,
+    rangeFrom: startDateStr,
+    rangeTo: endDateStr,
+    averageGlucose: data.promedio_glucosa,
+    latestHba1c: data.ultima_hba1c,
+    mealsLogged: data.comidas.registradas_semana,
+    mealsInadequate: data.comidas.inadecuadas,
+    exerciseDays: data.habitos.dias_ejercicio,
+    averageSleep: data.habitos.promedio_sueno,
+    averageWater: data.habitos.promedio_agua,
+    medicationAdherence: data.adherencia_medicacion_pct,
+  });
+  const csvDataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csvContent)}`;
+  const exportFileName = `lifemetric-summary-${startDateStr}-to-${endDateStr}.csv`;
+
   return (
     <div className="min-h-screen bg-surface-container-low">
       <SummaryHeader 
@@ -194,6 +247,15 @@ export default async function ResumenSemanal({
           <div className="absolute right-0 top-0 opacity-10 scale-150 transform translate-x-12 -translate-y-12">
             <span className="material-symbols-outlined text-[200px]" style={{ fontVariationSettings: "'FILL' 1" }}>insights</span>
           </div>
+          <a
+            href={csvDataUri}
+            download={exportFileName}
+            className="absolute right-5 top-5 z-20 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-white shadow-sm backdrop-blur-md transition hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            aria-label={messages.summary.exportToSheets}
+            title={messages.summary.exportToSheets}
+          >
+            <span className="material-symbols-outlined text-[24px]">download</span>
+          </a>
           <div className="relative z-10">
             <p className="text-blue-200 font-bold tracking-widest uppercase text-xs mb-2">{messages.summary.patientReport}</p>
             <h2 className="text-4xl font-extrabold mb-1">{data.paciente}</h2>

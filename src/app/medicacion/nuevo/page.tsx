@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getSessionPacienteId } from "@/actions/data";
+import { guardarRegistroMedicacion, inferMedicationFromPhoto } from "@/actions/medicacion";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
+import { supabase } from "@/lib/supabase";
 
 const medicacionSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -22,11 +26,17 @@ type FormValues = z.infer<typeof medicacionSchema>;
 
 export default function NuevaMedicacion() {
   const [loading, setLoading] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [iaDescripcion, setIaDescripcion] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { locale, messages } = useLocale();
   const medicationMessages = messages.medicationForm;
   const now = new Date();
-  
-  const { register, handleSubmit, setValue, control } = useForm<FormValues>({
+
+  const { register, handleSubmit, setValue, control, watch } = useForm<FormValues>({
     resolver: zodResolver(medicacionSchema),
     defaultValues: {
       fecha: now.toISOString().slice(0, 10),
@@ -45,6 +55,7 @@ export default function NuevaMedicacion() {
   }, [setValue]);
 
   const estado = useWatch({ control, name: "estado_toma" });
+  const comentarios = watch("comentarios");
 
   const getEstadoStyle = (tipo: string) => {
     return estado === tipo
@@ -52,12 +63,135 @@ export default function NuevaMedicacion() {
       : "bg-surface text-slate-500 border border-slate-200 hover:bg-slate-50 font-medium";
   };
 
-  const onSubmit = async () => {
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      void handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      void handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert(medicationMessages.imageOnly);
+      return;
+    }
+
+    const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
+      scanning: medicationMessages.virusScanning,
+      blockedPrefix: medicationMessages.virusBlocked,
+      fallbackPrefix: medicationMessages.virusFallback,
+      successPrefix: medicationMessages.virusPassed,
+    });
+
+    if (!canProceed) {
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImage = async (file: File) => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `medicacion/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("comidas")
+      .upload(filePath, file);
+
+    if (error) throw error;
+
+    const { data: publicUrlData } = supabase.storage
+      .from("comidas")
+      .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl;
+  };
+
+  const analizarFotoConIA = async () => {
+    if (!imageFile) {
+      alert(medicationMessages.photoRequired);
+      return;
+    }
+
+    setAnalyzingPhoto(true);
+    try {
+      const photoUrl = await uploadImage(imageFile);
+      const response = await inferMedicationFromPhoto({
+        imageUrl: photoUrl,
+        locale,
+      });
+
+      if (!response.success) {
+        alert(medicationMessages.aiError);
+        return;
+      }
+
+      if (response.data.medicamento) {
+        setValue("medicamento", response.data.medicamento, { shouldValidate: true });
+      }
+
+      if (response.data.descripcion_para_que_sirve) {
+        setIaDescripcion(response.data.descripcion_para_que_sirve);
+      }
+
+      alert(medicationMessages.aiSuccess);
+    } catch {
+      alert(medicationMessages.aiError);
+    } finally {
+      setAnalyzingPhoto(false);
+    }
+  };
+
+  const onSubmit = async (data: FormValues) => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const response = await guardarRegistroMedicacion({
+        ...data,
+        comentarios: data.comentarios || iaDescripcion || undefined,
+      });
+
+      if (!response.success) {
+        alert(medicationMessages.saveError);
+        return;
+      }
+
       alert(medicationMessages.success);
-    }, 1000);
+      setValue("medicamento", "");
+      setValue("dosis", "");
+      setValue("comentarios", "");
+      setIaDescripcion("");
+      setImageFile(null);
+      setImagePreview(null);
+    } catch {
+      alert(medicationMessages.saveError);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -74,7 +208,7 @@ export default function NuevaMedicacion() {
       <div className="p-6 md:p-10 max-w-2xl mx-auto pb-32 md:pb-12">
         <div className="bg-surface-container-lowest/95 backdrop-blur-2xl rounded-[2rem] p-6 shadow-2xl border border-white/50">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            
+
             <div className="flex items-center gap-4 py-4 mb-2">
               <span className="material-symbols-outlined text-5xl text-blue-500 bg-blue-50 p-4 rounded-full" style={{ fontVariationSettings: "'FILL' 1" }}>
                 medication
@@ -85,6 +219,63 @@ export default function NuevaMedicacion() {
               </div>
             </div>
 
+            <div className="mt-2 flex flex-col gap-2">
+              <span className="text-sm font-semibold text-slate-600">{medicationMessages.photoLabel}</span>
+              <div
+                className={`relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all ${dragActive ? "border-primary bg-primary/10" : "border-slate-300 bg-surface-container-highest/50"} ${imagePreview ? "p-2" : "h-40"}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleChange}
+                />
+
+                {imagePreview ? (
+                  <div className="relative w-full h-48 rounded-xl overflow-hidden">
+                    <Image src={imagePreview} alt={medicationMessages.photoLabel} fill className="object-cover" />
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setIaDescripcion("");
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center text-slate-500 pointer-events-none">
+                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">add_a_photo</span>
+                    <p className="text-sm font-medium text-center">{medicationMessages.dragAndDrop}<br />{medicationMessages.clickToSelect}</p>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => void analizarFotoConIA()}
+                disabled={analyzingPhoto}
+                className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60"
+              >
+                {analyzingPhoto ? medicationMessages.aiAnalyzing : medicationMessages.aiAnalyzeButton}
+              </button>
+              {iaDescripcion && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-blue-900 mb-1">{medicationMessages.aiDescriptionTitle}</p>
+                  <p>{iaDescripcion}</p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <label htmlFor="medicamento" className="text-sm font-semibold text-slate-600">{medicationMessages.medication}</label>
@@ -92,7 +283,7 @@ export default function NuevaMedicacion() {
                   id="medicamento"
                   {...register("medicamento")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                  placeholder={locale === 'es' ? 'Ej. Metformina' : 'E.g. Metformin'}
+                  placeholder={locale === "es" ? "Ej. Metformina" : "E.g. Metformin"}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -101,7 +292,7 @@ export default function NuevaMedicacion() {
                   id="dosis"
                   {...register("dosis")}
                   className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                  placeholder={locale === 'es' ? 'Ej. 850 mg' : 'E.g. 850 mg'}
+                  placeholder={locale === "es" ? "Ej. 850 mg" : "E.g. 850 mg"}
                 />
               </div>
             </div>
@@ -143,10 +334,12 @@ export default function NuevaMedicacion() {
               </div>
             </div>
 
-            {estado !== "tomada" && (
-               <div className="relative pt-2">
+            {(estado !== "tomada" || iaDescripcion) && (
+              <div className="relative pt-2">
                 <input
                   {...register("comentarios")}
+                  value={comentarios ?? iaDescripcion}
+                  onChange={(event) => setValue("comentarios", event.target.value, { shouldValidate: false })}
                   className="w-full bg-rose-50 border-none rounded-xl py-4 px-5 text-on-surface placeholder:text-rose-400 focus:ring-2 focus:ring-rose-500/30 transition-all"
                   placeholder={medicationMessages.commentPlaceholder}
                 />
