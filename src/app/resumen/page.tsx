@@ -6,6 +6,7 @@ import Link from "next/link";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
 import SummaryHeader from "@/components/resumen/SummaryHeader";
 import { buildClinicalSuggestions } from "@/lib/ai/gemini";
+import { unstable_cache } from "next/cache";
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -60,6 +61,12 @@ function formatLabValue(
 
   return suffix ? `${value} ${suffix}` : String(value);
 }
+
+const getCachedAISuggestions = unstable_cache(
+  async (locale: "es" | "en", data: Record<string, unknown>) => buildClinicalSuggestions({ locale, data }),
+  ["clinical-suggestions"],
+  { revalidate: 3600 }
+);
 
 export default async function ResumenSemanal({ 
   searchParams 
@@ -213,10 +220,10 @@ export default async function ResumenSemanal({
     })),
   };
 
-  const aiSuggestions = await buildClinicalSuggestions({
+  const aiSuggestions = await getCachedAISuggestions(
     locale,
-    data: aiSuggestionPayload,
-  });
+    aiSuggestionPayload
+  );
 
   const csvContent = buildSummaryCsv({
     patient: data.paciente,

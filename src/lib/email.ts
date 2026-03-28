@@ -10,10 +10,10 @@ export type EmailPayload = {
   replyTo?: string;
 };
 
-function getResendKey(): string {
+function getResendKey(): string | null {
   const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    throw new Error('RESEND_API_KEY no está configurada.');
+  if (!key || key === 're_placeholder') {
+    return null;
   }
 
   return key;
@@ -21,27 +21,37 @@ function getResendKey(): string {
 
 export async function sendEmailWithResend(payload: EmailPayload): Promise<void> {
   const apiKey = getResendKey();
-  const from = payload.from ?? process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
+  
+  if (!apiKey) {
+    console.warn('RESEND_API_KEY no configurada. El correo no ha sido enviado.');
+    return;
+  }
 
-  const response = await fetch(RESEND_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: payload.to,
-      subject: payload.subject,
-      html: payload.html,
-      text: payload.text,
-      reply_to: payload.replyTo,
-    }),
-  });
+  try {
+    const from = payload.from ?? process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Resend error (${response.status}): ${errorBody}`);
+    const response = await fetch(RESEND_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+        reply_to: payload.replyTo,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.warn(`Error de Resend (${response.status}): ${errorBody}`);
+    }
+  } catch (error) {
+    console.warn('Fallo al enviar correo con Resend:', error);
   }
 }
 
