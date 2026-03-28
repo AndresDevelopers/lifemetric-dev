@@ -41,7 +41,7 @@ export async function createPacienteAction(rawData: unknown) {
 
     console.error("Error creating paciente:", error);
 
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === "P2002") {
       return { success: false, error: "El correo electrónico ya está registrado." };
     }
 
