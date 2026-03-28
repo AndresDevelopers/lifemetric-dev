@@ -32,7 +32,7 @@ export default function NuevaComida() {
   const currentDate = now.toISOString().slice(0, 10);
   const currentTime = now.toTimeString().slice(0, 5);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, watch } = useForm<FormValues>({
     resolver: zodResolver(comidaSchema),
     defaultValues: {
       fecha: currentDate,
@@ -101,7 +101,7 @@ export default function NuevaComida() {
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `comidas/${fileName}`;
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('comidas')
       .upload(filePath, file);
 

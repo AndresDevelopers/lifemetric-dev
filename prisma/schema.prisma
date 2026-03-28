@@ -23,6 +23,7 @@ model Paciente {
   created_at             DateTime            @default(now()) @db.Timestamptz(6)
   email                  String
   password_hash          String
+  newsletter_suscrito    Boolean             @default(true)
   comidas                Comida[]
   glucosa                Glucosa[]
   habitos                Habito[]

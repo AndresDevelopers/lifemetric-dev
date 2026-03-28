@@ -108,6 +108,20 @@ export default function RegisterPage() {
                 <input id="diagnostico" type="text" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={registerMessages.diagnosisPlaceholder} required />
             </div>
 
+
+            <div className="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-4 py-3">
+              <label htmlFor="newsletterSubscribed" className="flex items-start gap-3 cursor-pointer">
+                <input
+                  id="newsletterSubscribed"
+                  name="newsletterSubscribed"
+                  type="checkbox"
+                  defaultChecked
+                  className="mt-1 h-4 w-4 rounded border-[var(--color-outline-variant)] text-[var(--color-tertiary)] focus:ring-[var(--color-tertiary)]"
+                />
+                <span className="text-sm text-[var(--color-on-surface-variant)]">{registerMessages.newsletterOptIn}</span>
+              </label>
+            </div>
+
             <TurnstileWidget onVerify={(t) => setCaptchaToken(t)} />
 
             <button

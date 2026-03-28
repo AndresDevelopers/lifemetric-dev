@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
 import SummaryHeader from "@/components/resumen/SummaryHeader";
+import { buildClinicalSuggestions } from "@/lib/ai/gemini";
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -132,6 +133,11 @@ export default async function ResumenSemanal({
   const tomasProgramadas = paciente.medicacion.length || 1;
   const tomasRealizadas = paciente.medicacion.filter(m => m.estado_toma === 'Tomada' || m.estado_toma === 'tomada').length;
   const adherenciaMedicacion = paciente.medicacion.length === 0 ? 0 : Math.round((tomasRealizadas / tomasProgramadas) * 100);
+  const medicamentosResumen = paciente.medicacion.reduce<Record<string, number>>((acc, item) => {
+    const key = item.medicamento?.trim() || "Sin nombre";
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const data = {
     paciente: `${paciente.nombre} ${paciente.apellido}`,
@@ -150,6 +156,30 @@ export default async function ResumenSemanal({
     alerta_principal: paciente.glucosa.some(g => g.valor_glucosa > 140) ? messages.summary.glucosePeaks : messages.summary.glucoseInRange,
     patron_principal: messages.summary.keepTracking
   };
+
+  const aiSuggestionPayload = {
+    ...data,
+    medicamentos: medicamentosResumen,
+    laboratorios: paciente.laboratorios.map((item) => ({
+      fecha: item.fecha_estudio,
+      hba1c: item.hba1c ? Number(item.hba1c) : null,
+      glucosa_ayuno: item.glucosa_ayuno,
+      trigliceridos: item.trigliceridos,
+      hdl: item.hdl,
+      ldl: item.ldl,
+    })),
+    comidas_recientes: filteredComidas.slice(0, 5).map((item) => ({
+      alimento_principal: item.alimento_principal,
+      nota: item.nota,
+      foto_url: item.foto_url,
+      clasificacion_final: item.clasificacion_final,
+    })),
+  };
+
+  const aiSuggestions = await buildClinicalSuggestions({
+    locale,
+    data: aiSuggestionPayload,
+  });
 
   return (
     <div className="min-h-screen bg-surface-container-low">
@@ -249,6 +279,57 @@ export default async function ResumenSemanal({
             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 mb-2">{messages.summary.medicationAdherence}</span>
           </div>
         </div>
+
+        <section className="rounded-[2rem] border border-violet-100 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">{messages.summary.medicationsSectionTitle}</h3>
+              <p className="text-sm text-slate-500">{messages.summary.medicationsSectionSubtitle}</p>
+            </div>
+            <span className="material-symbols-outlined rounded-2xl bg-violet-100 p-3 text-violet-700">medication</span>
+          </div>
+
+          {Object.keys(medicamentosResumen).length > 0 ? (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {Object.entries(medicamentosResumen).map(([medicamento, total]) => (
+                <article key={medicamento} className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4">
+                  <p className="text-sm font-bold text-slate-900">{medicamento}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {messages.summary.medicationsTakenLabel}: {total}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">{messages.summary.noMedicationData}</p>
+          )}
+        </section>
+
+        <section className="rounded-[2rem] border border-emerald-100 bg-white p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">{messages.summary.aiSuggestionsTitle}</h3>
+              <p className="text-sm text-slate-500">{messages.summary.aiSuggestionsSubtitle}</p>
+            </div>
+            <span className="material-symbols-outlined rounded-2xl bg-emerald-100 p-3 text-emerald-700">auto_awesome</span>
+          </div>
+
+          <p className="mt-4 text-sm text-slate-700">
+            {aiSuggestions?.summary ?? messages.summary.aiSuggestionsFallback}
+          </p>
+
+          <ul className="mt-4 space-y-2">
+            {(aiSuggestions?.suggestions ?? [messages.summary.keepTracking]).map((suggestion) => (
+              <li key={suggestion} className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                • {suggestion}
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-4 text-xs text-slate-500">
+            {messages.summary.aiSuggestionsDisclaimer}
+          </p>
+        </section>
 
         <section className="pt-8 border-t border-slate-100 space-y-5">
           <div className="flex items-center justify-between gap-4">
