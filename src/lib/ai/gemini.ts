@@ -35,6 +35,11 @@ const suggestionsSchema = z.object({
   suggestions: z.array(z.string()).max(5),
 });
 
+export const medicationVisionSchema = z.object({
+  medicamento: z.string().min(2).optional(),
+  descripcion_para_que_sirve: z.string().min(8).optional(),
+});
+
 function getGeminiApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -122,6 +127,28 @@ export async function buildClinicalSuggestions(params: {
   try {
     const parsedJson = JSON.parse(response);
     return suggestionsSchema.parse(parsedJson);
+  } catch {
+    return null;
+  }
+}
+
+
+export async function estimateMedicationFromImage(params: {
+  imageUrl: string;
+  locale: 'es' | 'en';
+}): Promise<z.infer<typeof medicationVisionSchema> | null> {
+  if (!canUseGemini()) return null;
+
+  const prompt =
+    params.locale === 'es'
+      ? `Analiza la foto de un medicamento: ${params.imageUrl}. Identifica el nombre comercial o genérico más probable y una descripción breve de para qué sirve. Devuelve SOLO JSON con claves medicamento y descripcion_para_que_sirve.`
+      : `Analyze this medication photo: ${params.imageUrl}. Identify the most likely brand or generic medication and provide a short description of what it is used for. Return ONLY JSON with keys medicamento and descripcion_para_que_sirve.`;
+
+  const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 250 });
+
+  try {
+    const parsedJson = JSON.parse(response);
+    return medicationVisionSchema.parse(parsedJson);
   } catch {
     return null;
   }

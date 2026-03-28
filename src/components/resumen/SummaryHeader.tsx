@@ -9,10 +9,12 @@ export default function SummaryHeader({ initialFrom, initialTo }: { readonly ini
   const summaryMessages = messages.summary;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const activeFrom = searchParams.get('from') ?? initialFrom;
+  const activeTo = searchParams.get('to') ?? initialTo;
   
   const [showPicker, setShowPicker] = useState(false);
-  const [fromDate, setFromDate] = useState(initialFrom);
-  const [toDate, setToDate] = useState(initialTo);
+  const [fromDate, setFromDate] = useState(activeFrom);
+  const [toDate, setToDate] = useState(activeTo);
 
   const applyRange = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -22,12 +24,12 @@ export default function SummaryHeader({ initialFrom, initialTo }: { readonly ini
     setShowPicker(false);
   };
 
-  const isDefault = () => {
+  const isDefault = (from: string, to: string) => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const weekAgoStr = weekAgo.toISOString().split('T')[0];
     const todayStr = new Date().toISOString().split('T')[0];
-    return fromDate === weekAgoStr && toDate === todayStr;
+    return from === weekAgoStr && to === todayStr;
   };
 
   return (
@@ -36,11 +38,17 @@ export default function SummaryHeader({ initialFrom, initialTo }: { readonly ini
       
       <div className="relative">
         <button 
-          onClick={() => setShowPicker(!showPicker)}
+          onClick={() => {
+            if (!showPicker) {
+              setFromDate(activeFrom);
+              setToDate(activeTo);
+            }
+            setShowPicker(!showPicker);
+          }}
           className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100 hover:border-primary/30 transition-all active:scale-95 group"
         >
           <span className="text-sm font-black text-slate-700 uppercase tracking-tighter">
-            {isDefault() ? summaryMessages.last7Days : `${fromDate} - ${toDate}`}
+            {isDefault(activeFrom, activeTo) ? summaryMessages.last7Days : `${activeFrom} - ${activeTo}`}
           </span>
           <span className="material-symbols-outlined text-primary group-hover:rotate-12 transition-transform">calendar_month</span>
         </button>
