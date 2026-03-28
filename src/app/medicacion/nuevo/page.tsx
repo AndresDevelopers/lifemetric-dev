@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
@@ -26,7 +26,7 @@ export default function NuevaMedicacion() {
   const medicationMessages = messages.medicationForm;
   const now = new Date();
   
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, control } = useForm<FormValues>({
     resolver: zodResolver(medicacionSchema),
     defaultValues: {
       fecha: now.toISOString().slice(0, 10),
@@ -44,7 +44,7 @@ export default function NuevaMedicacion() {
     loadData();
   }, [setValue]);
 
-  const estado = watch("estado_toma");
+  const estado = useWatch({ control, name: "estado_toma" });
 
   const getEstadoStyle = (tipo: string) => {
     return estado === tipo
@@ -52,9 +52,8 @@ export default function NuevaMedicacion() {
       : "bg-surface text-slate-500 border border-slate-200 hover:bg-slate-50 font-medium";
   };
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async () => {
     setLoading(true);
-    console.log("Submit", data);
     setTimeout(() => {
       setLoading(false);
       alert(medicationMessages.success);

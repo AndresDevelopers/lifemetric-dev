@@ -31,6 +31,7 @@ export async function getSessionPaciente() {
         apellido: true,
         email: true,
         sexo: true,
+        newsletter_suscrito: true,
       },
     });
     return paciente
@@ -48,6 +49,7 @@ export async function getSessionPaciente() {
       apellido: "",
       email: "",
       sexo: "M",
+      newsletter_suscrito: true,
       fecha_nacimiento: null,
       avatar_url: null
     };

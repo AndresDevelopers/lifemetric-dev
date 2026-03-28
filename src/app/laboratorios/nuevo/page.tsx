@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { getSessionPacienteId } from "@/actions/data";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { autofillLaboratorioFromDocumentAction, guardarLaboratorioAction } from "@/actions/laboratorio";
 
 const labSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -23,11 +24,13 @@ type FormValues = z.infer<typeof labSchema>;
 
 export default function SubirLaboratorios() {
   const [loading, setLoading] = useState(false);
-  const { messages } = useLocale();
+  const [isAutofilling, setIsAutofilling] = useState(false);
+  const [documentName, setDocumentName] = useState<string | null>(null);
+  const { locale, messages } = useLocale();
   const labsMessages = messages.labsForm;
   const now = new Date();
   
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue } = useForm<FormValues>({
     resolver: zodResolver(labSchema),
     defaultValues: {
       fecha_estudio: now.toISOString().slice(0, 10),
@@ -45,12 +48,62 @@ export default function SubirLaboratorios() {
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
-    console.log("Submit", data);
-    setTimeout(() => {
-      setLoading(false);
+    const response = await guardarLaboratorioAction(data);
+    if (response.success) {
       alert(labsMessages.success);
-    }, 1500);
+    } else {
+      alert(response.error);
+    }
+    setLoading(false);
   };
+
+  const onSelectFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setDocumentName(file.name);
+    setValue("archivo_url", file.name);
+    setIsAutofilling(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ""));
+        reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+        reader.readAsDataURL(file);
+      });
+
+      const base64 = dataUrl.split(",")[1];
+      if (!base64) {
+        throw new Error("Archivo inválido");
+      }
+
+      const ai = await autofillLaboratorioFromDocumentAction({
+        fileBase64: base64,
+        mimeType: file.type || "application/octet-stream",
+        locale,
+      });
+
+      if (!ai.success) {
+        alert(ai.error);
+        return;
+      }
+
+      if (ai.data.hba1c !== undefined) setValue("hba1c", ai.data.hba1c);
+      if (ai.data.glucosa_ayuno !== undefined) setValue("glucosa_ayuno", ai.data.glucosa_ayuno);
+      if (ai.data.trigliceridos !== undefined) setValue("trigliceridos", ai.data.trigliceridos);
+      if (ai.data.hdl !== undefined) setValue("hdl", ai.data.hdl);
+      if (ai.data.ldl !== undefined) setValue("ldl", ai.data.ldl);
+      alert(labsMessages.autoCompleted);
+    } catch {
+      alert(labsMessages.autoCompleteError);
+    } finally {
+      setIsAutofilling(false);
+    }
+  };
+
+  useEffect(() => {
+    register("archivo_url");
+  }, [register]);
 
   return (
     <div className="min-h-screen bg-surface-container-low">
@@ -159,8 +212,14 @@ export default function SubirLaboratorios() {
                 <span className="material-symbols-outlined text-4xl mb-2">upload_file</span>
                 <span className="text-sm font-bold">{labsMessages.clickToUpload}</span>
                 <span className="text-xs text-teal-500/70 mt-1">{labsMessages.uploadHint}</span>
-                <input id="archivo_input" type="file" className="hidden" />
+                <input id="archivo_input" type="file" className="hidden" accept=".pdf,image/*" onChange={onSelectFile} />
               </div>
+              {documentName && (
+                <p className="text-xs text-slate-500">{documentName}</p>
+              )}
+              {isAutofilling && (
+                <p className="text-xs text-teal-600 font-semibold">{labsMessages.autoCompleting}</p>
+              )}
             </div>
 
             <button

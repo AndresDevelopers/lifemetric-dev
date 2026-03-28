@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { estimateMealFromImage } from "@/lib/ai/gemini";
 
 interface ComidaInput {
   paciente_id: string;
@@ -41,26 +42,53 @@ function getClasificacionFinal(carbs: string, fibra: string, proteina: string): 
 }
 
 export async function clasificarYGuardarComida(data: ComidaInput) {
-  const class_proteina = getClasificacionProteina(data.proteina_g);
-  const class_carbohidrato = getClasificacionCarbohidrato(data.carbohidratos_g);
-  const class_fibra = getClasificacionFibra(data.fibra_g);
+  let aiData: Partial<ComidaInput> = {};
+
+  if (data.foto_url && (!data.alimento_principal || !data.kcal_estimadas)) {
+    let estimate = null;
+    try {
+      estimate = await estimateMealFromImage({
+        imageUrl: data.foto_url,
+        locale: "es",
+        notes: data.nota,
+      });
+    } catch (error) {
+      console.error("Error estimando comida con IA:", error);
+    }
+
+    if (estimate) {
+      aiData = {
+        alimento_principal: estimate.alimento_principal ?? data.alimento_principal,
+        kcal_estimadas: estimate.kcal_estimadas ?? data.kcal_estimadas,
+        proteina_g: estimate.proteina_g ?? data.proteina_g,
+        carbohidratos_g: estimate.carbohidratos_g ?? data.carbohidratos_g,
+        grasa_g: estimate.grasa_g ?? data.grasa_g,
+        fibra_g: estimate.fibra_g ?? data.fibra_g,
+      };
+    }
+  }
+
+  const finalData = { ...data, ...aiData };
+  const class_proteina = getClasificacionProteina(finalData.proteina_g);
+  const class_carbohidrato = getClasificacionCarbohidrato(finalData.carbohidratos_g);
+  const class_fibra = getClasificacionFibra(finalData.fibra_g);
   const class_final = getClasificacionFinal(class_carbohidrato, class_fibra, class_proteina);
 
   try {
     const nuevaComida = await prisma.comida.create({
       data: {
-        paciente_id: data.paciente_id,
-        fecha: new Date(data.fecha),
-        hora: new Date(`1970-01-01T${data.hora}:00Z`),
-        tipo_comida: data.tipo_comida,
-        foto_url: data.foto_url,
-        nota: data.nota,
-        alimento_principal: data.alimento_principal,
-        kcal_estimadas: data.kcal_estimadas,
-        proteina_g: data.proteina_g,
-        carbohidratos_g: data.carbohidratos_g,
-        grasa_g: data.grasa_g,
-        fibra_g: data.fibra_g,
+        paciente_id: finalData.paciente_id,
+        fecha: new Date(finalData.fecha),
+        hora: new Date(`1970-01-01T${finalData.hora}:00Z`),
+        tipo_comida: finalData.tipo_comida,
+        foto_url: finalData.foto_url,
+        nota: finalData.nota,
+        alimento_principal: finalData.alimento_principal,
+        kcal_estimadas: finalData.kcal_estimadas,
+        proteina_g: finalData.proteina_g,
+        carbohidratos_g: finalData.carbohidratos_g,
+        grasa_g: finalData.grasa_g,
+        fibra_g: finalData.fibra_g,
         clasificacion_proteina: class_proteina,
         clasificacion_carbohidrato: class_carbohidrato,
         clasificacion_fibra: class_fibra,

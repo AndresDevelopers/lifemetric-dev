@@ -26,7 +26,7 @@ export default function NuevoHabito() {
   const [loading, setLoading] = useState(false);
   const { messages } = useLocale();
   const habitsMessages = messages.habitsForm;
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, } = useForm<FormValues>({
     resolver: zodResolver(habitosSchema),
     defaultValues: {
       fecha: new Date().toISOString().slice(0, 10),

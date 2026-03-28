@@ -40,3 +40,17 @@ pnpm lint
 pnpm exec tsc --noEmit
 pnpm build
 ```
+
+
+## Email y AI
+
+La app ahora incluye integración server-side con:
+
+- **Resend** para correos transaccionales (recuperación de contraseña y suscripción/desuscripción por correo, incluyendo check por defecto en registro).
+- **Gemini** vía API REST para futuras funciones de IA, con modelo configurable en `GEMINI_MODEL`.
+
+Configura las variables nuevas en `.env` usando `.env.example` como guía.
+
+El módulo de **Resumen** ahora incluye sección de medicamentos y sugerencias IA con disclaimer clínico.
+Además, el formulario de laboratorios permite autocompletado de biomarcadores con IA a partir de PDF/imagen subidos.
+

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
@@ -27,7 +27,7 @@ export default function NuevaGlucosa() {
   
   const now = new Date();
   
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(glucosaSchema),
     defaultValues: {
       fecha: now.toISOString().slice(0, 10),
@@ -47,9 +47,9 @@ export default function NuevaGlucosa() {
     loadData();
   }, [setValue]);
 
-  const tipo_glucosa = watch("tipo_glucosa");
+  const tipo_glucosa = useWatch({ control, name: "tipo_glucosa" });
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async () => {
     setLoading(true);
     
     setTimeout(() => {

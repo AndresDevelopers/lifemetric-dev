@@ -1,9 +1,16 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useActionState, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
-import { changePasswordAction, deleteAccountAction, logoutAction, updateProfileAction } from '@/actions/auth';
+import {
+  changePasswordAction,
+  deleteAccountAction,
+  logoutAction,
+  subscribeToEmailsAction,
+  updateProfileAction,
+} from '@/actions/auth';
 import { getSessionPaciente } from '@/actions/data';
 
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
@@ -16,6 +23,7 @@ export default function AjustesPage() {
   const [passwordState, passwordFormAction, isPasswordPending] = useActionState(changePasswordAction, undefined);
   const [deleteState, deleteFormAction, isDeletePending] = useActionState(deleteAccountAction, undefined);
   const [profileState, profileFormAction, isProfilePending] = useActionState(updateProfileAction, undefined);
+  const [subscriptionState, subscriptionFormAction, isSubscriptionPending] = useActionState(subscribeToEmailsAction, undefined);
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [user, setUser] = useState<SettingsUser>(null);
@@ -183,7 +191,6 @@ export default function AjustesPage() {
               {profileState?.success && (
                 <p className="text-sm text-green-500 font-medium">{profileState.message}</p>
               )}
-
               <button
                 type="submit"
                 disabled={isProfilePending}
@@ -191,6 +198,42 @@ export default function AjustesPage() {
               >
                 {isProfilePending ? messages.common.saving : messages.common.save}
               </button>
+            </form>
+          </section>
+
+
+          <section className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-4">{messages.settings.emailSubscriptionTitle}</h2>
+            <p className="text-sm text-slate-500 mb-4">{messages.settings.emailSubscriptionDescription}</p>
+            <form action={subscriptionFormAction} className="space-y-3">
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="newsletterSubscribed" value={String(!!user.newsletter_suscrito)} />
+              <input
+                type="email"
+                name="email"
+                defaultValue={user.email}
+                required
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
+              <label htmlFor="newsletterToggleSettings" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  id="newsletterToggleSettings"
+                  type="checkbox"
+                  checked={!!user.newsletter_suscrito}
+                  onChange={(event) => setUser((prev) => (prev ? { ...prev, newsletter_suscrito: event.target.checked } : prev))}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{messages.settings.emailSubscriptionToggle}</span>
+              </label>
+              <button
+                type="submit"
+                disabled={isSubscriptionPending}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold disabled:opacity-60"
+              >
+                {isSubscriptionPending ? messages.common.saving : messages.common.save}
+              </button>
+              {subscriptionState?.success && <p className="text-sm text-emerald-600">{messages.settings.emailSubscriptionSuccess}</p>}
+              {subscriptionState?.error && <p className="text-sm text-red-600">{subscriptionState.error}</p>}
             </form>
           </section>
 
@@ -221,7 +264,6 @@ export default function AjustesPage() {
               {passwordState?.success && (
                 <p className="text-sm text-green-500 font-medium">{passwordState.message}</p>
               )}
-
               <button
                 type="submit"
                 disabled={isPasswordPending}
@@ -275,6 +317,16 @@ export default function AjustesPage() {
           {/* Logout Section */}
           <section className="pt-4">
             <form action={logoutAction}>
+              <label htmlFor="newsletterToggle" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  id="newsletterToggle"
+                  type="checkbox"
+                  checked={!!user.newsletter_suscrito}
+                  onChange={(event) => setUser((prev) => (prev ? { ...prev, newsletter_suscrito: event.target.checked } : prev))}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{messages.settings.emailSubscriptionToggle}</span>
+              </label>
               <button
                 type="submit"
                 className="w-full flex items-center justify-center gap-2 py-4 rounded-3xl bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 font-bold border border-gray-100 dark:border-slate-700 shadow-sm active:scale-95 transition-all group"

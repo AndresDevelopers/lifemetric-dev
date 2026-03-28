@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { deleteSession, setSession } from '@/lib/session';
 import { getSessionPacienteId } from './data';
+import { sendNewsletterSubscriptionEmail, sendPasswordRecoveryEmail } from '@/lib/email';
 
 export type AuthActionState = {
   error?: string;
@@ -32,6 +33,7 @@ const registerSchema = z.object({
   diagnostico: z.string().min(1),
   captchaToken: z.string().min(1, 'Captcha requerido'),
   locale: z.string().optional(),
+  newsletterSubscribed: z.coerce.boolean().optional(),
 });
 
 const recoverSchema = z.object({
@@ -40,6 +42,25 @@ const recoverSchema = z.object({
   locale: z.string().optional(),
 });
 
+
+async function sendRecoveryEmailIfAccountExists(email: string, locale: 'es' | 'en') {
+  const existingUser = await prisma.paciente.findFirst({
+    where: { email },
+    select: { paciente_id: true },
+  });
+
+  if (!existingUser) {
+    return;
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+  await sendPasswordRecoveryEmail({
+    to: email,
+    locale,
+    appUrl,
+  });
+}
+
 function isPacienteColumnMissingError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2022';
 }
@@ -47,6 +68,7 @@ function isPacienteColumnMissingError(error: unknown): boolean {
 async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
+  await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
 }
 
 export async function loginAction(prevState: AuthActionState, formData: FormData) {
@@ -108,7 +130,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     const rawData = Object.fromEntries(formData.entries());
     const parsedData = {
         ...rawData,
-        edad: Number.parseInt(rawData.edad as string, 10)
+        edad: Number.parseInt(rawData.edad as string, 10),
+        newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
     const data = registerSchema.parse(parsedData);
     const locale = normalizeLocale(data.locale);
@@ -154,6 +177,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
           apellido: data.apellido,
           email: data.email,
           password_hash: hashedPassword,
+          newsletter_suscrito: data.newsletterSubscribed ?? true,
           edad: data.edad,
           sexo: data.sexo,
           diagnostico_principal: data.diagnostico,
@@ -171,6 +195,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
           apellido: data.apellido,
           email: data.email,
           password_hash: hashedPassword,
+          newsletter_suscrito: data.newsletterSubscribed ?? true,
           edad: data.edad,
           sexo: data.sexo,
           diagnostico_principal: data.diagnostico,
@@ -208,6 +233,8 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
        const outcome = await res.json();
        if (!outcome.success) return { error: authMessages.invalidCaptcha };
     }
+
+    await sendRecoveryEmailIfAccountExists(data.email, locale);
 
     return { success: true, message: authMessages.recoverSuccess };
   } catch (error) {
@@ -267,6 +294,40 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
   } catch (error) {
     console.error(error);
     return { error: 'Error' };
+  }
+}
+
+export async function subscribeToEmailsAction(prevState: AuthActionState, formData: FormData) {
+  try {
+    const pacienteId = await getSessionPacienteId();
+    if (!pacienteId) redirect('/login');
+
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const email = z.string().email().parse(formData.get('email')?.toString());
+    const subscribed = z.coerce.boolean().parse(formData.get('newsletterSubscribed')?.toString() ?? 'false');
+
+    await ensurePacienteAuthColumns();
+    await prisma.paciente.update({
+      where: { paciente_id: pacienteId },
+      data: { newsletter_suscrito: subscribed },
+    });
+
+    if (subscribed) {
+      const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
+      await sendNewsletterSubscriptionEmail({
+        to: email,
+        locale,
+        appName,
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const authMessages = getMessages(locale).auth.messages;
+    if (error instanceof z.ZodError) return { error: authMessages.invalidData };
+    console.error(error);
+    return { error: authMessages.serverError };
   }
 }
 
