@@ -45,7 +45,7 @@ export default function Navigation({ userName }: NavigationProps) {
     { name: messages.navigation.home, path: "/", icon: "home_health" },
     { name: messages.navigation.habits, path: "/habitos/nuevo", icon: "settings_accessibility" },
     { name: messages.navigation.food, path: "/comidas/nuevo", icon: "add_circle" },
-    { name: messages.navigation.glucose, path: "/glucosa/nuevo", icon: "glucose" },
+    { name: messages.navigation.medication, path: "/medicacion/nuevo", icon: "medication" },
     { name: messages.navigation.summary, path: "/resumen", icon: "insights" },
   ];
 

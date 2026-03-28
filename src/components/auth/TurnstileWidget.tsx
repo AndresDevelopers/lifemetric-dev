@@ -6,15 +6,15 @@ import { Turnstile } from '@marsidev/react-turnstile';
 export function TurnstileWidget({ onVerify }: { readonly onVerify: (token: string) => void }) {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-  // En desarrollo sin siteKey configurada, permitimos el paso automáticamente
+  // Si no hay siteKey configurada en absoluto, permitimos el paso automáticamente para desarrollo
   useEffect(() => {
-    if (!siteKey || siteKey === '1x00000000000000000000AA') {
+    if (!siteKey) {
       onVerify('dev-bypass-token');
     }
   }, [siteKey, onVerify]);
 
-  if (!siteKey || siteKey === '1x00000000000000000000AA') {
-    return null; // No mostramos nada en modo bypass local
+  if (!siteKey) {
+    return null; // Solo ocultamos si no hay ninguna llave (ni siquiera la de test)
   }
 
   return (

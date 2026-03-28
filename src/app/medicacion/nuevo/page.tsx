@@ -27,7 +27,6 @@ type FormValues = z.infer<typeof medicacionSchema>;
 export default function NuevaMedicacion() {
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
-  const [iaDescripcion, setIaDescripcion] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -112,6 +111,9 @@ export default function NuevaMedicacion() {
       setImagePreview(event.target?.result as string);
     };
     reader.readAsDataURL(file);
+
+    // Auto-analyze with IA
+    void handleIAAnalysis(file);
   };
 
   const uploadImage = async (file: File) => {
@@ -132,47 +134,38 @@ export default function NuevaMedicacion() {
     return publicUrlData.publicUrl;
   };
 
-  const analizarFotoConIA = async () => {
-    if (!imageFile) {
-      alert(medicationMessages.photoRequired);
-      return;
-    }
-
+  const handleIAAnalysis = async (file: File) => {
     setAnalyzingPhoto(true);
     try {
-      const photoUrl = await uploadImage(imageFile);
+      const photoUrl = await uploadImage(file);
       const response = await inferMedicationFromPhoto({
         imageUrl: photoUrl,
         locale,
       });
 
-      if (!response.success) {
-        alert(medicationMessages.aiError);
-        return;
+      if (response.success && response.data) {
+        if (response.data.medicamento) {
+          setValue("medicamento", response.data.medicamento, { shouldValidate: true });
+        }
+        if (response.data.dosis) {
+          setValue("dosis", response.data.dosis, { shouldValidate: true });
+        }
       }
-
-      if (response.data.medicamento) {
-        setValue("medicamento", response.data.medicamento, { shouldValidate: true });
-      }
-
-      if (response.data.descripcion_para_que_sirve) {
-        setIaDescripcion(response.data.descripcion_para_que_sirve);
-      }
-
-      alert(medicationMessages.aiSuccess);
-    } catch {
-      alert(medicationMessages.aiError);
+    } catch (error) {
+      console.error("AI Analysis error:", error);
     } finally {
       setAnalyzingPhoto(false);
     }
   };
+
+
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
       const response = await guardarRegistroMedicacion({
         ...data,
-        comentarios: data.comentarios || iaDescripcion || undefined,
+        comentarios: data.comentarios || undefined,
       });
 
       if (!response.success) {
@@ -184,7 +177,6 @@ export default function NuevaMedicacion() {
       setValue("medicamento", "");
       setValue("dosis", "");
       setValue("comentarios", "");
-      setIaDescripcion("");
       setImageFile(null);
       setImagePreview(null);
     } catch {
@@ -247,7 +239,6 @@ export default function NuevaMedicacion() {
                         e.stopPropagation();
                         setImageFile(null);
                         setImagePreview(null);
-                        setIaDescripcion("");
                       }}
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
@@ -260,18 +251,10 @@ export default function NuevaMedicacion() {
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => void analizarFotoConIA()}
-                disabled={analyzingPhoto}
-                className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60"
-              >
-                {analyzingPhoto ? medicationMessages.aiAnalyzing : medicationMessages.aiAnalyzeButton}
-              </button>
-              {iaDescripcion && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-blue-900 mb-1">{medicationMessages.aiDescriptionTitle}</p>
-                  <p>{iaDescripcion}</p>
+              {analyzingPhoto && (
+                <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-xl animate-pulse">
+                  <span className="material-symbols-outlined text-blue-600 animate-spin">progress_activity</span>
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{medicationMessages.aiAnalyzing}</span>
                 </div>
               )}
             </div>
@@ -334,12 +317,10 @@ export default function NuevaMedicacion() {
               </div>
             </div>
 
-            {(estado !== "tomada" || iaDescripcion) && (
+            {estado !== "tomada" && (
               <div className="relative pt-2">
                 <input
                   {...register("comentarios")}
-                  value={comentarios ?? iaDescripcion}
-                  onChange={(event) => setValue("comentarios", event.target.value, { shouldValidate: false })}
                   className="w-full bg-rose-50 border-none rounded-xl py-4 px-5 text-on-surface placeholder:text-rose-400 focus:ring-2 focus:ring-rose-500/30 transition-all"
                   placeholder={medicationMessages.commentPlaceholder}
                 />

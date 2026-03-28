@@ -2,10 +2,9 @@ import { cookies, headers } from "next/headers";
 import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
 import SummaryHeader from "@/components/resumen/SummaryHeader";
-import { buildClinicalSuggestions } from "@/lib/ai/gemini";
+import { buildClinicalSuggestions, extractLabValuesFromImage } from "@/lib/ai/gemini";
 import { unstable_cache } from "next/cache";
 import {
   LOCALE_COOKIE_NAME,
@@ -15,7 +14,7 @@ import {
 } from "@/lib/i18n";
 
 function escapeCsvValue(value: string | number): string {
-  const normalized = String(value).replace(/"/g, "\"\"");
+  const normalized = String(value).replaceAll('"', '""');
   return `"${normalized}"`;
 }
 
@@ -62,17 +61,55 @@ function formatLabValue(
   return suffix ? `${value} ${suffix}` : String(value);
 }
 
+type LabChip = { label: string; value: string };
+
+function buildLabChips(
+  aiVision: { hba1c?: number | null; glucosa_ayuno?: number | null; trigliceridos?: number | null; hdl?: number | null; ldl?: number | null; insulina?: number | null; alt?: number | null; ast?: number | null; tsh?: number | null; creatinina?: number | null; acido_urico?: number | null; pcr_us?: number | null } | null,
+  fallback: { hba1c?: { toString(): string } | null; glucosa_ayuno?: number | null; trigliceridos?: number | null; hdl?: number | null; ldl?: number | null } | null,
+  labLabels: Record<string, string>
+): LabChip[] {
+  const chips: LabChip[] = [];
+  
+  if (aiVision) {
+    if (aiVision.hba1c != null) chips.push({ label: labLabels.hba1c, value: `${aiVision.hba1c}%` });
+    if (aiVision.glucosa_ayuno != null) chips.push({ label: labLabels.fastingGlucose, value: `${aiVision.glucosa_ayuno} mg/dL` });
+    if (aiVision.trigliceridos != null) chips.push({ label: labLabels.triglycerides, value: `${aiVision.trigliceridos} mg/dL` });
+    if (aiVision.hdl != null) chips.push({ label: labLabels.hdl, value: `${aiVision.hdl} mg/dL` });
+    if (aiVision.ldl != null) chips.push({ label: labLabels.ldl, value: `${aiVision.ldl} mg/dL` });
+    if (aiVision.insulina != null) chips.push({ label: labLabels.insulin, value: `${aiVision.insulina} \u03bcU/mL` });
+    if (aiVision.alt != null) chips.push({ label: labLabels.alt, value: `${aiVision.alt} U/L` });
+    if (aiVision.ast != null) chips.push({ label: labLabels.ast, value: `${aiVision.ast} U/L` });
+    if (aiVision.tsh != null) chips.push({ label: labLabels.tsh, value: `${aiVision.tsh} \u03bcIU/mL` });
+    if (aiVision.creatinina != null) chips.push({ label: labLabels.creatinine, value: `${aiVision.creatinina} mg/dL` });
+    if (aiVision.acido_urico != null) chips.push({ label: labLabels.uricAcid, value: `${aiVision.acido_urico} mg/dL` });
+    if (aiVision.pcr_us != null) chips.push({ label: labLabels.pcr_us, value: `${aiVision.pcr_us} mg/L` });
+  } else if (fallback) {
+    if (fallback.hba1c != null) chips.push({ label: labLabels.hba1c, value: `${Number(fallback.hba1c)}%` });
+    if (fallback.glucosa_ayuno != null) chips.push({ label: labLabels.fastingGlucose, value: `${fallback.glucosa_ayuno} mg/dL` });
+    if (fallback.trigliceridos != null) chips.push({ label: labLabels.triglycerides, value: `${fallback.trigliceridos} mg/dL` });
+    if (fallback.hdl != null) chips.push({ label: labLabels.hdl, value: `${fallback.hdl} mg/dL` });
+    if (fallback.ldl != null) chips.push({ label: labLabels.ldl, value: `${fallback.ldl} mg/dL` });
+  }
+  return chips;
+}
+
 const getCachedAISuggestions = unstable_cache(
   async (locale: "es" | "en", data: Record<string, unknown>) => buildClinicalSuggestions({ locale, data }),
   ["clinical-suggestions"],
   { revalidate: 3600 }
 );
 
-export default async function ResumenSemanal({ 
-  searchParams 
-}: { 
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }> 
-}) {
+const getCachedLabVision = unstable_cache(
+  async (imageUrl: string, locale: "es" | "en") => extractLabValuesFromImage({ imageUrl, locale }),
+  ["lab-vision"],
+  { revalidate: 86400 }
+);
+
+export default async function ResumenSemanal({
+  searchParams,
+}: Readonly<{
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}>) {
   const sp = await searchParams;
   const fromParam = sp.from as string | undefined;
   const toParam = sp.to as string | undefined;
@@ -153,6 +190,55 @@ export default async function ResumenSemanal({
 
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
   const ultimoLaboratorio = paciente.laboratorios[0] ?? null;
+
+  // Run AI vision extraction sequentially (to avoid concurrent 429s) 
+  // and only for labs that don't have extracted values yet
+  const labVisionResults: any[] = [];
+  let visionErrorEncountered = false;
+
+  for (const lab of paciente.laboratorios) {
+    if (lab.archivo_url && !visionErrorEncountered && lab.hba1c == null && lab.glucosa_ayuno == null) {
+      try {
+        // Add a small delay between requests to stay under RPM limits (15 RPM for free tier)
+        if (labVisionResults.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        const result = await getCachedLabVision(lab.archivo_url, locale);
+        labVisionResults.push(result);
+
+        // SAVE BACK TO DB IF FOUND - Efficiency DRY: don't repeat vision next time
+        if (result) {
+          await prisma.laboratorio.update({
+            where: { laboratorio_id: lab.laboratorio_id },
+            data: {
+              hba1c: result.hba1c,
+              glucosa_ayuno: result.glucosa_ayuno,
+              trigliceridos: result.trigliceridos,
+              hdl: result.hdl,
+              ldl: result.ldl,
+              insulina: result.insulina,
+              alt: result.alt,
+              ast: result.ast,
+              tsh: result.tsh,
+              creatinina: result.creatinina,
+              acido_urico: result.acido_urico,
+              pcr_us: result.pcr_us,
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Lab vision error:", err);
+        labVisionResults.push(null);
+        // If it's a 429, don't try other labs in this request
+        if (String(err).includes("429")) {
+          visionErrorEncountered = true;
+        }
+      }
+    } else {
+      labVisionResults.push(null);
+    }
+  }
   
   const promedioGlucosa = paciente.glucosa.length 
     ? Math.round(paciente.glucosa.reduce((acc, curr) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
@@ -211,6 +297,7 @@ export default async function ResumenSemanal({
       trigliceridos: item.trigliceridos,
       hdl: item.hdl,
       ldl: item.ldl,
+      labels: messages.summary.labValues,
     })),
     comidas_recientes: filteredComidas.slice(0, 5).map((item) => ({
       alimento_principal: item.alimento_principal,
@@ -220,10 +307,15 @@ export default async function ResumenSemanal({
     })),
   };
 
-  const aiSuggestions = await getCachedAISuggestions(
-    locale,
-    aiSuggestionPayload
-  );
+  let aiSuggestions = null;
+  try {
+    aiSuggestions = await getCachedAISuggestions(
+      locale,
+      aiSuggestionPayload
+    );
+  } catch (err) {
+    console.error("AI Suggestions error:", err);
+  }
 
   const csvContent = buildSummaryCsv({
     patient: data.paciente,
@@ -401,18 +493,12 @@ export default async function ResumenSemanal({
         </section>
 
         <section className="pt-8 border-t border-slate-100 space-y-5">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined rounded-2xl bg-teal-100 p-3 text-teal-700" style={{ fontVariationSettings: "'FILL' 1" }}>biotech</span>
             <div>
               <h3 className="text-xl font-bold text-slate-800">{messages.summary.laboratorySection}</h3>
-              <p className="text-sm text-slate-500 mt-1">{messages.summary.historySubtitle}</p>
+              <p className="text-sm text-slate-500 mt-0.5">{messages.summary.historySubtitle}</p>
             </div>
-            <Link
-              href="/laboratorios/nuevo"
-              className="inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-teal-200 transition hover:bg-teal-700"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              {messages.summary.uploadLabs}
-            </Link>
           </div>
 
           {ultimoLaboratorio ? (
@@ -479,56 +565,71 @@ export default async function ResumenSemanal({
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  {paciente.laboratorios.map((laboratorio) => (
-                    <div
-                      key={laboratorio.laboratorio_id}
-                      className="grid gap-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 md:grid-cols-[1.1fr_1fr_auto]"
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">
-                          {new Date(laboratorio.fecha_estudio).toLocaleDateString(locale)}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">{messages.summary.studyDate}</p>
+                  {paciente.laboratorios.map((laboratorio, idx) => {
+                    // Combine vision result from current call with DB data if vision is null
+                    const visionRes = labVisionResults[idx];
+                    const effectiveData = visionRes || {
+                      hba1c: laboratorio.hba1c ? Number(laboratorio.hba1c) : null,
+                      glucosa_ayuno: laboratorio.glucosa_ayuno,
+                      trigliceridos: laboratorio.trigliceridos,
+                      hdl: laboratorio.hdl,
+                      ldl: laboratorio.ldl,
+                      insulina: laboratorio.insulina,
+                      alt: laboratorio.alt,
+                      ast: laboratorio.ast,
+                      tsh: laboratorio.tsh,
+                      creatinina: laboratorio.creatinina,
+                      acido_urico: laboratorio.acido_urico,
+                      pcr_us: laboratorio.pcr_us,
+                    };
+                    const chips = buildLabChips(effectiveData, laboratorio, messages.summary.labValues);
+                    return (
+                      <div
+                        key={laboratorio.laboratorio_id}
+                        className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">
+                              {new Date(laboratorio.fecha_estudio).toLocaleDateString(locale)}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500">{messages.summary.studyDate}</p>
+                          </div>
+                          {laboratorio.archivo_url && (
+                            <span className="inline-flex items-center gap-1 rounded-xl bg-teal-50 border border-teal-200 px-2.5 py-1 text-xs font-semibold text-teal-700">
+                              <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                              {messages.summary.aiRead}
+                            </span>
+                          )}
+                        </div>
+                        {chips.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {chips.map((chip) => (
+                              <span
+                                key={chip.label}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
+                              >
+                                <span className="font-bold text-slate-500">{chip.label}</span>
+                                <span className="text-slate-800">{chip.value}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">{messages.summary.noValuesAvailable}</p>
+                        )}
                       </div>
-                      <div className="grid grid-cols-2 gap-3 text-sm text-slate-700 md:grid-cols-4">
-                        <span>HbA1c: {formatLabValue(laboratorio.hba1c ? Number(laboratorio.hba1c) : null, "%")}</span>
-                        <span>{messages.summary.fastingGlucose}: {formatLabValue(laboratorio.glucosa_ayuno, "mg/dL")}</span>
-                        <span>{messages.summary.triglycerides}: {formatLabValue(laboratorio.trigliceridos, "mg/dL")}</span>
-                        <span>{messages.summary.hdl}/{messages.summary.ldl}: {formatLabValue(laboratorio.hdl, "")} / {formatLabValue(laboratorio.ldl, "mg/dL")}</span>
-                      </div>
-                      {laboratorio.archivo_url ? (
-                        <a
-                          href={laboratorio.archivo_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 self-start rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">attach_file</span>
-                          {messages.summary.viewAttachment}
-                        </a>
-                      ) : (
-                        <span className="inline-flex items-center gap-2 self-start rounded-xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-500">
-                          <span className="material-symbols-outlined text-[18px]">draft</span>
-                          {messages.summary.noAttachment}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </article>
             </>
           ) : (
             <article className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
-              <span className="material-symbols-outlined rounded-full bg-slate-100 p-4 text-4xl text-slate-500">science</span>
+              <span className="material-symbols-outlined rounded-full bg-teal-50 p-4 text-4xl text-teal-500" style={{ fontVariationSettings: "'FILL' 1" }}>biotech</span>
               <h4 className="mt-4 text-xl font-bold text-slate-900">{messages.summary.noLabs}</h4>
-              <p className="mt-2 text-sm text-slate-500">{messages.summary.historySubtitle}</p>
-              <Link
-                href="/laboratorios/nuevo"
-                className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-teal-200 transition hover:bg-teal-700"
-              >
-                <span className="material-symbols-outlined text-[18px]">upload</span>
-                {messages.summary.uploadLabs}
-              </Link>
+              <p className="mt-2 text-sm text-slate-500">
+                {messages.summary.noLabsDescription}
+              </p>
             </article>
           )}
         </section>

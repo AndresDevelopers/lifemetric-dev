@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
+import ChatWidget from "@/components/ChatWidget";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import { getSessionPaciente } from "@/actions/data";
 import {
@@ -52,6 +53,7 @@ export default async function RootLayout({
           <Navigation userName={user ?? undefined} />
           <main className="flex-1 w-full relative">
             {children}
+            {user && <ChatWidget />}
           </main>
         </LocaleProvider>
       </body>

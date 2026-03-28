@@ -18,7 +18,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (state?.success) {
-      router.push('/resumen');
+      router.push('/');
     }
   }, [state, router]);
 

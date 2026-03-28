@@ -40,6 +40,21 @@ export const medicationVisionSchema = z.object({
   descripcion_para_que_sirve: z.string().min(8).optional(),
 });
 
+export const labVisionSchema = z.object({
+  hba1c: z.number().min(0).max(30).nullable().optional(),
+  glucosa_ayuno: z.number().int().min(0).max(1000).nullable().optional(),
+  insulina: z.number().min(0).max(500).nullable().optional(),
+  trigliceridos: z.number().int().min(0).max(5000).nullable().optional(),
+  hdl: z.number().int().min(0).max(500).nullable().optional(),
+  ldl: z.number().int().min(0).max(1000).nullable().optional(),
+  alt: z.number().int().min(0).max(5000).nullable().optional(),
+  ast: z.number().int().min(0).max(5000).nullable().optional(),
+  tsh: z.number().min(0).max(100).nullable().optional(),
+  pcr_us: z.number().min(0).max(500).nullable().optional(),
+  creatinina: z.number().min(0).max(50).nullable().optional(),
+  acido_urico: z.number().min(0).max(30).nullable().optional(),
+});
+
 function getGeminiApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -150,8 +165,8 @@ export async function buildClinicalSuggestions(params: {
 
   const prompt =
     params.locale === 'es'
-      ? `Actúa como asistente clínico educativo para diabetes. Con estos datos JSON: ${JSON.stringify(params.data)}. Devuelve SOLO JSON: {"summary":"...","suggestions":["...",...]}. Máximo 4 sugerencias concretas, tono claro y no alarmista.`
-      : `Act as an educational diabetes care assistant. Using this JSON data: ${JSON.stringify(params.data)}. Return ONLY JSON: {"summary":"...","suggestions":["...",...]}. Max 4 specific suggestions, clear and non-alarmist tone.`;
+      ? `Actúa como asistente clínico educativo especializado en diabetes. Analiza este informe JSON de la última semana: ${JSON.stringify(params.data)}. Tu objetivo es brindar un resumen cálido y empoderador, seguido de sugerencias prácticas. IMPORTANTE: Usa excelente ortografía en español con todas las tildes correspondientes. Devuelve ÚNICAMENTE el siguiente formato JSON: {"summary":"Su resumen cálido y claro aquí...","suggestions":["Sugerencia 1","Sugerencia 2",...]}. Máximo 4 sugerencias concretas, tono claro y no alarmista.`
+      : `Act as an educational diabetes care assistant. Analyze this weekly JSON report: ${JSON.stringify(params.data)}. Your goal is to provide a warm and empowering summary followed by practical tips. Return ONLY JSON: {"summary":"Your warm and clear summary here...","suggestions":["Tip 1","Tip 2",...]}. Max 4 specific suggestions, clear and non-alarmist tone.`;
 
   try {
     const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 500 });
@@ -163,6 +178,28 @@ export async function buildClinicalSuggestions(params: {
   }
 }
 
+
+export async function extractLabValuesFromImage(params: {
+  imageUrl: string;
+  locale: 'es' | 'en';
+}): Promise<z.infer<typeof labVisionSchema> | null> {
+  if (!canUseGemini()) return null;
+
+  const prompt =
+    params.locale === 'es'
+      ? `Eres un asistente médico experto en interpretación de resultados de laboratorio. Analiza esta imagen de resultados de laboratorio clínico: ${params.imageUrl}. Extrae únicamente los valores numéricos que encuentres para: HbA1c (%), glucosa en ayuno (mg/dL), insulina (μU/mL), triglicéridos (mg/dL), HDL (mg/dL), LDL (mg/dL), ALT (U/L), AST (U/L), TSH (μIU/mL), PCR-us (mg/L), creatinina (mg/dL), ácido úrico (mg/dL). Si un valor no aparece en la imagen, usa null. Devuelve SOLO JSON válido con las claves: hba1c, glucosa_ayuno, insulina, trigliceridos, hdl, ldl, alt, ast, tsh, pcr_us, creatinina, acido_urico. Sin texto adicional, solo JSON.`
+      : `You are a medical assistant expert in interpreting lab results. Analyze this clinical laboratory results image: ${params.imageUrl}. Extract only the numeric values found for: HbA1c (%), fasting glucose (mg/dL), insulin (μU/mL), triglycerides (mg/dL), HDL (mg/dL), LDL (mg/dL), ALT (U/L), AST (U/L), TSH (μIU/mL), hsCRP (mg/L), creatinine (mg/dL), uric acid (mg/dL). If a value does not appear in the image use null. Return ONLY valid JSON with keys: hba1c, glucosa_ayuno, insulina, trigliceridos, hdl, ldl, alt, ast, tsh, pcr_us, creatinina, acido_urico. No extra text, just JSON.`;
+
+  try {
+    const response = await generateGeminiText({ prompt, temperature: 0.1, maxOutputTokens: 400 });
+    const clean = response.replace(/```json|```/g, '').trim();
+    const parsedJson = JSON.parse(clean);
+    return labVisionSchema.parse(parsedJson);
+  } catch (error) {
+    console.error('Error extracting lab values from image:', error);
+    return null;
+  }
+}
 
 export async function estimateMedicationFromImage(params: {
   imageUrl: string;
