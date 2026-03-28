@@ -54,3 +54,11 @@ Configura las variables nuevas en `.env` usando `.env.example` como guía.
 El módulo de **Resumen** ahora incluye sección de medicamentos y sugerencias IA con disclaimer clínico.
 Además, el formulario de laboratorios permite autocompletado de biomarcadores con IA a partir de PDF/imagen subidos.
 
+
+
+## Escaneo anti-malware en subida de archivos
+
+- Las subidas de **imagen/PDF** (comidas, laboratorios y avatar) intentan validar en VirusTotal antes de continuar.
+- Si VirusTotal detecta indicadores maliciosos, la subida se bloquea.
+- Si la API no está configurada o falla, la app continúa en modo resiliente (no se cae el flujo principal).
+- Configura `VIRUSTOTAL_API_KEY` en `.env`.
