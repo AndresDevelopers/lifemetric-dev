@@ -75,7 +75,7 @@ export default async function Home() {
 
   // Calculate metrics
   const lastGlucoseVal = paciente.glucosa?.[0]?.valor_glucosa;
-  const lastGlucose = lastGlucoseVal != null ? String(lastGlucoseVal) : '--';
+  const lastGlucose = lastGlucoseVal !== null && lastGlucoseVal !== undefined ? String(lastGlucoseVal) : '--';
   
   const exerciseToday = paciente.habitos?.[0]?.ejercicio_min ?? 0;
   const sleepToday = paciente.habitos?.[0]?.sueno_horas ?? 0;
@@ -185,7 +185,7 @@ export default async function Home() {
         {/* ── Quick Actions ── */}
         <section className="space-y-6">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 px-2">
-            {messages.common.quickActions}
+            {messages.home.quickActions}
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -232,7 +232,7 @@ export default async function Home() {
   );
 }
 
-function MetricCard({ label, value, unit, icon, color, bgColor }: { label: string; value: string; unit: string; icon: string; color: string; bgColor: string }) {
+function MetricCard({ label, value, unit, icon, color, bgColor }: Readonly<{ label: string; value: string; unit: string; icon: string; color: string; bgColor: string }>) {
   return (
     <div className="bg-white rounded-[2rem] p-5 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col gap-1 hover:scale-[1.02] transition-all">
       <span className={`material-symbols-outlined ${color} text-2xl mb-1 p-2 ${bgColor} w-fit rounded-2xl`}>{icon}</span>
@@ -245,7 +245,7 @@ function MetricCard({ label, value, unit, icon, color, bgColor }: { label: strin
   );
 }
 
-function QuickActionCard({ href, title, subtitle, icon, color, bgColor, gradientColor }: { href: string; title: string; subtitle: string; icon: string; color: string; bgColor: string; gradientColor: string }) {
+function QuickActionCard({ href, title, subtitle, icon, color, bgColor, gradientColor }: Readonly<{ href: string; title: string; subtitle: string; icon: string; color: string; bgColor: string; gradientColor: string }>) {
   return (
     <Link
       href={href}

@@ -8,7 +8,13 @@ export default function ChatWidget() {
   const { messages } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [chatHistory, setChatHistory] = useState<{ role: "assistant" | "user" | "ai"; content: string }[]>([]);
+  // Chat history state initialized with translated greeting.
+  const [chatHistory, setChatHistory] = useState<{ role: "assistant" | "user" | "ai"; content: string }[]>(() => [
+    {
+      role: "assistant", // Using assistant for internal UI, will map to 'ai' for action
+      content: messages.chat.welcome,
+    },
+  ]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -17,18 +23,6 @@ export default function ChatWidget() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory, isOpen]);
-
-  // Initial greeting
-  useEffect(() => {
-    if (chatHistory.length === 0) {
-      setChatHistory([
-        {
-          role: "assistant", // Using assistant for internal UI, will map to 'ai' for action
-          content: messages.chat.welcome,
-        },
-      ]);
-    }
-  }, [messages.chat.welcome, chatHistory.length]);
 
   const handleSendMessage = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -48,7 +42,7 @@ export default function ChatWidget() {
       const historyForAction = chatHistory
         .filter(m => m.content !== messages.chat.welcome)
         .map(m => ({
-          role: m.role === 'assistant' ? 'ai' : m.role as 'user' | 'ai',
+          role: m.role === 'assistant' ? 'ai' : m.role,
           content: m.content
         }));
 

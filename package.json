@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo --port 3003",
-    "build": "next build",
+    "build": "prisma generate --no-hints && next build",
+    "postinstall": "prisma generate --no-hints",
     "start": "next start",
     "lint": "eslint",
     "test": "node --test tests/*.test.mjs"
@@ -13,6 +14,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@marsidev/react-turnstile": "^1.4.2",
     "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.4.1",
     "@supabase/supabase-js": "^2.100.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
@@ -30,7 +32,6 @@
     "@eslint/compat": "^2.0.3",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
-    "@prisma/client": "^7.4.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^25.5.0",

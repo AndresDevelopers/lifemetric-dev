@@ -15,7 +15,7 @@ export const redisClient =
 // Permite 20 requests por 10 segundos
 export const rateLimit = redisClient
   ? new Ratelimit({
-      redis: redisClient as any, // type assertion for Ratelimit 
+      redis: redisClient, 
       limiter: Ratelimit.slidingWindow(20, '10 s'),
       analytics: true,
       /**

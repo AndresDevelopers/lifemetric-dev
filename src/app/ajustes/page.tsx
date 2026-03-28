@@ -2,7 +2,6 @@
 'use client';
 
 import { useActionState, useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
 import {
   changePasswordAction,
   deleteAccountAction,
@@ -17,18 +16,14 @@ import { getMessages, normalizeLocale, getBrowserLocale, persistLocale, type Loc
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
 
 export default function AjustesPage() {
-  const searchParams = useSearchParams();
-  const [locale, setLocale] = useState<Locale>('es');
-  
-  useEffect(() => {
-    // If we have it in the URL, use it. Otherwise, use cookie/browser default.
-    const urlLang = searchParams.get('lang');
-    if (urlLang) {
-      setLocale(normalizeLocale(urlLang));
-    } else {
-      setLocale(getBrowserLocale());
+  const [locale, setLocale] = useState<Locale>(() => {
+    // If we are in the browser, check URL first, otherwise fallback to browser default.
+    if (typeof globalThis.window !== 'undefined') {
+      const urlLang = new URLSearchParams(globalThis.window.location.search).get('lang');
+      if (urlLang) return normalizeLocale(urlLang);
     }
-  }, [searchParams]);
+    return getBrowserLocale();
+  });
 
   const messages = getMessages(locale);
   
@@ -36,7 +31,7 @@ export default function AjustesPage() {
   const [deleteState, deleteFormAction, isDeletePending] = useActionState(deleteAccountAction, undefined);
   const [profileState, profileFormAction, isProfilePending] = useActionState(updateProfileAction, undefined);
   const [subscriptionState, subscriptionFormAction, isSubscriptionPending] = useActionState(subscribeToEmailsAction, undefined);
-  const [languageState, languageFormAction, isLanguagePending] = useActionState(updateLanguageAction, undefined);
+  const [, languageFormAction, isLanguagePending] = useActionState(updateLanguageAction, undefined);
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [user, setUser] = useState<SettingsUser>(null);
@@ -315,6 +310,53 @@ export default function AjustesPage() {
                 {isPasswordPending ? messages.common.saving : messages.common.save}
               </button>
             </form>
+          </section>
+
+          {/* Language Section */}
+          <section className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-white">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-8">
+              {messages.settings.languageTitle}
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                type="button"
+                disabled={isLanguagePending}
+                onClick={() => handleLanguageChange('es')}
+                className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 transition-all group ${
+                  locale === 'es' 
+                    ? 'border-blue-500 bg-blue-50/50 text-blue-900' 
+                    : 'border-slate-100 hover:border-slate-200 text-slate-600'
+                } ${isLanguagePending ? 'opacity-50 cursor-wait' : ''}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🇪🇸</span>
+                  <span className="font-bold">Español</span>
+                </div>
+                {locale === 'es' && (
+                  <span className="material-symbols-outlined text-blue-500 font-bold">check_circle</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                disabled={isLanguagePending}
+                onClick={() => handleLanguageChange('en')}
+                className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 transition-all group ${
+                  locale === 'en' 
+                    ? 'border-blue-500 bg-blue-50/50 text-blue-900' 
+                    : 'border-slate-100 hover:border-slate-200 text-slate-600'
+                } ${isLanguagePending ? 'opacity-50 cursor-wait' : ''}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🇺🇸</span>
+                  <span className="font-bold">English</span>
+                </div>
+                {locale === 'en' && (
+                  <span className="material-symbols-outlined text-blue-500 font-bold">check_circle</span>
+                )}
+              </button>
+            </div>
           </section>
 
           {/* Delete Account Section */}

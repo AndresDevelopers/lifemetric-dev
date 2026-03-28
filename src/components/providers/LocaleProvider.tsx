@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Locale, getBrowserLocale, getMessages, persistLocale } from '@/lib/i18n';
+import { createContext, useContext, useMemo, useState } from 'react';
+import { Locale, getMessages, persistLocale } from '@/lib/i18n';
 
 type LocaleContextValue = {
   locale: Locale;
@@ -19,10 +19,6 @@ export function LocaleProvider({
   initialLocale: Locale;
 }>) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
-
-  useEffect(() => {
-    setLocaleState(getBrowserLocale(initialLocale));
-  }, [initialLocale]);
 
   const value = useMemo<LocaleContextValue>(
     () => ({

@@ -37,6 +37,7 @@ export async function getSessionPaciente() {
             email: true,
             sexo: true,
             newsletter_suscrito: true,
+            idioma: true,
           },
         });
       },
@@ -53,11 +54,13 @@ export async function getSessionPaciente() {
     console.error("Error fetching patient, returning fallback:", error);
     // Fallback para evitar bloqueo de UI si la DB no está sincronizada
     return {
+      paciente_id: pacienteId,
       nombre: "Usuario",
       apellido: "",
       email: "",
       sexo: "M",
       newsletter_suscrito: true,
+      idioma: "es",
       fecha_nacimiento: null,
       avatar_url: null
     };
