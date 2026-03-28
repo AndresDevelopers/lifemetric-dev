@@ -10,6 +10,7 @@ import { getSessionPacienteId } from "@/actions/data";
 import { clasificarYGuardarComida } from "@/actions/comida";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { supabase } from "@/lib/supabase";
+import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
 
 const comidaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -25,7 +26,7 @@ type FormValues = z.infer<typeof comidaSchema>;
 
 export default function NuevaComida() {
   const [loading, setLoading] = useState(false);
-  const { messages } = useLocale();
+  const { locale, messages } = useLocale();
   const foodMessages = messages.foodForm;
   
   const now = new Date();
@@ -83,8 +84,19 @@ export default function NuevaComida() {
     }
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (file.type.startsWith("image/")) {
+      const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
+        scanning: foodMessages.virusScanning,
+        blockedPrefix: foodMessages.virusBlocked,
+        fallbackPrefix: foodMessages.virusFallback,
+        successPrefix: foodMessages.virusPassed,
+      });
+
+      if (!canProceed) {
+        return;
+      }
+
       setImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {

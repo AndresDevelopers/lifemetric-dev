@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { getSessionPacienteId } from "@/actions/data";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { autofillLaboratorioFromDocumentAction, guardarLaboratorioAction } from "@/actions/laboratorio";
+import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
 
 const labSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -63,6 +64,21 @@ export default function SubirLaboratorios() {
 
     setDocumentName(file.name);
     setValue("archivo_url", file.name);
+
+    const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
+      scanning: labsMessages.virusScanning,
+      blockedPrefix: labsMessages.virusBlocked,
+      fallbackPrefix: labsMessages.virusFallback,
+      successPrefix: labsMessages.virusPassed,
+    });
+
+    if (!canProceed) {
+      setDocumentName(null);
+      setValue("archivo_url", "");
+      event.target.value = "";
+      return;
+    }
+
     setIsAutofilling(true);
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {

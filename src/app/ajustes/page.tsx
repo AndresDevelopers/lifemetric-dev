@@ -4,6 +4,7 @@
 import { useActionState, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
+import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
 import {
   changePasswordAction,
   deleteAccountAction,
@@ -45,9 +46,21 @@ export default function AjustesPage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
+        scanning: messages.settings.virusScanning,
+        blockedPrefix: messages.settings.virusBlocked,
+        fallbackPrefix: messages.settings.virusFallback,
+        successPrefix: messages.settings.virusPassed,
+      });
+
+      if (!canProceed) {
+        e.target.value = '';
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
