@@ -60,10 +60,11 @@ export default function AjustesPage() {
   }, []);
 
   const handleProfileSubmit = () => {
+    const parsedBirthDate = fechaNacimiento ? new Date(`${fechaNacimiento}T00:00:00.000Z`) : null;
     setUser((prev: SettingsUser) => (prev
       ? {
           ...prev,
-          fecha_nacimiento: fechaNacimiento || null,
+          fecha_nacimiento: parsedBirthDate,
           altura_cm: alturaCm ? Number(alturaCm) : null,
           motivo_registro: motivoRegistro || null,
         }
