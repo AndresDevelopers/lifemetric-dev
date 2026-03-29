@@ -54,7 +54,7 @@ test('login bootstraps paciente row when supabase auth user exists but profile r
 test('auth actions support botid provider fallback and login sends captchaProvider', () => {
   assert.match(auth, /captchaProvider:\s*z\.enum\(\['turnstile',\s*'botid'\]\)\.optional\(\)/);
   assert.match(auth, /data\.captchaProvider !== 'botid'/);
-  assert.match(auth, /botIdModuleName\s*=\s*'botid\/server'/);
+  assert.match(auth, /x-vercel-botid/);
   assert.match(auth, /isBotIdBlocked/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
 });
@@ -65,6 +65,7 @@ test('auth actions use supabase auth for sign in, sign up and recovery', () => {
   assert.match(auth, /signUp/);
   assert.match(auth, /resetPasswordForEmail/);
   assert.match(auth, /autoSignInData/);
+  assert.match(auth, /useServiceRole:\s*false/);
   assert.match(auth, /fechaNacimiento/);
   assert.match(auth, /calculateAgeFromBirthDate/);
   assert.match(supabaseLib, /SUPABASE_SERVICE_ROLE_KEY/);

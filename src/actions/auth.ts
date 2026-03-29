@@ -4,6 +4,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { createSupabaseServerClient } from '@/lib/supabase';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
@@ -59,20 +60,9 @@ async function ensurePacienteAuthColumns() {
 }
 
 async function isBotIdBlocked(): Promise<boolean> {
-  try {
-    const botIdModuleName = 'botid/server';
-    const botId = (await import(botIdModuleName)) as {
-      checkBotId?: () => Promise<{ isBot: boolean }>;
-    };
-    if (!botId.checkBotId) {
-      return false;
-    }
-    const result = await botId.checkBotId();
-    return Boolean(result.isBot);
-  } catch {
-    // Resilient fallback for browsers/ad-blockers where BotID signal may be unavailable.
-    return false;
-  }
+  const headerStore = await headers();
+  const botSignal = headerStore.get('x-vercel-botid')?.toLowerCase() ?? '';
+  return botSignal.includes('bot');
 }
 
 function getDefaultPacienteData(email: string) {
@@ -132,7 +122,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
        }
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabaseServerClient({ useServiceRole: false });
     const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -221,7 +211,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
        }
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabaseServerClient({ useServiceRole: false });
     const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: data.email,
@@ -338,7 +328,7 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
     }
 
     const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-    const supabase = createSupabaseServerClient();
+    const supabase = createSupabaseServerClient({ useServiceRole: false });
     await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${appUrl}/recuperar`,
     });
