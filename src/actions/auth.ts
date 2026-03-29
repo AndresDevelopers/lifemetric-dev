@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { createSupabaseServerClient } from '@/lib/supabase';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
@@ -12,6 +13,7 @@ import { deleteSession, setSession } from '@/lib/session';
 import { getSessionPacienteId } from './data';
 import { sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
+import { ensurePacienteProfileColumns, updatePacienteProfileExtras } from '@/lib/pacienteProfile';
 
 export type AuthActionState = {
   error?: string;
@@ -33,8 +35,10 @@ const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   fechaNacimiento: z.string().min(1),
+  alturaCm: z.coerce.number().positive().max(272).optional(),
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
+  motivoRegistro: z.string().min(3).max(400).optional(),
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
@@ -58,6 +62,7 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
   await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS idioma TEXT DEFAULT 'es'");
+  await ensurePacienteProfileColumns();
 }
 
 async function findOrCreatePacienteByEmail(input: {
@@ -69,6 +74,9 @@ async function findOrCreatePacienteByEmail(input: {
   sexo: string;
   diagnosticoPrincipal: string;
   newsletterSuscrito: boolean;
+  fechaNacimiento?: string | null;
+  alturaCm?: number | null;
+  motivoRegistro?: string | null;
 }) {
   const createPaciente = async () => prisma.paciente.create({
     data: {
@@ -86,14 +94,26 @@ async function findOrCreatePacienteByEmail(input: {
 
   try {
     const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
-    return paciente ?? await createPaciente();
+    const currentPaciente = paciente ?? await createPaciente();
+    await updatePacienteProfileExtras(currentPaciente.paciente_id, {
+      fechaNacimiento: input.fechaNacimiento,
+      alturaCm: input.alturaCm,
+      motivoRegistro: input.motivoRegistro,
+    });
+    return currentPaciente;
   } catch (error) {
     if (!isPacienteColumnMissingError(error)) {
       throw error;
     }
     await ensurePacienteAuthColumns();
     const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
-    return paciente ?? await createPaciente();
+    const currentPaciente = paciente ?? await createPaciente();
+    await updatePacienteProfileExtras(currentPaciente.paciente_id, {
+      fechaNacimiento: input.fechaNacimiento,
+      alturaCm: input.alturaCm,
+      motivoRegistro: input.motivoRegistro,
+    });
+    return currentPaciente;
   }
 }
 
@@ -207,6 +227,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     const parsedData = {
         ...rawData,
         fechaNacimiento: (rawData.fechaNacimiento as string | undefined) ?? '',
+        alturaCm: rawData.alturaCm ? Number(rawData.alturaCm) : undefined,
+        motivoRegistro: (rawData.motivoRegistro as string | undefined)?.trim() || undefined,
         newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
     const data = registerSchema.parse(parsedData);
@@ -264,6 +286,9 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         sexo: data.sexo,
         diagnosticoPrincipal: data.diagnostico,
         newsletterSuscrito: data.newsletterSubscribed ?? true,
+        fechaNacimiento: data.fechaNacimiento,
+        alturaCm: data.alturaCm,
+        motivoRegistro: data.motivoRegistro ?? data.diagnostico,
       });
     } catch (error) {
       if (signUpData.user?.id) {
@@ -415,6 +440,7 @@ export async function subscribeToEmailsAction(prevState: AuthActionState, formDa
       where: { paciente_id: pacienteId },
       data: { newsletter_suscrito: subscribed },
     });
+    revalidateTag(`paciente-${pacienteId}`, 'max');
 
     if (subscribed) {
       const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
@@ -442,6 +468,8 @@ const profileSchema = z.object({
   sexo: z.string().min(1),
   fecha_nacimiento: z.string().optional(),
   avatar_url: z.string().optional(),
+  altura_cm: z.coerce.number().positive().max(272).optional(),
+  motivo_registro: z.string().max(400).optional(),
 });
 
 export async function updateProfileAction(prevState: AuthActionState, formData: FormData) {
@@ -479,8 +507,17 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
         apellido: data.apellido,
         email: data.email,
         sexo: data.sexo,
+        edad: data.fecha_nacimiento ? calculateAgeFromBirthDate(data.fecha_nacimiento) : undefined,
       },
     });
+
+    await updatePacienteProfileExtras(pacienteId, {
+      fechaNacimiento: data.fecha_nacimiento || null,
+      avatarUrl: data.avatar_url || null,
+      alturaCm: typeof data.altura_cm === 'number' ? data.altura_cm : null,
+      motivoRegistro: data.motivo_registro?.trim() ? data.motivo_registro.trim() : null,
+    });
+    revalidateTag(`paciente-${pacienteId}`, 'max');
 
     return { success: true, message: messages.settings.profileUpdated };
   } catch (error) {
@@ -504,6 +541,7 @@ export async function updateLanguageAction(prevState: AuthActionState, formData:
       where: { paciente_id: pacienteId },
       data: { idioma },
     });
+    revalidateTag(`paciente-${pacienteId}`, 'max');
 
     return { success: true };
   } catch (error) {

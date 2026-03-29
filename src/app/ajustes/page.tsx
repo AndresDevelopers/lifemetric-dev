@@ -189,7 +189,7 @@ export default function AjustesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     {messages.settings.fields.birthday}
@@ -198,6 +198,20 @@ export default function AjustesPage() {
                     type="date"
                     name="fecha_nacimiento"
                     defaultValue={user.fecha_nacimiento ? new Date(user.fecha_nacimiento).toISOString().split('T')[0] : ''}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                    {messages.settings.fields.height}
+                  </label>
+                  <input
+                    type="number"
+                    min="80"
+                    max="272"
+                    step="0.1"
+                    name="altura_cm"
+                    defaultValue={user.altura_cm ?? ''}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
@@ -215,6 +229,18 @@ export default function AjustesPage() {
                     <option value="F">{messages.settings.fields.genderFemale}</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                  {messages.settings.fields.registrationReason}
+                </label>
+                <textarea
+                  name="motivo_registro"
+                  defaultValue={user.motivo_registro ?? ''}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                />
               </div>
 
               {profileState?.error && (

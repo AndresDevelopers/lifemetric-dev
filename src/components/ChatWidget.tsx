@@ -4,6 +4,54 @@ import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { chatWithAIAction } from "@/actions/chat";
 
+function renderInlineMarkdown(text: string) {
+  const segments = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return segments.map((segment, index) => {
+    const isBold = segment.startsWith("**") && segment.endsWith("**") && segment.length > 4;
+
+    if (!isBold) {
+      return <span key={`text-${index}`}>{segment}</span>;
+    }
+
+    return <strong key={`bold-${index}`}>{segment.slice(2, -2)}</strong>;
+  });
+}
+
+function renderAssistantMarkdown(content: string) {
+  const lines = content.split("\n");
+
+  return lines.map((line, index) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      return <div key={`space-${index}`} className="h-2" aria-hidden="true" />;
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (headingMatch) {
+      const headingText = headingMatch[2];
+      return (
+        <p key={`heading-${index}`} className="font-bold text-slate-900 dark:text-white mt-1 mb-2">
+          {renderInlineMarkdown(headingText)}
+        </p>
+      );
+    }
+
+    const listMatch = trimmed.match(/^[-*]\s+(.+)$/);
+    if (listMatch) {
+      return (
+        <p key={`list-${index}`} className="pl-4 relative">
+          <span className="absolute left-0">•</span>
+          {renderInlineMarkdown(listMatch[1])}
+        </p>
+      );
+    }
+
+    return <p key={`p-${index}`}>{renderInlineMarkdown(trimmed)}</p>;
+  });
+}
+
 export default function ChatWidget() {
   const { messages } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
@@ -155,7 +203,7 @@ export default function ChatWidget() {
                   }
                 `}
               >
-                {msg.content}
+                {msg.role === "assistant" ? renderAssistantMarkdown(msg.content) : msg.content}
               </div>
             </div>
           ))}

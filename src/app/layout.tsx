@@ -18,10 +18,16 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "MVP Seguimiento Metabólico",
-  description: "Sistema clínico para diabéticos",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const appName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Lifemetric";
+  return {
+    title: {
+      default: appName,
+      template: `%s | ${appName}`,
+    },
+    description: "Sistema clínico para diabéticos",
+  };
+}
 
 export default async function RootLayout({
   children,

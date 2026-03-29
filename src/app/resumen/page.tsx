@@ -13,6 +13,7 @@ import {
   getMessages,
   inferLocaleFromRequest,
 } from "@/lib/i18n";
+import { getPacienteProfileExtras } from "@/lib/pacienteProfile";
 
 function escapeCsvValue(value: string | number): string {
   const normalized = String(value).replaceAll('"', '""');
@@ -188,6 +189,7 @@ export default async function ResumenSemanal({
   if (!paciente) {
     redirect('/login');
   }
+  const profileExtras = await getPacienteProfileExtras(pacienteId);
 
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
   const ultimoLaboratorio = paciente.laboratorios[0] ?? null;
@@ -290,6 +292,11 @@ export default async function ResumenSemanal({
     paciente: `${paciente.nombre} ${paciente.apellido}`,
     edad: paciente.edad ?? null,
     sexo: paciente.sexo ?? null,
+    altura_cm: profileExtras.altura_cm ?? null,
+    motivo_registro: profileExtras.motivo_registro ?? null,
+    fecha_nacimiento: profileExtras.fecha_nacimiento
+      ? profileExtras.fecha_nacimiento.toISOString().split("T")[0]
+      : null,
     ultima_hba1c: ultimaHba1c,
     promedio_glucosa: promedioGlucosaConFallback,
     comidas: {
@@ -404,6 +411,19 @@ export default async function ResumenSemanal({
                 </div>
               </div>
             </div>
+            {(data.altura_cm || data.motivo_registro) && (
+              <div className="mt-5 rounded-2xl bg-white/10 p-4 backdrop-blur-md">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-200">
+                  {messages.summary.aiProfileContextTitle}
+                </p>
+                {data.altura_cm && (
+                  <p className="mt-1 text-sm text-blue-50">{messages.summary.patientHeight}: {data.altura_cm} cm</p>
+                )}
+                {data.motivo_registro && (
+                  <p className="mt-1 text-sm text-blue-50">{messages.summary.registrationReason}: {data.motivo_registro}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
