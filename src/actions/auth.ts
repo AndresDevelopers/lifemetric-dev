@@ -301,7 +301,14 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     if (signUpError) {
       const isDuplicate = /already registered|already been registered|user already exists/i.test(signUpError.message);
-      return { error: isDuplicate ? authMessages.registerEmailUnavailable : authMessages.registerError };
+      const isWeakPassword = /password|6 characters|at least/i.test(signUpError.message);
+      return {
+        error: isDuplicate
+          ? authMessages.registerEmailUnavailable
+          : isWeakPassword
+            ? authMessages.registerWeakPassword
+            : authMessages.registerError,
+      };
     }
 
     const edadCalculada = calculateAgeFromBirthDate(data.fechaNacimiento);
@@ -358,7 +365,12 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
   } catch (error) {
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
-    if (error instanceof z.ZodError) return { error: authMessages.invalidRegisterData };
+    if (error instanceof z.ZodError) {
+      const firstIssuePath = error.issues[0]?.path?.[0];
+      if (firstIssuePath === 'email') return { error: authMessages.registerInvalidEmail };
+      if (firstIssuePath === 'password') return { error: authMessages.registerWeakPassword };
+      return { error: authMessages.registerMissingRequired };
+    }
     console.error(error);
     return { error: authMessages.registerError };
   }
@@ -395,10 +407,23 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
     }
 
     const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    await ensurePacienteAuthColumns();
+    const paciente = await prisma.paciente.findFirst({
+      where: { email: data.email },
+      select: { paciente_id: true },
+    });
+
+    if (!paciente) {
+      return { error: authMessages.accountNotFound };
+    }
+
     const supabase = createSupabaseServerClient({ useServiceRole: false });
-    await supabase.auth.resetPasswordForEmail(data.email, {
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${appUrl}/recuperar`,
     });
+    if (resetError) {
+      return { error: authMessages.recoveryEmailSendError };
+    }
 
     return { success: true, message: authMessages.recoverSuccess };
   } catch (error) {
