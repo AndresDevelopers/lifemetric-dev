@@ -157,6 +157,13 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
     if (error instanceof z.ZodError) return { error: authMessages.invalidData };
+    if (
+      error instanceof Prisma.PrismaClientInitializationError ||
+      error instanceof Prisma.PrismaClientKnownRequestError ||
+      error instanceof Prisma.PrismaClientValidationError
+    ) {
+      return { error: authMessages.invalidCredentials };
+    }
     console.error(error);
     return { error: authMessages.serverError };
   }

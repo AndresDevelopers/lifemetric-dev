@@ -60,9 +60,16 @@ test('session signing supports auth secret fallback chain', () => {
 
 test('prisma config and prisma client support supabase/postgres env fallbacks', () => {
   assert.match(prismaConfig, /SUPABASE_DB_URL/);
+  assert.match(prismaConfig, /SUPABASE_POOLER_URL/);
   assert.match(prismaConfig, /POSTGRES_URL/);
   assert.match(prismaLib, /process\.env\.SUPABASE_DB_URL/);
+  assert.match(prismaLib, /process\.env\.SUPABASE_POOLER_URL/);
   assert.match(prismaLib, /process\.env\.POSTGRES_URL/);
+});
+
+test('login action handles prisma runtime errors without exposing server error message', () => {
+  assert.match(auth, /PrismaClientInitializationError/);
+  assert.match(auth, /return \{ error: authMessages\.invalidCredentials \}/);
 });
 
 test('readme documents auth runtime resilience checks', () => {
