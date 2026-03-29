@@ -34,8 +34,8 @@ const saveLabSchema = z.object({
 export async function autofillLaboratorioFromDocumentAction(rawData: unknown) {
   const input = autofillSchema.parse(rawData);
 
-  if (!process.env.GEMINI_API_KEY) {
-    return { success: false, error: "Gemini no está configurado." } as const;
+  if (!process.env.AI_GATEWAY_API_KEY) {
+    return { success: false, error: "AI Gateway no está configurado." } as const;
   }
 
   const pacienteId = await getSessionPacienteId();

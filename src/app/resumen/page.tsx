@@ -284,7 +284,6 @@ export default async function ResumenSemanal({
     },
     adherencia_medicacion_pct: adherenciaMedicacion,
     alerta_principal: paciente.glucosa.some(g => g.valor_glucosa > 140) ? messages.summary.glucosePeaks : messages.summary.glucoseInRange,
-    patron_principal: messages.summary.keepTracking
   };
 
   const aiSuggestionPayload = {
@@ -377,22 +376,13 @@ export default async function ResumenSemanal({
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-1 gap-6">
           <div className="bg-rose-50 border border-rose-100 rounded-[2rem] p-6 shadow-sm">
             <div className="flex gap-3 mb-2">
               <span className="material-symbols-outlined text-rose-500 mt-1" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
               <div>
                 <h3 className="font-bold text-rose-900">{messages.summary.mainAlert}</h3>
                 <p className="text-rose-800/80 text-sm mt-1">{data.alerta_principal}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-teal-50 border border-teal-100 rounded-[2rem] p-6 shadow-sm">
-            <div className="flex gap-3 mb-2">
-              <span className="material-symbols-outlined text-teal-600 mt-1" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
-              <div>
-                <h3 className="font-bold text-teal-900">{messages.summary.detectedPattern}</h3>
-                <p className="text-teal-800/80 text-sm mt-1">{data.patron_principal}</p>
               </div>
             </div>
           </div>
