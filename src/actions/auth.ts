@@ -57,6 +57,44 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
+  await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS idioma TEXT DEFAULT 'es'");
+}
+
+async function findOrCreatePacienteByEmail(input: {
+  email: string;
+  password: string;
+  nombre: string;
+  apellido: string;
+  edad: number;
+  sexo: string;
+  diagnosticoPrincipal: string;
+  newsletterSuscrito: boolean;
+}) {
+  const createPaciente = async () => prisma.paciente.create({
+    data: {
+      nombre: input.nombre,
+      apellido: input.apellido,
+      email: input.email,
+      password_hash: await bcrypt.hash(input.password, 10),
+      newsletter_suscrito: input.newsletterSuscrito,
+      edad: input.edad,
+      sexo: input.sexo,
+      diagnostico_principal: input.diagnosticoPrincipal,
+      usa_glucometro: false,
+    },
+  });
+
+  try {
+    const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
+    return paciente ?? await createPaciente();
+  } catch (error) {
+    if (!isPacienteColumnMissingError(error)) {
+      throw error;
+    }
+    await ensurePacienteAuthColumns();
+    const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
+    return paciente ?? await createPaciente();
+  }
 }
 
 async function isBotIdBlocked(): Promise<boolean> {
@@ -132,30 +170,17 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       return { error: authMessages.invalidCredentials };
     }
 
-    let paciente;
-    try {
-      paciente = await prisma.paciente.findFirst({
-        where: { email: data.email },
-      });
-    } catch (error) {
-      if (!isPacienteColumnMissingError(error)) {
-        throw error;
-      }
-      await ensurePacienteAuthColumns();
-      paciente = await prisma.paciente.findFirst({
-        where: { email: data.email },
-      });
-    }
-
-    if (!paciente) {
-      paciente = await prisma.paciente.create({
-        data: {
-          ...getDefaultPacienteData(data.email),
-          email: data.email,
-          password_hash: await bcrypt.hash(data.password, 10),
-        },
-      });
-    }
+    const defaults = getDefaultPacienteData(data.email);
+    const paciente = await findOrCreatePacienteByEmail({
+      email: data.email,
+      password: data.password,
+      nombre: defaults.nombre,
+      apellido: defaults.apellido,
+      edad: defaults.edad,
+      sexo: defaults.sexo,
+      diagnosticoPrincipal: defaults.diagnostico_principal,
+      newsletterSuscrito: defaults.newsletter_suscrito,
+    });
 
     await setSession(paciente.paciente_id);
 
@@ -226,48 +251,30 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       return { error: isDuplicate ? authMessages.registerEmailUnavailable : authMessages.registerError };
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
     const edadCalculada = calculateAgeFromBirthDate(data.fechaNacimiento);
 
     let paciente;
     try {
-      paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
-      if (!paciente) {
-        paciente = await prisma.paciente.create({
-          data: {
-            nombre: data.nombre,
-            apellido: data.apellido,
-            email: data.email,
-            password_hash: hashedPassword,
-            newsletter_suscrito: data.newsletterSubscribed ?? true,
-            edad: edadCalculada,
-            sexo: data.sexo,
-            diagnostico_principal: data.diagnostico,
-            usa_glucometro: false,
-          },
-        });
-      }
+      paciente = await findOrCreatePacienteByEmail({
+        email: data.email,
+        password: data.password,
+        nombre: data.nombre,
+        apellido: data.apellido,
+        edad: edadCalculada,
+        sexo: data.sexo,
+        diagnosticoPrincipal: data.diagnostico,
+        newsletterSuscrito: data.newsletterSubscribed ?? true,
+      });
     } catch (error) {
-      if (!isPacienteColumnMissingError(error)) {
-        throw error;
+      if (signUpData.user?.id) {
+        try {
+          const adminClient = createSupabaseServerClient({ useServiceRole: true });
+          await adminClient.auth.admin.deleteUser(signUpData.user.id);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup orphan Supabase auth user after paciente creation error.', cleanupError);
+        }
       }
-      await ensurePacienteAuthColumns();
-      paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
-      if (!paciente) {
-        paciente = await prisma.paciente.create({
-          data: {
-            nombre: data.nombre,
-            apellido: data.apellido,
-            email: data.email,
-            password_hash: hashedPassword,
-            newsletter_suscrito: data.newsletterSubscribed ?? true,
-            edad: edadCalculada,
-            sexo: data.sexo,
-            diagnostico_principal: data.diagnostico,
-            usa_glucometro: false,
-          },
-        });
-      }
+      throw error;
     }
 
     if (signUpData.session) {
