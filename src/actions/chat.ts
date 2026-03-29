@@ -10,9 +10,10 @@ function formatDate(value?: Date | null): string {
   return value ? value.toISOString().split('T')[0] : 'N/D';
 }
 
-function formatMaybe(value: string | number | null | undefined, unit?: string): string {
+function formatMaybe(value: unknown, unit?: string): string {
   if (value === null || value === undefined || value === '') return 'N/D';
-  return unit ? `${value} ${unit}` : String(value);
+  const normalized = typeof value === 'object' ? String(value) : value;
+  return unit ? `${normalized} ${unit}` : String(normalized);
 }
 
 export async function chatWithAIAction(userMessage: string, chatHistory: { role: 'user' | 'ai', content: string }[] = []) {
