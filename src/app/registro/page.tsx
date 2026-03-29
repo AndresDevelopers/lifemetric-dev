@@ -7,6 +7,7 @@ import { registerAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { translateTemplate } from '@/lib/i18n';
+import { PROMO_FOCUS_PRODUCTS } from '@/lib/productCatalog';
 
 export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
@@ -20,6 +21,7 @@ export default function RegisterPage() {
   const diagnosisOptions = locale === 'es'
     ? ['Control', 'Diabetes tipo 1', 'Diabetes tipo 2', 'Hipertensión', 'Otra']
     : ['Routine check', 'Type 1 diabetes', 'Type 2 diabetes', 'Hypertension', 'Other'];
+  const doctorOptions = ['Renato', 'Ulysses'];
 
   useEffect(() => {
     if (state?.success && !state?.message) {
@@ -128,6 +130,27 @@ export default function RegisterPage() {
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label htmlFor="productoPermitido" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.allowedProduct}</label>
+                <select id="productoPermitido" name="productoPermitido" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required>
+                  <option value="">{messages.common.select}</option>
+                  {PROMO_FOCUS_PRODUCTS.map((product) => (
+                    <option key={product} value={product}>{product}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="doctorAsignado" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.attendingDoctor}</label>
+                <select id="doctorAsignado" name="doctorAsignado" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required>
+                  <option value="">{messages.common.select}</option>
+                  {doctorOptions.map((doctor) => (
+                    <option key={doctor} value={doctor}>{doctor}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-4 py-3">

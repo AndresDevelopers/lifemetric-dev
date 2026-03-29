@@ -83,6 +83,8 @@ test('register page does not auto-redirect when registration requires email veri
   assert.match(register, /state\?\.success && !state\?\.message/);
   assert.match(register, /name="fechaNacimiento"/);
   assert.match(register, /name="diagnostico"/);
+  assert.match(register, /name="productoPermitido"/);
+  assert.match(register, /name="doctorAsignado"/);
   assert.match(register, /diagnosisOptions\.map/);
 });
 
@@ -126,6 +128,8 @@ test('laboratory uploads use dedicated storage bucket and retention route exists
   assert.match(labPage, /storage\.from\("laboratorios"\)\.upload/);
   assert.match(retentionRoute, /MEAL_IMAGE_RETENTION_DAYS/);
   assert.match(retentionRoute, /LAB_IMAGE_RETENTION_DAYS/);
+  assert.match(retentionRoute, /deletedInactiveAccounts/);
+  assert.match(retentionRoute, /last_login_at/);
   assert.match(storageRetentionLib, /365/);
   assert.match(storageRetentionLib, /730/);
 });

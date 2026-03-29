@@ -15,6 +15,7 @@ import { sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 import { ensurePacienteProfileColumns, updatePacienteProfileExtras } from '@/lib/pacienteProfile';
 import { getStoragePathFromPublicUrl } from '@/lib/storageRetention';
+import { PROMO_FOCUS_PRODUCTS } from '@/lib/productCatalog';
 
 export type AuthActionState = {
   error?: string;
@@ -39,6 +40,8 @@ const registerSchema = z.object({
   alturaCm: z.coerce.number().positive().max(272).optional(),
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
+  productoPermitido: z.enum(PROMO_FOCUS_PRODUCTS),
+  doctorAsignado: z.enum(['Renato', 'Ulysses']),
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
@@ -67,7 +70,16 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
   await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS idioma TEXT DEFAULT 'es'");
+  await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ");
   await ensurePacienteProfileColumns();
+}
+
+async function touchPacienteLastLogin(pacienteId: string) {
+  await ensurePacienteAuthColumns();
+  await prisma.$executeRaw`
+    UPDATE pacientes SET last_login_at = NOW()
+    WHERE paciente_id = ${pacienteId}::uuid
+  `;
 }
 
 async function findOrCreatePacienteByEmail(input: {
@@ -82,6 +94,8 @@ async function findOrCreatePacienteByEmail(input: {
   fechaNacimiento?: string | null;
   alturaCm?: number | null;
   motivoRegistro?: string | null;
+  productoPermitidoRegistro?: string | null;
+  doctorAsignado?: string | null;
 }) {
   const createPaciente = async () => prisma.paciente.create({
     data: {
@@ -220,6 +234,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     });
 
     await setSession(paciente.paciente_id);
+    await touchPacienteLastLogin(paciente.paciente_id);
 
     return { success: true };
   } catch (error) {
@@ -303,9 +318,11 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         diagnosticoPrincipal: data.diagnostico,
         newsletterSuscrito: data.newsletterSubscribed ?? true,
         fechaNacimiento: data.fechaNacimiento,
-        alturaCm: data.alturaCm,
-        motivoRegistro: data.diagnostico,
-      });
+            alturaCm: data.alturaCm,
+            motivoRegistro: data.diagnostico,
+            productoPermitidoRegistro: data.productoPermitido,
+            doctorAsignado: data.doctorAsignado,
+          });
     } catch (error) {
       if (signUpData.user?.id) {
         try {
@@ -318,19 +335,21 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       throw error;
     }
 
-    if (signUpData.session) {
-      await setSession(paciente.paciente_id);
-      return { success: true };
-    }
+      if (signUpData.session) {
+          await setSession(paciente.paciente_id);
+          await touchPacienteLastLogin(paciente.paciente_id);
+          return { success: true };
+      }
 
     const { data: autoSignInData } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
-    if (autoSignInData.user) {
-      await setSession(paciente.paciente_id);
-      return { success: true };
-    }
+      if (autoSignInData.user) {
+          await setSession(paciente.paciente_id);
+          await touchPacienteLastLogin(paciente.paciente_id);
+          return { success: true };
+      }
 
     const verifyMessage = locale === 'es'
       ? 'Revisa tu correo para verificar tu cuenta y luego inicia sesión.'

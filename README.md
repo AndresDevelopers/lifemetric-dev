@@ -83,6 +83,10 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
   - Archivos/imágenes de laboratorios: se eliminan automáticamente a los **2 años**.
 - Al eliminar cuenta desde Ajustes se purgan registros del usuario (comidas, glucosa, hábitos, medicación y datos personales), pero se conservan temporalmente las evidencias de laboratorio hasta cumplir su retención de 2 años para mejora de modelos de IA.
 - Para eliminar cuenta en Ajustes ahora se exige repetir la contraseña actual. Si es válida, la sesión se cierra y se redirige a login mostrando confirmación de cuenta eliminada.
+- Si el usuario pasa 1 año sin iniciar sesión, el job de retención elimina su cuenta por inactividad con el mismo criterio de purga (conservando evidencias de laboratorio hasta su vencimiento de 2 años).
+- Registro ahora incluye:
+  - Producto (Permitido) seleccionado por el paciente.
+  - Doctor que atendió (Renato o Ulysses).
 
 ### Job de retención (cron)
 
