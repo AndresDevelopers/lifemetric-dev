@@ -20,12 +20,24 @@ const inter = Inter({
 
 export async function generateMetadata(): Promise<Metadata> {
   const appName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Lifemetric";
+  const faviconUrl = process.env.NEXT_PUBLIC_APP_FAVICON_URL?.trim() || "/favicon.ico";
   return {
     title: {
       default: appName,
       template: `%s | ${appName}`,
     },
     description: "Sistema clínico para diabéticos",
+    icons: {
+      icon: faviconUrl,
+      shortcut: faviconUrl,
+      apple: faviconUrl,
+    },
+    openGraph: {
+      images: [{ url: faviconUrl }],
+    },
+    twitter: {
+      images: [faviconUrl],
+    },
   };
 }
 

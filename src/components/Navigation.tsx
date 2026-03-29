@@ -31,6 +31,8 @@ interface NavigationProps {
 export default function Navigation({ userName }: NavigationProps) {
   const pathname = usePathname();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Lifemetric";
+  const appBrandLogoUrl = process.env.NEXT_PUBLIC_APP_BRAND_LOGO_URL?.trim() ?? "";
+  const appIconUrl = process.env.NEXT_PUBLIC_APP_ICON_URL?.trim() ?? "";
   const { messages } = useLocale();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -103,7 +105,12 @@ export default function Navigation({ userName }: NavigationProps) {
                     <p className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">
                       {userName.nombre} {userName.apellido}
                     </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">{appName}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                      {appIconUrl ? (
+                        <img src={appIconUrl} alt={appName} className="w-3.5 h-3.5 rounded object-cover" />
+                      ) : null}
+                      <span>{appName}</span>
+                    </p>
                   </div>
                 </div>
 
@@ -233,8 +240,17 @@ export default function Navigation({ userName }: NavigationProps) {
             </Link>
           </div>
         ) : (
-          <div className="text-2xl font-black text-blue-900 dark:text-blue-100 px-6 py-8">
-            {appName}
+          <div className="px-6 py-8">
+            {appBrandLogoUrl ? (
+              <img src={appBrandLogoUrl} alt={appName} className="h-10 w-auto max-w-[180px] object-contain" />
+            ) : (
+              <div className="flex items-center gap-3 text-2xl font-black text-blue-900 dark:text-blue-100">
+                {appIconUrl ? (
+                  <img src={appIconUrl} alt={appName} className="w-9 h-9 rounded-xl object-cover" />
+                ) : null}
+                <span>{appName}</span>
+              </div>
+            )}
           </div>
         )}
 
