@@ -104,6 +104,8 @@ const messages = {
       messages: {
         invalidCaptcha: 'Captcha inválido',
         invalidCredentials: 'Credenciales inválidas',
+        accountNotFound: 'No existe una cuenta con ese correo.',
+        wrongPassword: 'La contraseña es incorrecta.',
         invalidData: 'Datos no válidos',
         invalidRegisterData: 'Datos de registro no válidos',
         registerEmailUnavailable: 'Este correo electrónico no está disponible.',
@@ -503,6 +505,8 @@ const messages = {
       messages: {
         invalidCaptcha: 'Invalid captcha',
         invalidCredentials: 'Invalid credentials',
+        accountNotFound: 'No account exists with that email.',
+        wrongPassword: 'The password is incorrect.',
         invalidData: 'Invalid data',
         invalidRegisterData: 'Invalid registration data',
         registerEmailUnavailable: 'This email address is not available.',

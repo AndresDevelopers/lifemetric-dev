@@ -164,19 +164,6 @@ async function isBotIdBlocked(): Promise<boolean> {
   return botSignal.includes('bot');
 }
 
-function getDefaultPacienteData(email: string) {
-  const username = email.split('@')[0] ?? 'usuario';
-  return {
-    nombre: username,
-    apellido: 'Usuario',
-    edad: 18,
-    sexo: 'No especificado',
-    diagnostico_principal: 'Sin especificar',
-    usa_glucometro: false,
-    newsletter_suscrito: true,
-  };
-}
-
 function calculateAgeFromBirthDate(fechaNacimiento: string): number {
   const birth = new Date(fechaNacimiento);
   if (Number.isNaN(birth.getTime())) {
@@ -221,6 +208,21 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
        }
     }
 
+    await ensurePacienteAuthColumns();
+    const paciente = await prisma.paciente.findFirst({
+      where: { email: data.email },
+      select: { paciente_id: true, password_hash: true },
+    });
+
+    if (!paciente) {
+      return { error: authMessages.accountNotFound };
+    }
+
+    const isPasswordValid = await bcrypt.compare(data.password, paciente.password_hash ?? '');
+    if (!isPasswordValid) {
+      return { error: authMessages.wrongPassword };
+    }
+
     const supabase = createSupabaseServerClient({ useServiceRole: false });
     const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
       email: data.email,
@@ -228,20 +230,8 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     });
 
     if (signInError || !signInData.user) {
-      return { error: authMessages.invalidCredentials };
+      return { error: authMessages.wrongPassword };
     }
-
-    const defaults = getDefaultPacienteData(data.email);
-    const paciente = await findOrCreatePacienteByEmail({
-      email: data.email,
-      password: data.password,
-      nombre: defaults.nombre,
-      apellido: defaults.apellido,
-      edad: defaults.edad,
-      sexo: defaults.sexo,
-      diagnosticoPrincipal: defaults.diagnostico_principal,
-      newsletterSuscrito: defaults.newsletter_suscrito,
-    });
 
     await setSession(paciente.paciente_id);
     await touchPacienteLastLogin(paciente.paciente_id);
