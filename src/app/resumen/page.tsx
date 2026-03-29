@@ -253,9 +253,9 @@ export default async function ResumenSemanal({
   const comidasInadecuadas = filteredComidas.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
   const glucosaEstimadaPorComida = estimateGlucoseFromMeals(
     filteredComidas.map((item) => ({
-      carbohidratos_g: item.carbohidratos_g,
-      fibra_g: item.fibra_g,
-      proteina_g: item.proteina_g,
+      carbohidratos_g: item.carbohidratos_g != null ? Number(item.carbohidratos_g) : null,
+      fibra_g: item.fibra_g != null ? Number(item.fibra_g) : null,
+      proteina_g: item.proteina_g != null ? Number(item.proteina_g) : null,
       clasificacion_final: item.clasificacion_final,
     })),
   );
