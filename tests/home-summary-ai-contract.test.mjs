@@ -99,3 +99,10 @@ test('medication save flow blocks restricted products and enforces photo-name ma
   assert.match(medicationAction, /product_name_photo_mismatch/);
   assert.match(medicationPage, /ai_detected_medicamento/);
 });
+
+
+test('summary main alert waits for data before showing alert message', () => {
+  assert.match(summary, /hasAlertData/);
+  assert.match(summary, /waitingForAlertData/);
+  assert.match(i18n, /waitingForAlertData/);
+});

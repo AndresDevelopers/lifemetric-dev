@@ -273,6 +273,13 @@ export default async function ResumenSemanal({
   const tomasProgramadas = paciente.medicacion.length || 1;
   const tomasRealizadas = paciente.medicacion.filter(m => m.estado_toma === 'Tomada' || m.estado_toma === 'tomada').length;
   const adherenciaMedicacion = paciente.medicacion.length === 0 ? 0 : Math.round((tomasRealizadas / tomasProgramadas) * 100);
+  const hasAlertData =
+    paciente.glucosa.length > 0 ||
+    filteredComidas.length > 0 ||
+    paciente.habitos.length > 0 ||
+    paciente.medicacion.length > 0 ||
+    paciente.laboratorios.length > 0;
+
   const medicamentosResumen = paciente.medicacion.reduce<Record<string, number>>((acc, item) => {
     const key = item.medicamento?.trim() || "Sin nombre";
     acc[key] = (acc[key] ?? 0) + 1;
@@ -295,9 +302,11 @@ export default async function ResumenSemanal({
       promedio_agua: promedioAgua,
     },
     adherencia_medicacion_pct: adherenciaMedicacion,
-    alerta_principal: (paciente.glucosa.some(g => g.valor_glucosa > 140) || (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140))
-      ? messages.summary.glucosePeaks
-      : messages.summary.glucoseInRange,
+    alerta_principal: hasAlertData
+      ? ((paciente.glucosa.some(g => g.valor_glucosa > 140) || (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140))
+          ? messages.summary.glucosePeaks
+          : messages.summary.glucoseInRange)
+      : null,
   };
 
   const aiSuggestionPayload = {
@@ -404,7 +413,7 @@ export default async function ResumenSemanal({
               <span className="material-symbols-outlined text-rose-500 mt-1" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
               <div>
                 <h3 className="font-bold text-rose-900">{messages.summary.mainAlert}</h3>
-                <p className="text-rose-800/80 text-sm mt-1">{data.alerta_principal}</p>
+                <p className="text-rose-800/80 text-sm mt-1">{data.alerta_principal ?? messages.summary.waitingForAlertData}</p>
               </div>
             </div>
           </div>
