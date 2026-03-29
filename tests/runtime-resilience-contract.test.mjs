@@ -8,9 +8,11 @@ const redisPath = path.join(process.cwd(), 'src', 'lib', 'redis.ts');
 const turnstilePath = path.join(process.cwd(), 'src', 'components', 'auth', 'TurnstileWidget.tsx');
 const authPath = path.join(process.cwd(), 'src', 'actions', 'auth.ts');
 const loginPath = path.join(process.cwd(), 'src', 'app', 'login', 'page.tsx');
+const registerPath = path.join(process.cwd(), 'src', 'app', 'registro', 'page.tsx');
 const sessionPath = path.join(process.cwd(), 'src', 'lib', 'session.ts');
 const prismaConfigPath = path.join(process.cwd(), 'prisma.config.ts');
 const prismaLibPath = path.join(process.cwd(), 'src', 'lib', 'prisma.ts');
+const supabaseLibPath = path.join(process.cwd(), 'src', 'lib', 'supabase.ts');
 const readmePath = path.join(process.cwd(), 'README.md');
 
 const layout = fs.readFileSync(layoutPath, 'utf8');
@@ -18,9 +20,11 @@ const redis = fs.readFileSync(redisPath, 'utf8');
 const turnstile = fs.readFileSync(turnstilePath, 'utf8');
 const auth = fs.readFileSync(authPath, 'utf8');
 const login = fs.readFileSync(loginPath, 'utf8');
+const register = fs.readFileSync(registerPath, 'utf8');
 const session = fs.readFileSync(sessionPath, 'utf8');
 const prismaConfig = fs.readFileSync(prismaConfigPath, 'utf8');
 const prismaLib = fs.readFileSync(prismaLibPath, 'utf8');
+const supabaseLib = fs.readFileSync(supabaseLibPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 
 test('layout avoids hard dependency on @vercel/analytics/react', () => {
@@ -39,9 +43,11 @@ test('turnstile fallback does not rely on hardcoded bypass token strings', () =>
   assert.match(turnstile, /onProviderChange\?\.\('botid'\)/);
 });
 
-test('login validates password hash presence before bcrypt compare', () => {
-  assert.match(auth, /if \(!paciente\.password_hash \|\| paciente\.password_hash\.trim\(\)\.length === 0\)/);
-  assert.match(auth, /bcrypt\.compare\(data\.password,\s*paciente\.password_hash\)/);
+test('login bootstraps paciente row when supabase auth user exists but profile row is missing', () => {
+  assert.match(auth, /signInWithPassword/);
+  assert.match(auth, /if \(!paciente\)/);
+  assert.match(auth, /getDefaultPacienteData/);
+  assert.match(auth, /password_hash:\s*await bcrypt\.hash\(data\.password,\s*10\)/);
 });
 
 test('auth actions support botid provider fallback and login sends captchaProvider', () => {
@@ -50,6 +56,18 @@ test('auth actions support botid provider fallback and login sends captchaProvid
   assert.match(auth, /botIdModuleName\s*=\s*'botid\/server'/);
   assert.match(auth, /isBotIdBlocked/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
+});
+
+test('auth actions use supabase auth for sign in, sign up and recovery', () => {
+  assert.match(auth, /createSupabaseServerClient/);
+  assert.match(auth, /signInWithPassword/);
+  assert.match(auth, /signUp/);
+  assert.match(auth, /resetPasswordForEmail/);
+  assert.match(supabaseLib, /SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test('register page does not auto-redirect when registration requires email verification', () => {
+  assert.match(register, /state\?\.success && !state\?\.message/);
 });
 
 test('session signing supports auth secret fallback chain', () => {

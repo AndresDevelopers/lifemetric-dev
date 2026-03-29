@@ -19,7 +19,7 @@ export default function RegisterPage() {
   const registerMessages = messages.auth.register;
 
   useEffect(() => {
-    if (state?.success) {
+    if (state?.success && !state?.message) {
       router.push('/');
     }
   }, [state, router]);
@@ -58,6 +58,13 @@ export default function RegisterPage() {
             <div className="mb-6 p-4 rounded-xl bg-[var(--color-error-container)] text-[var(--color-on-error-container)] flex items-center gap-2 text-sm font-semibold">
               <span className="material-symbols-outlined">error</span>
               {state.error}
+            </div>
+          )}
+
+          {state?.success && state?.message && (
+            <div className="mb-6 p-4 rounded-xl bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)] flex items-center gap-2 text-sm font-semibold">
+              <span className="material-symbols-outlined">mail</span>
+              {state.message}
             </div>
           )}
 

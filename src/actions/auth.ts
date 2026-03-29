@@ -5,10 +5,11 @@ import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { createSupabaseServerClient } from '@/lib/supabase';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { deleteSession, setSession } from '@/lib/session';
 import { getSessionPacienteId } from './data';
-import { sendNewsletterSubscriptionEmail, sendPasswordRecoveryEmail } from '@/lib/email';
+import { sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 
 export type AuthActionState = {
@@ -47,24 +48,6 @@ const recoverSchema = z.object({
 });
 
 
-async function sendRecoveryEmailIfAccountExists(email: string, locale: 'es' | 'en') {
-  const existingUser = await prisma.paciente.findFirst({
-    where: { email },
-    select: { paciente_id: true },
-  });
-
-  if (!existingUser) {
-    return;
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-  await sendPasswordRecoveryEmail({
-    to: email,
-    locale,
-    appUrl,
-  });
-}
-
 function isPacienteColumnMissingError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === 'P2022';
 }
@@ -90,6 +73,19 @@ async function isBotIdBlocked(): Promise<boolean> {
     // Resilient fallback for browsers/ad-blockers where BotID signal may be unavailable.
     return false;
   }
+}
+
+function getDefaultPacienteData(email: string) {
+  const username = email.split('@')[0] ?? 'usuario';
+  return {
+    nombre: username,
+    apellido: 'Usuario',
+    edad: 18,
+    sexo: 'No especificado',
+    diagnostico_principal: 'Sin especificar',
+    usa_glucometro: false,
+    newsletter_suscrito: true,
+  };
 }
 
 export async function loginAction(prevState: AuthActionState, formData: FormData) {
@@ -122,6 +118,16 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
        }
     }
 
+    const supabase = createSupabaseServerClient();
+    const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (signInError || !signInData.user) {
+      return { error: authMessages.invalidCredentials };
+    }
+
     let paciente;
     try {
       paciente = await prisma.paciente.findFirst({
@@ -138,16 +144,13 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     }
 
     if (!paciente) {
-      return { error: authMessages.invalidCredentials };
-    }
-
-    if (!paciente.password_hash || paciente.password_hash.trim().length === 0) {
-      return { error: authMessages.invalidCredentials };
-    }
-
-    const isValid = await bcrypt.compare(data.password, paciente.password_hash);
-    if (!isValid) {
-      return { error: authMessages.invalidCredentials };
+      paciente = await prisma.paciente.create({
+        data: {
+          ...getDefaultPacienteData(data.email),
+          email: data.email,
+          password_hash: await bcrypt.hash(data.password, 10),
+        },
+      });
     }
 
     await setSession(paciente.paciente_id);
@@ -204,48 +207,25 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
        }
     }
 
-    let existingUser;
-    try {
-      existingUser = await prisma.paciente.findFirst({
-        where: { email: data.email },
-      });
-    } catch (error) {
-      if (!isPacienteColumnMissingError(error)) {
-        throw error;
-      }
-      await ensurePacienteAuthColumns();
-      existingUser = await prisma.paciente.findFirst({
-        where: { email: data.email },
-      });
-    }
+    const supabase = createSupabaseServerClient();
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        emailRedirectTo: `${appUrl}/login`,
+      },
+    });
 
-    if (existingUser) {
+    if (signUpError) {
       return { error: authMessages.registerEmailUnavailable };
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    let newPaciente;
-    try {
-      newPaciente = await prisma.paciente.create({
-        data: {
-          nombre: data.nombre,
-          apellido: data.apellido,
-          email: data.email,
-          password_hash: hashedPassword,
-          newsletter_suscrito: data.newsletterSubscribed ?? true,
-          edad: data.edad,
-          sexo: data.sexo,
-          diagnostico_principal: data.diagnostico,
-          usa_glucometro: false,
-        },
-      });
-    } catch (error) {
-      if (!isPacienteColumnMissingError(error)) {
-        throw error;
-      }
-      await ensurePacienteAuthColumns();
-      newPaciente = await prisma.paciente.create({
+    let paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
+    if (!paciente) {
+      paciente = await prisma.paciente.create({
         data: {
           nombre: data.nombre,
           apellido: data.apellido,
@@ -260,9 +240,15 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       });
     }
 
-    await setSession(newPaciente.paciente_id);
+    if (signUpData.session) {
+      await setSession(paciente.paciente_id);
+      return { success: true };
+    }
 
-    return { success: true };
+    const verifyMessage = locale === 'es'
+      ? 'Revisa tu correo para verificar tu cuenta y luego inicia sesión.'
+      : 'Check your email to verify your account, then sign in.';
+    return { success: true, message: verifyMessage };
   } catch (error) {
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
@@ -302,7 +288,11 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
        }
     }
 
-    await sendRecoveryEmailIfAccountExists(data.email, locale);
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const supabase = createSupabaseServerClient();
+    await supabase.auth.resetPasswordForEmail(data.email, {
+      redirectTo: `${appUrl}/recuperar`,
+    });
 
     return { success: true, message: authMessages.recoverSuccess };
   } catch (error) {
