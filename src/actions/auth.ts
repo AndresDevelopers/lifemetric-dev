@@ -38,7 +38,6 @@ const registerSchema = z.object({
   alturaCm: z.coerce.number().positive().max(272).optional(),
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
-  motivoRegistro: z.string().min(3).max(400).optional(),
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
@@ -228,7 +227,6 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         ...rawData,
         fechaNacimiento: (rawData.fechaNacimiento as string | undefined) ?? '',
         alturaCm: rawData.alturaCm ? Number(rawData.alturaCm) : undefined,
-        motivoRegistro: (rawData.motivoRegistro as string | undefined)?.trim() || undefined,
         newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
     const data = registerSchema.parse(parsedData);
@@ -288,7 +286,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         newsletterSuscrito: data.newsletterSubscribed ?? true,
         fechaNacimiento: data.fechaNacimiento,
         alturaCm: data.alturaCm,
-        motivoRegistro: data.motivoRegistro ?? data.diagnostico,
+        motivoRegistro: data.diagnostico,
       });
     } catch (error) {
       if (signUpData.user?.id) {
@@ -468,7 +466,11 @@ const profileSchema = z.object({
   sexo: z.string().min(1),
   fecha_nacimiento: z.string().optional(),
   avatar_url: z.string().optional(),
-  altura_cm: z.coerce.number().positive().max(272).optional(),
+  altura_cm: z.preprocess(
+    (value) => (value === '' || value == null ? undefined : Number(value)),
+    z.number().positive().max(272).optional()
+  ),
+  motivo_registro: z.string().max(400).optional(),
 });
 
 export async function updateProfileAction(prevState: AuthActionState, formData: FormData) {
@@ -514,6 +516,7 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
       fechaNacimiento: data.fecha_nacimiento || null,
       avatarUrl: data.avatar_url || null,
       alturaCm: typeof data.altura_cm === 'number' ? data.altura_cm : null,
+      motivoRegistro: data.motivo_registro?.trim() ? data.motivo_registro.trim() : null,
     });
     revalidateTag(`paciente-${pacienteId}`, 'max');
 

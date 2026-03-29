@@ -26,6 +26,9 @@ export default function AjustesPage() {
   });
 
   const messages = getMessages(locale);
+  const diagnosisOptions = locale === 'es'
+    ? ['Control', 'Diabetes tipo 1', 'Diabetes tipo 2', 'Hipertensión', 'Otra']
+    : ['Routine check', 'Type 1 diabetes', 'Type 2 diabetes', 'Hypertension', 'Other'];
   
   const [passwordState, passwordFormAction, isPasswordPending] = useActionState(changePasswordAction, undefined);
   const [deleteState, deleteFormAction, isDeletePending] = useActionState(deleteAccountAction, undefined);
@@ -36,6 +39,7 @@ export default function AjustesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [user, setUser] = useState<SettingsUser>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [motivoRegistro, setMotivoRegistro] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -43,6 +47,7 @@ export default function AjustesPage() {
       const data = await getSessionPaciente();
       if (data) {
         setUser(data);
+        setMotivoRegistro(data.motivo_registro ?? '');
         if (data.avatar_url) setAvatarPreview(data.avatar_url);
         if (data.idioma) setLocale(data.idioma as Locale);
       }
@@ -235,8 +240,29 @@ export default function AjustesPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                   {messages.settings.fields.registrationReason}
                 </label>
-                <div className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-sm">
-                  {user.motivo_registro || messages.settings.fields.registrationReasonFallback}
+                <div className="flex items-center gap-2">
+                  <select
+                    name="motivo_registro"
+                    value={motivoRegistro}
+                    onChange={(event) => setMotivoRegistro(event.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
+                  >
+                    <option value="">{messages.settings.fields.registrationReasonFallback}</option>
+                    {diagnosisOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setMotivoRegistro('')}
+                    className="h-11 w-11 shrink-0 rounded-xl border border-gray-200 dark:border-slate-600 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors"
+                    aria-label={messages.common.close}
+                    title={messages.common.close}
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 

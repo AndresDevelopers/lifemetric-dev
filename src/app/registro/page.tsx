@@ -130,12 +130,6 @@ export default function RegisterPage() {
                 </select>
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="motivoRegistro" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.registrationReason}</label>
-              <textarea id="motivoRegistro" name="motivoRegistro" rows={3} className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)] resize-none" placeholder={registerMessages.registrationReasonPlaceholder} />
-            </div>
-
-
             <div className="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-4 py-3">
               <label htmlFor="newsletterSubscribed" className="flex items-start gap-3 cursor-pointer">
                 <input
