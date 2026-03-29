@@ -82,6 +82,7 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
   - Imágenes de comidas: se eliminan automáticamente a los **365 días**.
   - Archivos/imágenes de laboratorios: se eliminan automáticamente a los **2 años**.
 - Al eliminar cuenta desde Ajustes se purgan registros del usuario (comidas, glucosa, hábitos, medicación y datos personales), pero se conservan temporalmente las evidencias de laboratorio hasta cumplir su retención de 2 años para mejora de modelos de IA.
+- Para eliminar cuenta en Ajustes ahora se exige repetir la contraseña actual. Si es válida, la sesión se cierra y se redirige a login mostrando confirmación de cuenta eliminada.
 
 ### Job de retención (cron)
 

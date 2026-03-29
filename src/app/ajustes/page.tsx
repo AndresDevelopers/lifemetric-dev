@@ -435,6 +435,14 @@ export default function AjustesPage() {
             {showDeleteConfirm ? (
               <form action={deleteFormAction} className="space-y-4 flex flex-col items-center">
                 <input type="hidden" name="locale" value={locale} />
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  required
+                  autoComplete="current-password"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-2 focus:ring-red-500/20 transition-all font-semibold"
+                  placeholder={messages.settings.deletePasswordConfirm}
+                />
                 <button
                   type="submit"
                   disabled={isDeletePending}

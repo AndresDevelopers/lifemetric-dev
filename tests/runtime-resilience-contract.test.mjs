@@ -63,6 +63,7 @@ test('auth actions support botid provider fallback and login sends captchaProvid
   assert.match(auth, /x-vercel-botid/);
   assert.match(auth, /isBotIdBlocked/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
+  assert.match(login, /accountDeleted/);
 });
 
 test('auth actions use supabase auth for sign in, sign up and recovery', () => {
@@ -116,6 +117,9 @@ test('delete account keeps lab evidence while purging user data and uploaded mea
   assert.match(auth, /paciente\.update/);
   assert.match(auth, /Cuenta eliminada/);
   assert.match(auth, /storage\.from\('comidas'\)\.remove/);
+  assert.match(auth, /confirmPassword/);
+  assert.match(auth, /bcrypt\.compare/);
+  assert.match(auth, /redirect\(`\/login\?accountDeleted=1&lang=\$\{locale\}`\)/);
 });
 
 test('laboratory uploads use dedicated storage bucket and retention route exists', () => {

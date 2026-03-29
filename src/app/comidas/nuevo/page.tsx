@@ -26,6 +26,7 @@ type FormValues = z.infer<typeof comidaSchema>;
 export default function NuevaComida() {
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [pacienteId, setPacienteId] = useState<string>("");
   const { locale, messages } = useLocale();
   const foodMessages = messages.foodForm;
   
@@ -46,7 +47,10 @@ export default function NuevaComida() {
   useEffect(() => {
     async function loadData() {
       const pId = await getSessionPacienteId();
-      if (pId) setValue("paciente_id", pId);
+      if (pId) {
+        setPacienteId(pId);
+        setValue("paciente_id", pId);
+      }
     }
     loadData();
   }, [setValue]);
@@ -110,7 +114,6 @@ export default function NuevaComida() {
         setUploadedPhotoUrl(photoUrl);
         setValue("foto_url", photoUrl);
 
-        const pacienteId = watch("paciente_id");
         if (!pacienteId) return;
 
         setAnalyzingPhoto(true);

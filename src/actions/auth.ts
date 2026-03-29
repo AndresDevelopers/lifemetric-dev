@@ -52,6 +52,11 @@ const recoverSchema = z.object({
   locale: z.string().optional(),
 });
 
+const deleteAccountSchema = z.object({
+  locale: z.string().optional(),
+  confirmPassword: z.string().min(6),
+});
+
 
 function isPacienteColumnMissingError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === 'P2022';
@@ -422,14 +427,19 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
     const pacienteId = await getSessionPacienteId();
     if (!pacienteId) redirect('/login');
 
-    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const parsed = deleteAccountSchema.parse(Object.fromEntries(formData.entries()));
+    const locale = normalizeLocale(parsed.locale);
     const messages = getMessages(locale);
     const paciente = await prisma.paciente.findUnique({
       where: { paciente_id: pacienteId },
-      select: { email: true },
+      select: { email: true, password_hash: true },
     });
     if (!paciente) {
       return { error: 'Error' };
+    }
+    const passwordMatches = await bcrypt.compare(parsed.confirmPassword, paciente.password_hash);
+    if (!passwordMatches) {
+      return { error: messages.auth.messages.invalidCredentials };
     }
 
     const mealPhotos = await prisma.comida.findMany({
@@ -476,8 +486,13 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
     }
 
     await deleteSession();
-    return { success: true, message: messages.settings.accountDeleted };
+    redirect(`/login?accountDeleted=1&lang=${locale}`);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      const locale = normalizeLocale(formData.get('locale')?.toString());
+      const authMessages = getMessages(locale).auth.messages;
+      return { error: authMessages.invalidData };
+    }
     console.error(error);
     return { error: 'Error' };
   }
