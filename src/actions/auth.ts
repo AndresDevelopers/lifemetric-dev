@@ -218,7 +218,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     });
 
     if (signUpError) {
-      return { error: authMessages.registerEmailUnavailable };
+      const isDuplicate = /already registered|already been registered|user already exists/i.test(signUpError.message);
+      return { error: isDuplicate ? authMessages.registerEmailUnavailable : authMessages.registerError };
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -241,6 +242,15 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     }
 
     if (signUpData.session) {
+      await setSession(paciente.paciente_id);
+      return { success: true };
+    }
+
+    const { data: autoSignInData } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+    if (autoSignInData.user) {
       await setSession(paciente.paciente_id);
       return { success: true };
     }

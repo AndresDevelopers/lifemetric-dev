@@ -64,6 +64,7 @@ test('auth actions use supabase auth for sign in, sign up and recovery', () => {
   assert.match(auth, /signInWithPassword/);
   assert.match(auth, /signUp/);
   assert.match(auth, /resetPasswordForEmail/);
+  assert.match(auth, /autoSignInData/);
   assert.match(supabaseLib, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(envExample, /SUPABASE_SERVICE_ROLE_KEY=/);
 });
