@@ -48,7 +48,7 @@ test('auth actions support botid provider fallback and login sends captchaProvid
   assert.match(auth, /captchaProvider:\s*z\.enum\(\['turnstile',\s*'botid'\]\)\.optional\(\)/);
   assert.match(auth, /data\.captchaProvider !== 'botid'/);
   assert.match(auth, /botIdModuleName\s*=\s*'botid\/server'/);
-  assert.match(auth, /isBotIdVerified/);
+  assert.match(auth, /isBotIdBlocked/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
 });
 
