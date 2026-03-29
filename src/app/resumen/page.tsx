@@ -193,6 +193,16 @@ export default async function ResumenSemanal({
 
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
   const ultimoLaboratorio = paciente.laboratorios[0] ?? null;
+  const latestLabOverall = await prisma.laboratorio.findFirst({
+    where: { paciente_id: pacienteId },
+    orderBy: { fecha_estudio: 'desc' },
+    select: { fecha_estudio: true },
+  });
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  const isLabDataOlderThanThreeMonths = latestLabOverall
+    ? new Date(latestLabOverall.fecha_estudio) < ninetyDaysAgo
+    : false;
 
   // Run AI vision extraction sequentially (to avoid concurrent 429s) 
   // and only for labs that don't have extracted values yet
@@ -616,6 +626,18 @@ export default async function ResumenSemanal({
               <p className="text-sm text-slate-500 mt-0.5">{messages.summary.historySubtitle}</p>
             </div>
           </div>
+
+          {isLabDataOlderThanThreeMonths ? (
+            <article className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-wider text-amber-700">{messages.summary.labsOutdatedTitle}</p>
+              <p className="mt-1 text-sm text-amber-900">{messages.summary.labsOutdatedDescription}</p>
+              {latestLabOverall ? (
+                <p className="mt-1 text-xs text-amber-700">
+                  {messages.summary.studyDate}: {new Date(latestLabOverall.fecha_estudio).toLocaleDateString(locale)}
+                </p>
+              ) : null}
+            </article>
+          ) : null}
 
           {ultimoLaboratorio ? (
             <>
