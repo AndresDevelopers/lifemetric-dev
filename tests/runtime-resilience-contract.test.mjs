@@ -26,6 +26,7 @@ const prismaConfig = fs.readFileSync(prismaConfigPath, 'utf8');
 const prismaLib = fs.readFileSync(prismaLibPath, 'utf8');
 const supabaseLib = fs.readFileSync(supabaseLibPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
+const envExample = fs.readFileSync(path.join(process.cwd(), '.env.example'), 'utf8');
 
 test('layout avoids hard dependency on @vercel/analytics/react', () => {
   assert.doesNotMatch(layout, /@vercel\/analytics\/react/);
@@ -64,6 +65,7 @@ test('auth actions use supabase auth for sign in, sign up and recovery', () => {
   assert.match(auth, /signUp/);
   assert.match(auth, /resetPasswordForEmail/);
   assert.match(supabaseLib, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(envExample, /SUPABASE_SERVICE_ROLE_KEY=/);
 });
 
 test('register page does not auto-redirect when registration requires email verification', () => {
