@@ -21,6 +21,7 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   captchaToken: z.string().optional(),
+  captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
 });
 
@@ -33,6 +34,7 @@ const registerSchema = z.object({
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
   captchaToken: z.string().optional(),
+  captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
   newsletterSubscribed: z.coerce.boolean().optional(),
 });
@@ -40,6 +42,7 @@ const registerSchema = z.object({
 const recoverSchema = z.object({
   email: z.string().email(),
   captchaToken: z.string().optional(),
+  captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
 });
 
@@ -83,7 +86,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
+    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
        try {
          const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
            method: 'POST',
@@ -155,7 +158,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
+    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
        try {
          const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
            method: 'POST',
@@ -250,7 +253,7 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
+    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
        try {
          const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
            method: 'POST',

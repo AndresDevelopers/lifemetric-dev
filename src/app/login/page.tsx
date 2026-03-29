@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [state, action, isPending] = useActionState(loginAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
+  const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const router = useRouter();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const { locale, messages } = useLocale();
@@ -75,6 +76,7 @@ export default function LoginPage() {
           <form action={action} className="space-y-6">
             <input type="hidden" name="captchaToken" value={captchaToken} />
             <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="captchaProvider" value={captchaProvider} />
 
             <div className="space-y-2 group">
               <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
@@ -122,6 +124,7 @@ export default function LoginPage() {
             <TurnstileWidget
               onVerify={(token) => setCaptchaToken(token)}
               onRequirementChange={setIsCaptchaRequired}
+              onProviderChange={setCaptchaProvider}
             />
 
             <button

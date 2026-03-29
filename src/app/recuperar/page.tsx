@@ -10,6 +10,7 @@ export default function RecoverPage() {
   const [state, action, isPending] = useActionState(recoveryAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
+  const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const { locale, messages } = useLocale();
   const recoverMessages = messages.auth.recover;
 
@@ -49,6 +50,7 @@ export default function RecoverPage() {
           <form action={action} className="space-y-6">
             <input type="hidden" name="captchaToken" value={captchaToken} />
             <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="captchaProvider" value={captchaProvider} />
 
             <div className="space-y-2 group">
               <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-secondary)] transition-colors">
@@ -72,6 +74,7 @@ export default function RecoverPage() {
             <TurnstileWidget
               onVerify={(token) => setCaptchaToken(token)}
               onRequirementChange={setIsCaptchaRequired}
+              onProviderChange={setCaptchaProvider}
             />
 
             <button
