@@ -1,7 +1,15 @@
 import { z } from 'zod';
+import { getPromoProductGuidance } from '@/lib/productCatalog';
 
 const AI_GATEWAY_BASE_URL = 'https://ai-gateway.vercel.sh/v1';
 const DEFAULT_AI_MODEL = 'google/gemini-2.0-flash-001';
+
+
+const THERMORUSH_CONTEXT = {
+  es: `ThermoRush (gotas de soporte neuro-metabólico): tomar antes de desayuno y almuerzo. Enfoques esperados: señalización de saciedad/apetito, alimentación relacionada con estrés, apoyo metabólico de energía, glucosa, triglicéridos/colesterol. Ingredientes reportados: extracto de té verde (Camellia sinensis), L-carnitina, taurina, rodiola, capsaicinoides y cromo. Mensaje clínico responsable: puede usarse como apoyo en estilo de vida, no reemplaza terapias médicas ni evaluación profesional. Si el paciente usa GLP-1, indicar consulta médica antes de combinar. Evitar prometer resultados garantizados; priorizar lenguaje de apoyo, seguridad y seguimiento clínico.`,
+  en: `ThermoRush (neuro-metabolic support drops): taken before breakfast and lunch. Intended areas: appetite/satiety signaling, stress-related eating patterns, metabolic energy support, glucose, triglycerides/cholesterol support. Reported ingredients: green tea extract (Camellia sinensis), L-carnitine, taurine, rhodiola, capsaicinoids, and chromium. Safety framing: can be presented as lifestyle support, not as a replacement for medical therapy or professional evaluation. If the patient is on GLP-1 therapy, advise clinician review before combining. Do not promise guaranteed outcomes; keep supportive and safety-first language.`
+};
+
 
 const aiGatewayResponseSchema = z.object({
   choices: z
@@ -41,7 +49,16 @@ export const mealVisionSchema = z.object({
 
 const suggestionsSchema = z.object({
   summary: z.string(),
-  suggestions: z.array(z.string()).max(5),
+  suggestions: z.array(z.string()).max(6),
+  importantAlert: z.string().optional(),
+  centralProblems: z.array(z.string()).max(5).optional(),
+  priorityPlan: z.array(z.string()).max(8).optional(),
+  nutritionFocus: z.array(z.string()).max(8).optional(),
+  lifestyleFocus: z.array(z.string()).max(8).optional(),
+  recommendedLabs: z.array(z.string()).max(8).optional(),
+  productsGuidance: z.array(z.string()).max(5).optional(),
+  expectedProgress: z.array(z.string()).max(5).optional(),
+  patientMessage: z.string().optional(),
 });
 
 export const medicationVisionSchema = z.object({
@@ -185,8 +202,8 @@ export async function buildClinicalSuggestions(params: {
 
   const prompt =
     params.locale === 'es'
-      ? `Actúa como asistente clínico educativo especializado en diabetes. Analiza este informe JSON de la última semana: ${JSON.stringify(params.data)}. Tu objetivo es brindar un resumen cálido y empoderador, seguido de sugerencias prácticas. IMPORTANTE: Usa excelente ortografía en español con todas las tildes correspondientes. Devuelve ÚNICAMENTE el siguiente formato JSON: {"summary":"Su resumen cálido y claro aquí...","suggestions":["Sugerencia 1","Sugerencia 2",...]}. Máximo 4 sugerencias concretas, tono claro y no alarmista.`
-      : `Act as an educational diabetes care assistant. Analyze this weekly JSON report: ${JSON.stringify(params.data)}. Your goal is to provide a warm and empowering summary followed by practical tips. Return ONLY JSON: {"summary":"Your warm and clear summary here...","suggestions":["Tip 1","Tip 2",...]}. Max 4 specific suggestions, clear and non-alarmist tone.`;
+      ? `Actúa como asistente clínico educativo con enfoque metabólico. Analiza este informe JSON de la última semana: ${JSON.stringify(params.data)}. Usa además este marco de producto para recomendaciones de productos/suplementos: ${THERMORUSH_CONTEXT.es}. ${getPromoProductGuidance('es')} Reglas: 1) Si glucosa_real_registrada es false, usa glucosa_estimada_por_comidas como referencia y deja claro que es estimación por alimentos. 2) Medicación y laboratorios son opcionales: si faltan, no bloquees el análisis; enfócate en comidas, hábitos y glucosa estimada/real. 3) Si sexo biológico es femenino y hay señales de fatiga, baja energía o laboratorio sugestivo, prioriza evaluación de hierro/anemia con lenguaje prudente (sin diagnosticar). 4) Incluye recomendaciones de alimentos, hábitos y seguimiento clínico ordenadas por prioridad. 5) Si recomiendas ThermoRush, explica dosis (antes del desayuno y almuerzo), objetivo metabólico esperado y que no reemplaza tratamiento médico. 6) Nunca menciones productos restringidos. 7) Tono claro, humano, no alarmista y sin sustituir consulta médica. Devuelve SOLO JSON válido con este formato: {"summary":"...","importantAlert":"... opcional ...","centralProblems":["..."],"priorityPlan":["..."],"nutritionFocus":["..."],"lifestyleFocus":["..."],"recommendedLabs":["..."],"productsGuidance":["..."],"expectedProgress":["..."],"patientMessage":"... opcional ...","suggestions":["...","..."]}. Máximo 6 suggestions.`
+      : `Act as an educational metabolic-care assistant. Analyze this weekly JSON report: ${JSON.stringify(params.data)}. Also use this product guidance framework for supplements/products recommendations: ${THERMORUSH_CONTEXT.en}. ${getPromoProductGuidance('en')} Rules: 1) If glucosa_real_registrada is false, use glucosa_estimada_por_comidas and clearly state it is a meal-based estimate. 2) Medication and labs are optional: if missing, still provide actionable analysis from meals/habits/glucose. 3) Prioritize practical recommendations by urgency. 4) If you mention ThermoRush, include timing (before breakfast and lunch), expected metabolic rationale, and that it does not replace medical treatment. 5) Never mention restricted products. 6) Keep a clear, supportive and non-alarmist tone, and never replace medical care. Return ONLY valid JSON with this shape: {"summary":"...","importantAlert":"... optional ...","centralProblems":["..."],"priorityPlan":["..."],"nutritionFocus":["..."],"lifestyleFocus":["..."],"recommendedLabs":["..."],"productsGuidance":["..."],"expectedProgress":["..."],"patientMessage":"... optional ...","suggestions":["...","..."]}. Max 6 suggestions.`;
 
   try {
     const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 500 });

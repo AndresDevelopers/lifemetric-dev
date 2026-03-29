@@ -167,6 +167,32 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
     return 'bg-emerald-500';
   };
 
+
+  const getMealInsight = (comida: Comida) => {
+    const kcal = comida.kcal_estimadas ?? 0;
+    const classif = (comida.clasificacion_final ?? '').toLowerCase();
+    if (classif.includes('pico') || classif.includes('malo') || classif.includes('pobre')) {
+      return {
+        tone: 'text-rose-900 bg-rose-50 border-rose-200',
+        text: locale === 'es'
+          ? 'Podría elevar glucosa/inflamación. Prioriza proteína magra, fibra y menos harinas refinadas.'
+          : 'This may raise glucose/inflammation. Prioritize lean protein, fiber, and fewer refined carbs.',
+      };
+    }
+    if (kcal > 0 && kcal < 320) {
+      return {
+        tone: 'text-emerald-900 bg-emerald-50 border-emerald-200',
+        text: locale === 'es'
+          ? 'Buena densidad metabólica: ligera y con potencial de saciedad. Puedes sumar grasa saludable si hay hambre temprana.'
+          : 'Good metabolic density: light with satiety potential. Add healthy fat if hunger appears early.',
+      };
+    }
+    return {
+      tone: 'text-slate-800 bg-slate-50 border-slate-200',
+      text: historyMessages.mealInsightBody,
+    };
+  };
+
   const getDateButtonClass = (dayDateStr: string, hasData: boolean) => {
     if (filterDate === dayDateStr) {
       return 'bg-primary text-white shadow-xl shadow-primary/25 scale-105 z-10';
@@ -329,6 +355,19 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <h4 className="font-extrabold text-slate-800 truncate leading-tight">{translateMealType(comida.tipo_comida, locale)}</h4>
+                  <details className="group/insight relative">
+                    <summary
+                      className="list-none h-6 w-6 rounded-full border border-sky-200 bg-sky-50 text-sky-700 flex items-center justify-center cursor-pointer"
+                      aria-label={historyMessages.mealInsightLabel}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">info</span>
+                    </summary>
+                    <div className={`absolute z-20 mt-2 w-72 max-w-[70vw] rounded-xl border p-3 shadow-xl ${getMealInsight(comida).tone}`}>
+                      <p className="text-[11px] font-black uppercase tracking-wider">{historyMessages.mealInsightTitle}</p>
+                      <p className="mt-1 text-xs leading-relaxed">{getMealInsight(comida).text}</p>
+                      <p className="mt-2 text-[11px]">{historyMessages.mealInsightOptimization}</p>
+                    </div>
+                  </details>
                   <span className="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 bg-slate-50 text-slate-400 rounded-lg shrink-0 border border-slate-100">
                     {new Date(comida.hora).toLocaleTimeString(locale === 'es' ? 'es-ES' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                   </span>

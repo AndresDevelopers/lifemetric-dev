@@ -3,6 +3,7 @@
 import { generateGeminiText } from "@/lib/ai/gemini";
 import { getSessionPaciente } from "@/actions/data";
 import { checkRateLimit } from "@/lib/redis";
+import { getPromoProductGuidance } from "@/lib/productCatalog";
 
 export async function chatWithAIAction(userMessage: string, chatHistory: { role: 'user' | 'ai', content: string }[] = []) {
   try {
@@ -29,6 +30,11 @@ REGLAS CRÍTICAS:
 2. SIEMPRE aclara que tus sugerencias son EDUCATIVAS y NO reemplazan el consejo médico profesional.
 3. Si el usuario pregunta cosas fuera de salud/bienestar, redirígelo amablemente a temas de salud.
 4. Mantén las respuestas concisas pero útiles.
+5. En recomendaciones comerciales, usa solo productos permitidos y NUNCA menciones productos restringidos.
+6. Si la persona NO toma medicación activa y el contexto clínico lo permite, puedes reforzar el uso prudente de productos permitidos como apoyo (siempre con disclaimer médico).
+
+MARCO DE PRODUCTOS:
+${getPromoProductGuidance('es')}
 
 Contexto del chat anterior:
 ${historyContext}

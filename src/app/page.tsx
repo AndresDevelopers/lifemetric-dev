@@ -188,7 +188,7 @@ export default async function Home() {
             {messages.home.quickActions}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <QuickActionCard
               href="/comidas/nuevo"
               title={messages.home.foodTitle}
@@ -224,6 +224,15 @@ export default async function Home() {
               color="text-orange-500"
               bgColor="bg-orange-500/10"
               gradientColor="from-orange-500/5"
+            />
+            <QuickActionCard
+              href="/laboratorios/nuevo"
+              title={messages.home.labsTitle}
+              subtitle={messages.home.labsSubtitle}
+              icon="biotech"
+              color="text-purple-500"
+              bgColor="bg-purple-500/10"
+              gradientColor="from-purple-500/5"
             />
           </div>
         </section>

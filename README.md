@@ -64,6 +64,14 @@ El módulo de **Resumen** ahora incluye sección de medicamentos y sugerencias I
 Además, el formulario de laboratorios permite autocompletado de biomarcadores con IA a partir de PDF/imagen subidos.
 
 
+- En el inicio autenticado se agregó acceso rápido a Laboratorios para registrar estudios sin fricción.
+- Si no hay mediciones de glucosa en el rango, las sugerencias IA usan una glucosa estimada basada en comidas (carbohidratos/fibra/proteína) para mejorar el contexto, dejando explícito que es una estimación.
+- La sección de sugerencias del Resumen ahora permite estructura clínica (alerta importante, problemas centrales, plan prioritario, nutrición, hábitos, labs sugeridos, guía de productos y progreso esperado), incluso cuando medicación/laboratorios no estén cargados.
+- El historial alimenticio muestra un icono informativo por plato con interpretación metabólica y recomendaciones rápidas de optimización.
+- La IA del resumen incorpora un marco de producto para ThermoRush en recomendaciones (uso sugerido antes de desayuno/almuerzo, enfoque en apetito-estrés-energía-glucosa, y advertencia de que no reemplaza tratamiento médico).
+- Se agregó control de catálogo para IA/chat: productos permitidos para sugerencia comercial y productos restringidos que nunca deben mencionarse.
+- En medicación, si el nombre ingresado pertenece al catálogo controlado, se exige validación por foto IA y coincidencia nombre↔imagen antes de guardar.
+
 
 ## Escaneo anti-malware en subida de archivos
 

@@ -6,6 +6,7 @@ import HistorialComidas from "@/components/resumen/HistorialComidas";
 import SummaryHeader from "@/components/resumen/SummaryHeader";
 import { buildClinicalSuggestions, extractLabValuesFromImage } from "@/lib/ai/gemini";
 import { unstable_cache } from "next/cache";
+import { estimateGlucoseFromMeals } from "@/lib/glucoseInference";
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -250,6 +251,15 @@ export default async function ResumenSemanal({
   });
   const comidasRegistradas = filteredComidas.length;
   const comidasInadecuadas = filteredComidas.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
+  const glucosaEstimadaPorComida = estimateGlucoseFromMeals(
+    filteredComidas.map((item) => ({
+      carbohidratos_g: item.carbohidratos_g,
+      fibra_g: item.fibra_g,
+      proteina_g: item.proteina_g,
+      clasificacion_final: item.clasificacion_final,
+    })),
+  );
+  const promedioGlucosaConFallback = promedioGlucosa > 0 ? promedioGlucosa : (glucosaEstimadaPorComida ?? 0);
 
   const diasEjercicio = paciente.habitos.filter(h => (h.ejercicio_min || 0) > 0).length;
   const promedioSueno = paciente.habitos.length 
@@ -271,8 +281,10 @@ export default async function ResumenSemanal({
 
   const data = {
     paciente: `${paciente.nombre} ${paciente.apellido}`,
+    edad: paciente.edad ?? null,
+    sexo: paciente.sexo ?? null,
     ultima_hba1c: ultimaHba1c,
-    promedio_glucosa: promedioGlucosa,
+    promedio_glucosa: promedioGlucosaConFallback,
     comidas: {
       registradas_semana: comidasRegistradas,
       inadecuadas: comidasInadecuadas,
@@ -283,12 +295,17 @@ export default async function ResumenSemanal({
       promedio_agua: promedioAgua,
     },
     adherencia_medicacion_pct: adherenciaMedicacion,
-    alerta_principal: paciente.glucosa.some(g => g.valor_glucosa > 140) ? messages.summary.glucosePeaks : messages.summary.glucoseInRange,
+    alerta_principal: (paciente.glucosa.some(g => g.valor_glucosa > 140) || (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140))
+      ? messages.summary.glucosePeaks
+      : messages.summary.glucoseInRange,
   };
 
   const aiSuggestionPayload = {
     ...data,
     medicamentos: medicamentosResumen,
+    tiene_habitos: paciente.habitos.length > 0,
+    tiene_medicacion: paciente.medicacion.length > 0,
+    tiene_laboratorios: paciente.laboratorios.length > 0,
     laboratorios: paciente.laboratorios.map((item) => ({
       fecha: item.fecha_estudio,
       hba1c: item.hba1c ? Number(item.hba1c) : null,
@@ -303,7 +320,12 @@ export default async function ResumenSemanal({
       nota: item.nota,
       foto_url: item.foto_url,
       clasificacion_final: item.clasificacion_final,
+      carbohidratos_g: item.carbohidratos_g,
+      fibra_g: item.fibra_g,
+      proteina_g: item.proteina_g,
     })),
+    glucosa_real_registrada: paciente.glucosa.length > 0,
+    glucosa_estimada_por_comidas: paciente.glucosa.length > 0 ? null : glucosaEstimadaPorComida,
   };
 
   let aiSuggestions = null;
@@ -468,6 +490,81 @@ export default async function ResumenSemanal({
           <p className="mt-4 text-sm text-slate-700">
             {aiSuggestions?.summary ?? messages.summary.aiSuggestionsFallback}
           </p>
+
+          {aiSuggestions?.importantAlert && (
+            <article className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-wider text-amber-700">{messages.summary.importantAlert}</p>
+              <p className="mt-1 text-sm text-amber-900">{aiSuggestions.importantAlert}</p>
+            </article>
+          )}
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {aiSuggestions?.centralProblems?.length ? (
+              <article className="rounded-xl bg-slate-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-600">{messages.summary.centralProblems}</p>
+                <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                  {aiSuggestions.centralProblems.map((item) => <li key={item}>• {item}</li>)}
+                </ul>
+              </article>
+            ) : null}
+            {aiSuggestions?.priorityPlan?.length ? (
+              <article className="rounded-xl bg-blue-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-wider text-blue-700">{messages.summary.priorityPlan}</p>
+                <ul className="mt-2 space-y-1 text-sm text-blue-900">
+                  {aiSuggestions.priorityPlan.map((item) => <li key={item}>• {item}</li>)}
+                </ul>
+              </article>
+            ) : null}
+            {aiSuggestions?.nutritionFocus?.length ? (
+              <article className="rounded-xl bg-emerald-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-wider text-emerald-700">{messages.summary.nutritionFocus}</p>
+                <ul className="mt-2 space-y-1 text-sm text-emerald-900">
+                  {aiSuggestions.nutritionFocus.map((item) => <li key={item}>• {item}</li>)}
+                </ul>
+              </article>
+            ) : null}
+            {aiSuggestions?.lifestyleFocus?.length ? (
+              <article className="rounded-xl bg-violet-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-wider text-violet-700">{messages.summary.lifestyleFocus}</p>
+                <ul className="mt-2 space-y-1 text-sm text-violet-900">
+                  {aiSuggestions.lifestyleFocus.map((item) => <li key={item}>• {item}</li>)}
+                </ul>
+              </article>
+            ) : null}
+          </div>
+
+          {aiSuggestions?.recommendedLabs?.length ? (
+            <article className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-wider text-cyan-700">{messages.summary.recommendedLabs}</p>
+              <ul className="mt-2 space-y-1 text-sm text-cyan-900">
+                {aiSuggestions.recommendedLabs.map((item) => <li key={item}>• {item}</li>)}
+              </ul>
+            </article>
+          ) : null}
+
+          {aiSuggestions?.productsGuidance?.length ? (
+            <article className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-wider text-rose-700">{messages.summary.productsGuidance}</p>
+              <ul className="mt-2 space-y-1 text-sm text-rose-900">
+                {aiSuggestions.productsGuidance.map((item) => <li key={item}>• {item}</li>)}
+              </ul>
+            </article>
+          ) : null}
+
+          {aiSuggestions?.expectedProgress?.length ? (
+            <article className="mt-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+              <p className="text-xs font-black uppercase tracking-wider text-teal-700">{messages.summary.expectedProgress}</p>
+              <ul className="mt-2 space-y-1 text-sm text-teal-900">
+                {aiSuggestions.expectedProgress.map((item) => <li key={item}>• {item}</li>)}
+              </ul>
+            </article>
+          ) : null}
+
+          {aiSuggestions?.patientMessage && (
+            <blockquote className="mt-4 rounded-xl border-l-4 border-primary bg-primary/5 px-4 py-3 text-sm text-slate-700 italic">
+              “{aiSuggestions.patientMessage}”
+            </blockquote>
+          )}
 
           <ul className="mt-4 space-y-2">
             {(aiSuggestions?.suggestions ?? [messages.summary.keepTracking]).map((suggestion) => (
