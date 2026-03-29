@@ -6,10 +6,16 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function getConnectionString() {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString =
+    process.env.DATABASE_URL ??
+    process.env.DIRECT_URL ??
+    process.env.SUPABASE_DB_URL ??
+    process.env.SUPABASE_DATABASE_URL ??
+    process.env.POSTGRES_URL ??
+    process.env.POSTGRES_PRISMA_URL;
 
   if (!connectionString) {
-    throw new Error('DATABASE_URL is required to initialize Prisma.');
+    throw new Error('DATABASE_URL (or SUPABASE_DB_URL / POSTGRES_URL) is required to initialize Prisma.');
   }
 
   return connectionString;

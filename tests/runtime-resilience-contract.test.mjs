@@ -9,6 +9,8 @@ const turnstilePath = path.join(process.cwd(), 'src', 'components', 'auth', 'Tur
 const authPath = path.join(process.cwd(), 'src', 'actions', 'auth.ts');
 const loginPath = path.join(process.cwd(), 'src', 'app', 'login', 'page.tsx');
 const sessionPath = path.join(process.cwd(), 'src', 'lib', 'session.ts');
+const prismaConfigPath = path.join(process.cwd(), 'prisma.config.ts');
+const prismaLibPath = path.join(process.cwd(), 'src', 'lib', 'prisma.ts');
 const readmePath = path.join(process.cwd(), 'README.md');
 
 const layout = fs.readFileSync(layoutPath, 'utf8');
@@ -17,6 +19,8 @@ const turnstile = fs.readFileSync(turnstilePath, 'utf8');
 const auth = fs.readFileSync(authPath, 'utf8');
 const login = fs.readFileSync(loginPath, 'utf8');
 const session = fs.readFileSync(sessionPath, 'utf8');
+const prismaConfig = fs.readFileSync(prismaConfigPath, 'utf8');
+const prismaLib = fs.readFileSync(prismaLibPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 
 test('layout avoids hard dependency on @vercel/analytics/react', () => {
@@ -44,6 +48,7 @@ test('auth actions support botid provider fallback and login sends captchaProvid
   assert.match(auth, /captchaProvider:\s*z\.enum\(\['turnstile',\s*'botid'\]\)\.optional\(\)/);
   assert.match(auth, /data\.captchaProvider !== 'botid'/);
   assert.match(auth, /botIdModuleName\s*=\s*'botid\/server'/);
+  assert.match(auth, /isBotIdVerified/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
 });
 
@@ -51,6 +56,13 @@ test('session signing supports auth secret fallback chain', () => {
   assert.match(session, /process\.env\.AUTH_SECRET/);
   assert.match(session, /process\.env\.SESSION_SECRET/);
   assert.match(session, /process\.env\.NEXTAUTH_SECRET/);
+});
+
+test('prisma config and prisma client support supabase/postgres env fallbacks', () => {
+  assert.match(prismaConfig, /SUPABASE_DB_URL/);
+  assert.match(prismaConfig, /POSTGRES_URL/);
+  assert.match(prismaLib, /process\.env\.SUPABASE_DB_URL/);
+  assert.match(prismaLib, /process\.env\.POSTGRES_URL/);
 });
 
 test('readme documents auth runtime resilience checks', () => {

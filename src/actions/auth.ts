@@ -75,7 +75,7 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
 }
 
-async function isBotIdBlocked(): Promise<boolean> {
+async function isBotIdVerified(): Promise<boolean> {
   try {
     const botIdModuleName = 'botid/server';
     const botId = (await import(botIdModuleName)) as {
@@ -85,7 +85,7 @@ async function isBotIdBlocked(): Promise<boolean> {
       return false;
     }
     const result = await botId.checkBotId();
-    return Boolean(result.isBot);
+    return !result.isBot;
   } catch {
     return false;
   }
@@ -100,7 +100,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
 
     const isAllowed = await checkRateLimit(`login:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+    if (data.captchaProvider === 'botid' && !(await isBotIdVerified())) {
       return { error: authMessages.invalidCaptcha };
     }
 
@@ -175,7 +175,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`register:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+    if (data.captchaProvider === 'botid' && !(await isBotIdVerified())) {
       return { error: authMessages.invalidCaptcha };
     }
 
@@ -273,7 +273,7 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`recovery:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+    if (data.captchaProvider === 'botid' && !(await isBotIdVerified())) {
       return { error: authMessages.invalidCaptcha };
     }
 
