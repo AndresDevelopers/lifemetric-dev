@@ -118,6 +118,10 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       return { error: authMessages.invalidCredentials };
     }
 
+    if (!paciente.password_hash || paciente.password_hash.trim().length === 0) {
+      return { error: authMessages.invalidCredentials };
+    }
+
     const isValid = await bcrypt.compare(data.password, paciente.password_hash);
     if (!isValid) {
       return { error: authMessages.invalidCredentials };

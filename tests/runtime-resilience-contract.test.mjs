@@ -6,11 +6,13 @@ import path from 'node:path';
 const layoutPath = path.join(process.cwd(), 'src', 'app', 'layout.tsx');
 const redisPath = path.join(process.cwd(), 'src', 'lib', 'redis.ts');
 const turnstilePath = path.join(process.cwd(), 'src', 'components', 'auth', 'TurnstileWidget.tsx');
+const authPath = path.join(process.cwd(), 'src', 'actions', 'auth.ts');
 const readmePath = path.join(process.cwd(), 'README.md');
 
 const layout = fs.readFileSync(layoutPath, 'utf8');
 const redis = fs.readFileSync(redisPath, 'utf8');
 const turnstile = fs.readFileSync(turnstilePath, 'utf8');
+const auth = fs.readFileSync(authPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 
 test('layout avoids hard dependency on @vercel/analytics/react', () => {
@@ -26,6 +28,11 @@ test('redis rate limit uses native redis commands without @upstash/ratelimit pac
 test('turnstile fallback does not rely on hardcoded bypass token strings', () => {
   assert.doesNotMatch(turnstile, /bypass-token/);
   assert.match(turnstile, /onRequirementChange\?\.\(false\)/);
+});
+
+test('login validates password hash presence before bcrypt compare', () => {
+  assert.match(auth, /if \(!paciente\.password_hash \|\| paciente\.password_hash\.trim\(\)\.length === 0\)/);
+  assert.match(auth, /bcrypt\.compare\(data\.password,\s*paciente\.password_hash\)/);
 });
 
 test('readme documents auth runtime resilience checks', () => {
