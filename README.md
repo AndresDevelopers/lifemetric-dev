@@ -41,6 +41,15 @@ pnpm exec tsc --noEmit
 pnpm build
 ```
 
+## Resiliencia de autenticación y runtime
+
+- Si **Turnstile no está disponible** (bloqueo de script, timeout o falta de `NEXT_PUBLIC_TURNSTILE_SITE_KEY`), los formularios de autenticación no deben quedar bloqueados indefinidamente en cliente y cambian al proveedor de fallback `botid` (si la señal de BotID no llega por navegador/ad-blocker, el flujo sigue en modo resiliente).
+- Login/registro/recuperación usan **Supabase Auth** como fuente de verdad de credenciales; la tabla `pacientes` se mantiene para perfil clínico y sesión interna.
+- El **rate limiting** se aplica con Upstash Redis usando comandos nativos (`INCR` + `EXPIRE`) para reducir dependencias críticas en runtime.
+- La firma de sesión busca secreto en `AUTH_SECRET`, `SESSION_SECRET` o `NEXTAUTH_SECRET` para evitar errores de login por configuración parcial.
+- Prisma intenta resolver conexión desde `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_DB_URL`, `SUPABASE_DATABASE_URL`, `SUPABASE_POOLER_URL` o variables `POSTGRES_*` para compatibilidad con despliegues Supabase/Vercel.
+- Evita introducir imports de paquetes opcionales en rutas críticas (`layout`, auth) sin fallback explícito, para prevenir errores 500 por resolución de módulos.
+
 
 ## Email y AI
 

@@ -9,6 +9,8 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 export default function RecoverPage() {
   const [state, action, isPending] = useActionState(recoveryAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
+  const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const { locale, messages } = useLocale();
   const recoverMessages = messages.auth.recover;
 
@@ -48,6 +50,7 @@ export default function RecoverPage() {
           <form action={action} className="space-y-6">
             <input type="hidden" name="captchaToken" value={captchaToken} />
             <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="captchaProvider" value={captchaProvider} />
 
             <div className="space-y-2 group">
               <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-secondary)] transition-colors">
@@ -68,11 +71,15 @@ export default function RecoverPage() {
               </div>
             </div>
 
-            <TurnstileWidget onVerify={(t) => setCaptchaToken(t)} />
+            <TurnstileWidget
+              onVerify={(token) => setCaptchaToken(token)}
+              onRequirementChange={setIsCaptchaRequired}
+              onProviderChange={setCaptchaProvider}
+            />
 
             <button
               type="submit"
-              disabled={isPending || !captchaToken}
+              disabled={isPending || (isCaptchaRequired && !captchaToken)}
               className="w-full py-3.5 px-4 bg-[var(--color-secondary)] hover:bg-[var(--color-on-secondary-fixed-variant)] text-white font-semibold rounded-xl transition-all shadow-lg shadow-[var(--color-secondary)]/30 hover:shadow-[var(--color-secondary)]/50 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isPending ? (

@@ -4,11 +4,13 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import { createSupabaseServerClient } from '@/lib/supabase';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { deleteSession, setSession } from '@/lib/session';
 import { getSessionPacienteId } from './data';
-import { sendNewsletterSubscriptionEmail, sendPasswordRecoveryEmail } from '@/lib/email';
+import { sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 
 export type AuthActionState = {
@@ -21,6 +23,7 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   captchaToken: z.string().optional(),
+  captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
 });
 
@@ -29,10 +32,11 @@ const registerSchema = z.object({
   apellido: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  edad: z.number().int().min(1),
+  fechaNacimiento: z.string().min(1),
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
   captchaToken: z.string().optional(),
+  captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
   newsletterSubscribed: z.coerce.boolean().optional(),
 });
@@ -40,27 +44,10 @@ const registerSchema = z.object({
 const recoverSchema = z.object({
   email: z.string().email(),
   captchaToken: z.string().optional(),
+  captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
 });
 
-
-async function sendRecoveryEmailIfAccountExists(email: string, locale: 'es' | 'en') {
-  const existingUser = await prisma.paciente.findFirst({
-    where: { email },
-    select: { paciente_id: true },
-  });
-
-  if (!existingUser) {
-    return;
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-  await sendPasswordRecoveryEmail({
-    to: email,
-    locale,
-    appUrl,
-  });
-}
 
 function isPacienteColumnMissingError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === 'P2022';
@@ -72,6 +59,39 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
 }
 
+async function isBotIdBlocked(): Promise<boolean> {
+  const headerStore = await headers();
+  const botSignal = headerStore.get('x-vercel-botid')?.toLowerCase() ?? '';
+  return botSignal.includes('bot');
+}
+
+function getDefaultPacienteData(email: string) {
+  const username = email.split('@')[0] ?? 'usuario';
+  return {
+    nombre: username,
+    apellido: 'Usuario',
+    edad: 18,
+    sexo: 'No especificado',
+    diagnostico_principal: 'Sin especificar',
+    usa_glucometro: false,
+    newsletter_suscrito: true,
+  };
+}
+
+function calculateAgeFromBirthDate(fechaNacimiento: string): number {
+  const birth = new Date(fechaNacimiento);
+  if (Number.isNaN(birth.getTime())) {
+    return 18;
+  }
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const monthDelta = now.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  return Math.max(1, age);
+}
+
 export async function loginAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
@@ -81,9 +101,12 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
 
     const isAllowed = await checkRateLimit(`login:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
+    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+      return { error: authMessages.invalidCaptcha };
+    }
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
+    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
        try {
          const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
            method: 'POST',
@@ -97,6 +120,16 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
        } catch (error) {
          console.warn('Error connecting to Turnstile siteverify, bypassing check:', error);
        }
+    }
+
+    const supabase = createSupabaseServerClient({ useServiceRole: false });
+    const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (signInError || !signInData.user) {
+      return { error: authMessages.invalidCredentials };
     }
 
     let paciente;
@@ -115,12 +148,13 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     }
 
     if (!paciente) {
-      return { error: authMessages.invalidCredentials };
-    }
-
-    const isValid = await bcrypt.compare(data.password, paciente.password_hash);
-    if (!isValid) {
-      return { error: authMessages.invalidCredentials };
+      paciente = await prisma.paciente.create({
+        data: {
+          ...getDefaultPacienteData(data.email),
+          email: data.email,
+          password_hash: await bcrypt.hash(data.password, 10),
+        },
+      });
     }
 
     await setSession(paciente.paciente_id);
@@ -130,6 +164,13 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
     if (error instanceof z.ZodError) return { error: authMessages.invalidData };
+    if (
+      error instanceof Prisma.PrismaClientInitializationError ||
+      error instanceof Prisma.PrismaClientKnownRequestError ||
+      error instanceof Prisma.PrismaClientValidationError
+    ) {
+      return { error: authMessages.invalidCredentials };
+    }
     console.error(error);
     return { error: authMessages.serverError };
   }
@@ -140,7 +181,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     const rawData = Object.fromEntries(formData.entries());
     const parsedData = {
         ...rawData,
-        edad: Number.parseInt(rawData.edad as string, 10),
+        fechaNacimiento: (rawData.fechaNacimiento as string | undefined) ?? '',
         newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
     const data = registerSchema.parse(parsedData);
@@ -149,9 +190,12 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`register:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
+    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+      return { error: authMessages.invalidCaptcha };
+    }
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
+    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
        try {
          const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
            method: 'POST',
@@ -167,65 +211,83 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
        }
     }
 
-    let existingUser;
-    try {
-      existingUser = await prisma.paciente.findFirst({
-        where: { email: data.email },
-      });
-    } catch (error) {
-      if (!isPacienteColumnMissingError(error)) {
-        throw error;
-      }
-      await ensurePacienteAuthColumns();
-      existingUser = await prisma.paciente.findFirst({
-        where: { email: data.email },
-      });
-    }
+    const supabase = createSupabaseServerClient({ useServiceRole: false });
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        emailRedirectTo: `${appUrl}/login`,
+      },
+    });
 
-    if (existingUser) {
-      return { error: authMessages.registerEmailUnavailable };
+    if (signUpError) {
+      const isDuplicate = /already registered|already been registered|user already exists/i.test(signUpError.message);
+      return { error: isDuplicate ? authMessages.registerEmailUnavailable : authMessages.registerError };
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
+    const edadCalculada = calculateAgeFromBirthDate(data.fechaNacimiento);
 
-    let newPaciente;
+    let paciente;
     try {
-      newPaciente = await prisma.paciente.create({
-        data: {
-          nombre: data.nombre,
-          apellido: data.apellido,
-          email: data.email,
-          password_hash: hashedPassword,
-          newsletter_suscrito: data.newsletterSubscribed ?? true,
-          edad: data.edad,
-          sexo: data.sexo,
-          diagnostico_principal: data.diagnostico,
-          usa_glucometro: false,
-        },
-      });
+      paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
+      if (!paciente) {
+        paciente = await prisma.paciente.create({
+          data: {
+            nombre: data.nombre,
+            apellido: data.apellido,
+            email: data.email,
+            password_hash: hashedPassword,
+            newsletter_suscrito: data.newsletterSubscribed ?? true,
+            edad: edadCalculada,
+            sexo: data.sexo,
+            diagnostico_principal: data.diagnostico,
+            usa_glucometro: false,
+          },
+        });
+      }
     } catch (error) {
       if (!isPacienteColumnMissingError(error)) {
         throw error;
       }
       await ensurePacienteAuthColumns();
-      newPaciente = await prisma.paciente.create({
-        data: {
-          nombre: data.nombre,
-          apellido: data.apellido,
-          email: data.email,
-          password_hash: hashedPassword,
-          newsletter_suscrito: data.newsletterSubscribed ?? true,
-          edad: data.edad,
-          sexo: data.sexo,
-          diagnostico_principal: data.diagnostico,
-          usa_glucometro: false,
-        },
-      });
+      paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
+      if (!paciente) {
+        paciente = await prisma.paciente.create({
+          data: {
+            nombre: data.nombre,
+            apellido: data.apellido,
+            email: data.email,
+            password_hash: hashedPassword,
+            newsletter_suscrito: data.newsletterSubscribed ?? true,
+            edad: edadCalculada,
+            sexo: data.sexo,
+            diagnostico_principal: data.diagnostico,
+            usa_glucometro: false,
+          },
+        });
+      }
     }
 
-    await setSession(newPaciente.paciente_id);
+    if (signUpData.session) {
+      await setSession(paciente.paciente_id);
+      return { success: true };
+    }
 
-    return { success: true };
+    const { data: autoSignInData } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+    if (autoSignInData.user) {
+      await setSession(paciente.paciente_id);
+      return { success: true };
+    }
+
+    const verifyMessage = locale === 'es'
+      ? 'Revisa tu correo para verificar tu cuenta y luego inicia sesión.'
+      : 'Check your email to verify your account, then sign in.';
+    return { success: true, message: verifyMessage };
   } catch (error) {
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
@@ -244,9 +306,12 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`recovery:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
+    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+      return { error: authMessages.invalidCaptcha };
+    }
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
+    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
        try {
          const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
            method: 'POST',
@@ -262,7 +327,11 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
        }
     }
 
-    await sendRecoveryEmailIfAccountExists(data.email, locale);
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const supabase = createSupabaseServerClient({ useServiceRole: false });
+    await supabase.auth.resetPasswordForEmail(data.email, {
+      redirectTo: `${appUrl}/recuperar`,
+    });
 
     return { success: true, message: authMessages.recoverSuccess };
   } catch (error) {

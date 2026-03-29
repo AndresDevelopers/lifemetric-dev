@@ -11,13 +11,18 @@ import { translateTemplate } from '@/lib/i18n';
 export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
+  const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const router = useRouter();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const { locale, messages } = useLocale();
   const registerMessages = messages.auth.register;
+  const diagnosisOptions = locale === 'es'
+    ? ['Control', 'Diabetes tipo 1', 'Diabetes tipo 2', 'Hipertensión', 'Otra']
+    : ['Routine check', 'Type 1 diabetes', 'Type 2 diabetes', 'Hypertension', 'Other'];
 
   useEffect(() => {
-    if (state?.success) {
+    if (state?.success && !state?.message) {
       router.push('/');
     }
   }, [state, router]);
@@ -59,9 +64,17 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {state?.success && state?.message && (
+            <div className="mb-6 p-4 rounded-xl bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)] flex items-center gap-2 text-sm font-semibold">
+              <span className="material-symbols-outlined">mail</span>
+              {state.message}
+            </div>
+          )}
+
           <form action={action} className="space-y-4">
             <input type="hidden" name="captchaToken" value={captchaToken} />
             <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="captchaProvider" value={captchaProvider} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="space-y-1">
@@ -89,8 +102,8 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                <div className="space-y-1">
-                 <label htmlFor="edad" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.age}</label>
-                 <input id="edad" type="number" name="edad" min="1" max="150" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
+                 <label htmlFor="fechaNacimiento" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.age}</label>
+                 <input id="fechaNacimiento" type="date" name="fechaNacimiento" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
                <div className="space-y-1 sm:col-span-2">
@@ -105,7 +118,12 @@ export default function RegisterPage() {
 
             <div className="space-y-1">
                 <label htmlFor="diagnostico" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.diagnosis}</label>
-                <input id="diagnostico" type="text" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={registerMessages.diagnosisPlaceholder} required />
+                <select id="diagnostico" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required>
+                  <option value="">{messages.common.select}</option>
+                  {diagnosisOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
             </div>
 
 
@@ -122,11 +140,15 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            <TurnstileWidget onVerify={(t) => setCaptchaToken(t)} />
+            <TurnstileWidget
+              onVerify={(token) => setCaptchaToken(token)}
+              onRequirementChange={setIsCaptchaRequired}
+              onProviderChange={setCaptchaProvider}
+            />
 
             <button
               type="submit"
-              disabled={isPending || !captchaToken}
+              disabled={isPending || (isCaptchaRequired && !captchaToken)}
               className="w-full py-3.5 px-4 bg-[var(--color-tertiary)] hover:bg-[var(--color-on-tertiary-fixed-variant)] text-white font-semibold rounded-xl transition-all shadow-lg shadow-[var(--color-tertiary)]/30 hover:shadow-[var(--color-tertiary)]/50 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isPending ? (

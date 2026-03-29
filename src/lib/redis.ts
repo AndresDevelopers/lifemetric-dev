@@ -1,5 +1,4 @@
 import { Redis } from '@upstash/redis';
-import { Ratelimit } from '@upstash/ratelimit';
 import { unstable_cache } from 'next/cache';
 
 // Inicializar el cliente de Redis solo si las variables de entorno están presentes
@@ -11,37 +10,29 @@ export const redisClient =
       })
     : null;
 
-// Tasa límite para prevenir abusos (Rate Limiting inteligente)
-// Permite 20 requests por 10 segundos
-export const rateLimit = redisClient
-  ? new Ratelimit({
-      redis: redisClient, 
-      limiter: Ratelimit.slidingWindow(20, '10 s'),
-      analytics: true,
-      /**
-       * Prefix in redis
-       */
-      prefix: '@upstash/ratelimit',
-    })
-  : {
-      // Fallback: Si no hay Upstash, siempre permite la request (modo desarrollo o resiliencia local)
-      limit: async () => ({
-        success: true,
-        pending: Promise.resolve(),
-        limit: 100,
-        remaining: 99,
-        reset: Date.now() + 10000,
-      }),
-    };
+const RATE_LIMIT_WINDOW_SECONDS = 10;
+const RATE_LIMIT_MAX_REQUESTS = 20;
 
 /**
  * Validar Rate Limit devolviendo boolean
  */
 export const checkRateLimit = async (identifier: string): Promise<boolean> => {
+  if (!redisClient) {
+    return true;
+  }
+
+  const normalizedIdentifier = identifier.trim().toLowerCase();
+  if (!normalizedIdentifier) {
+    return true;
+  }
+
+  const key = `ratelimit:${normalizedIdentifier}`;
+
   try {
-    const limiter = rateLimit as Ratelimit;
-    const { success } = await limiter.limit(identifier);
-    return success;
+    const requests = await redisClient.incr(key);
+    await redisClient.expire(key, RATE_LIMIT_WINDOW_SECONDS);
+
+    return requests <= RATE_LIMIT_MAX_REQUESTS;
   } catch (error) {
     console.error('Rate limit check failed, allowing request to maintain resilience:', error);
     // Fallback gracefully on upstash failure (Zero-Downtime Rule)
