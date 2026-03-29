@@ -100,10 +100,14 @@ export default function RegisterPage() {
                </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                <div className="space-y-1">
                  <label htmlFor="fechaNacimiento" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.age}</label>
                  <input id="fechaNacimiento" type="date" name="fechaNacimiento" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
+               </div>
+               <div className="space-y-1">
+                 <label htmlFor="alturaCm" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.height}</label>
+                 <input id="alturaCm" type="number" min="80" max="272" step="0.1" name="alturaCm" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" />
                </div>
                
                <div className="space-y-1 sm:col-span-2">
@@ -125,7 +129,6 @@ export default function RegisterPage() {
                   ))}
                 </select>
             </div>
-
 
             <div className="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-4 py-3">
               <label htmlFor="newsletterSubscribed" className="flex items-start gap-3 cursor-pointer">

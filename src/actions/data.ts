@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { intelligentCache } from "@/lib/redis";
+import { getPacienteProfileExtras } from "@/lib/pacienteProfile";
 
 export async function getSessionPacienteId() {
   const cookieStore = await cookies();
@@ -43,13 +44,16 @@ export async function getSessionPaciente() {
       },
       { revalidate: 300, tags: [`paciente-${pacienteId}`] }
     );
-    return paciente
-      ? {
-          ...paciente,
-          fecha_nacimiento: null,
-          avatar_url: null,
-        }
-      : null;
+    if (!paciente) return null;
+
+    const profileExtras = await getPacienteProfileExtras(pacienteId);
+    return {
+      ...paciente,
+      fecha_nacimiento: profileExtras.fecha_nacimiento,
+      avatar_url: profileExtras.avatar_url,
+      altura_cm: profileExtras.altura_cm,
+      motivo_registro: profileExtras.motivo_registro,
+    };
   } catch (error) {
     console.error("Error fetching patient, returning fallback:", error);
     // Fallback para evitar bloqueo de UI si la DB no está sincronizada
@@ -62,7 +66,9 @@ export async function getSessionPaciente() {
       newsletter_suscrito: true,
       idioma: "es",
       fecha_nacimiento: null,
-      avatar_url: null
+      avatar_url: null,
+      altura_cm: null,
+      motivo_registro: null,
     };
   }
 }
