@@ -5,11 +5,29 @@ import { cookies } from 'next/headers';
  * This is compatible with both Node.js (Server Actions) and Edge Runtime (Middleware).
  */
 
-const getSecretKey = async () => {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    throw new Error('AUTH_SECRET is not defined in environment variables');
+const getSessionSecret = () => {
+  const configuredSecret =
+    process.env.AUTH_SECRET ??
+    process.env.SESSION_SECRET ??
+    process.env.NEXTAUTH_SECRET;
+
+  if (configuredSecret) {
+    return configuredSecret;
   }
+
+  const globalWithSecret = globalThis as typeof globalThis & {
+    __lifemetricSessionSecret?: string;
+  };
+
+  if (!globalWithSecret.__lifemetricSessionSecret) {
+    globalWithSecret.__lifemetricSessionSecret = crypto.randomUUID();
+  }
+
+  return globalWithSecret.__lifemetricSessionSecret;
+};
+
+const getSecretKey = async () => {
+  const secret = getSessionSecret();
   const encoder = new TextEncoder();
   return crypto.subtle.importKey(
     'raw',

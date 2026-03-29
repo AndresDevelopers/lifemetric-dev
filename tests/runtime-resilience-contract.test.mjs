@@ -8,6 +8,7 @@ const redisPath = path.join(process.cwd(), 'src', 'lib', 'redis.ts');
 const turnstilePath = path.join(process.cwd(), 'src', 'components', 'auth', 'TurnstileWidget.tsx');
 const authPath = path.join(process.cwd(), 'src', 'actions', 'auth.ts');
 const loginPath = path.join(process.cwd(), 'src', 'app', 'login', 'page.tsx');
+const sessionPath = path.join(process.cwd(), 'src', 'lib', 'session.ts');
 const readmePath = path.join(process.cwd(), 'README.md');
 
 const layout = fs.readFileSync(layoutPath, 'utf8');
@@ -15,6 +16,7 @@ const redis = fs.readFileSync(redisPath, 'utf8');
 const turnstile = fs.readFileSync(turnstilePath, 'utf8');
 const auth = fs.readFileSync(authPath, 'utf8');
 const login = fs.readFileSync(loginPath, 'utf8');
+const session = fs.readFileSync(sessionPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 
 test('layout avoids hard dependency on @vercel/analytics/react', () => {
@@ -41,7 +43,14 @@ test('login validates password hash presence before bcrypt compare', () => {
 test('auth actions support botid provider fallback and login sends captchaProvider', () => {
   assert.match(auth, /captchaProvider:\s*z\.enum\(\['turnstile',\s*'botid'\]\)\.optional\(\)/);
   assert.match(auth, /data\.captchaProvider !== 'botid'/);
+  assert.match(auth, /botIdModuleName\s*=\s*'botid\/server'/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
+});
+
+test('session signing supports auth secret fallback chain', () => {
+  assert.match(session, /process\.env\.AUTH_SECRET/);
+  assert.match(session, /process\.env\.SESSION_SECRET/);
+  assert.match(session, /process\.env\.NEXTAUTH_SECRET/);
 });
 
 test('readme documents auth runtime resilience checks', () => {

@@ -75,6 +75,22 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
 }
 
+async function isBotIdBlocked(): Promise<boolean> {
+  try {
+    const botIdModuleName = 'botid/server';
+    const botId = (await import(botIdModuleName)) as {
+      checkBotId?: () => Promise<{ isBot: boolean }>;
+    };
+    if (!botId.checkBotId) {
+      return false;
+    }
+    const result = await botId.checkBotId();
+    return Boolean(result.isBot);
+  } catch {
+    return false;
+  }
+}
+
 export async function loginAction(prevState: AuthActionState, formData: FormData) {
   try {
     const rawData = Object.fromEntries(formData.entries());
@@ -84,6 +100,9 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
 
     const isAllowed = await checkRateLimit(`login:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
+    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+      return { error: authMessages.invalidCaptcha };
+    }
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
@@ -156,6 +175,9 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`register:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
+    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+      return { error: authMessages.invalidCaptcha };
+    }
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
@@ -251,6 +273,9 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`recovery:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
+    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
+      return { error: authMessages.invalidCaptcha };
+    }
 
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
     if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
