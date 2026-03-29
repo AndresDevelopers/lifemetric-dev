@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useActionState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loginAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
@@ -49,16 +50,19 @@ export default function LoginPage() {
             </span>
             {appBrandLogoUrl ? (
               <div className="w-full max-w-[320px] mx-auto md:mx-0 py-3 sm:py-4 md:py-6 px-4 sm:px-5 md:px-6 rounded-3xl bg-[#082f5b]/55 border border-cyan-100/25 backdrop-blur-sm shadow-[0_12px_36px_rgba(4,18,43,0.35)]">
-                <img
+                <Image
                   src={appBrandLogoUrl}
                   alt={appName}
+                  width={560}
+                  height={220}
+                  unoptimized
                   className="w-full h-auto max-h-28 sm:max-h-36 md:max-h-52 object-contain drop-shadow-[0_10px_24px_rgba(220,244,255,0.34)]"
                 />
               </div>
             ) : (
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
                 {appIconUrl ? (
-                  <img src={appIconUrl} alt={appName} className="w-12 h-12 md:w-14 md:h-14 rounded-2xl object-cover" />
+                  <Image src={appIconUrl} alt={appName} width={56} height={56} unoptimized className="w-12 h-12 md:w-14 md:h-14 rounded-2xl object-cover" />
                 ) : (
                   <span className="material-symbols-outlined text-5xl">vital_signs</span>
                 )}

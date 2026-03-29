@@ -254,17 +254,17 @@ export default async function ResumenSemanal({
   }
   
   const promedioGlucosa = paciente.glucosa.length 
-    ? Math.round(paciente.glucosa.reduce((acc, curr) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
+    ? Math.round(paciente.glucosa.reduce((acc: number, curr: (typeof paciente.glucosa)[number]) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
     : 0;
 
-  const filteredComidas = paciente.comidas.filter(c => {
+  const filteredComidas = paciente.comidas.filter((c: (typeof paciente.comidas)[number]) => {
     const d = new Date(c.fecha);
     return d >= startDate && d <= endDate;
   });
   const comidasRegistradas = filteredComidas.length;
-  const comidasInadecuadas = filteredComidas.filter(c => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
+  const comidasInadecuadas = filteredComidas.filter((c: (typeof filteredComidas)[number]) => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
   const glucosaEstimadaPorComida = estimateGlucoseFromMeals(
-    filteredComidas.map((item) => ({
+    filteredComidas.map((item: (typeof filteredComidas)[number]) => ({
       carbohidratos_g: item.carbohidratos_g != null ? Number(item.carbohidratos_g) : null,
       fibra_g: item.fibra_g != null ? Number(item.fibra_g) : null,
       proteina_g: item.proteina_g != null ? Number(item.proteina_g) : null,
@@ -273,17 +273,17 @@ export default async function ResumenSemanal({
   );
   const promedioGlucosaConFallback = promedioGlucosa > 0 ? promedioGlucosa : (glucosaEstimadaPorComida ?? 0);
 
-  const diasEjercicio = paciente.habitos.filter(h => (h.ejercicio_min || 0) > 0).length;
+  const diasEjercicio = paciente.habitos.filter((h: (typeof paciente.habitos)[number]) => (h.ejercicio_min || 0) > 0).length;
   const promedioSueno = paciente.habitos.length 
-    ? Math.round(paciente.habitos.reduce((acc, curr) => acc + Number(curr.sueno_horas || 0), 0) / paciente.habitos.length * 10) / 10
+    ? Math.round(paciente.habitos.reduce((acc: number, curr: (typeof paciente.habitos)[number]) => acc + Number(curr.sueno_horas || 0), 0) / paciente.habitos.length * 10) / 10
     : 0;
   
   const promedioAgua = paciente.habitos.length 
-    ? Math.round(paciente.habitos.reduce((acc, curr) => acc + (curr.agua_vasos || 0), 0) / paciente.habitos.length)
+    ? Math.round(paciente.habitos.reduce((acc: number, curr: (typeof paciente.habitos)[number]) => acc + (curr.agua_vasos || 0), 0) / paciente.habitos.length)
     : 0;
 
   const tomasProgramadas = paciente.medicacion.length || 1;
-  const tomasRealizadas = paciente.medicacion.filter(m => m.estado_toma === 'Tomada' || m.estado_toma === 'tomada').length;
+  const tomasRealizadas = paciente.medicacion.filter((m: (typeof paciente.medicacion)[number]) => m.estado_toma === 'Tomada' || m.estado_toma === 'tomada').length;
   const adherenciaMedicacion = paciente.medicacion.length === 0 ? 0 : Math.round((tomasRealizadas / tomasProgramadas) * 100);
   const hasAlertData =
     paciente.glucosa.length > 0 ||
@@ -292,7 +292,7 @@ export default async function ResumenSemanal({
     paciente.medicacion.length > 0 ||
     paciente.laboratorios.length > 0;
 
-  const medicamentosResumen = paciente.medicacion.reduce<Record<string, number>>((acc, item) => {
+  const medicamentosResumen = paciente.medicacion.reduce<Record<string, number>>((acc: Record<string, number>, item: (typeof paciente.medicacion)[number]) => {
     const key = item.medicamento?.trim() || "Sin nombre";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
@@ -320,7 +320,7 @@ export default async function ResumenSemanal({
     },
     adherencia_medicacion_pct: adherenciaMedicacion,
     alerta_principal: hasAlertData
-      ? ((paciente.glucosa.some(g => g.valor_glucosa > 140) || (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140))
+      ? ((paciente.glucosa.some((g: (typeof paciente.glucosa)[number]) => g.valor_glucosa > 140) || (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140))
           ? messages.summary.glucosePeaks
           : messages.summary.glucoseInRange)
       : null,
@@ -332,7 +332,7 @@ export default async function ResumenSemanal({
     tiene_habitos: paciente.habitos.length > 0,
     tiene_medicacion: paciente.medicacion.length > 0,
     tiene_laboratorios: paciente.laboratorios.length > 0,
-    laboratorios: paciente.laboratorios.map((item) => ({
+    laboratorios: paciente.laboratorios.map((item: (typeof paciente.laboratorios)[number]) => ({
       fecha: item.fecha_estudio,
       hba1c: item.hba1c ? Number(item.hba1c) : null,
       glucosa_ayuno: item.glucosa_ayuno,
@@ -341,7 +341,7 @@ export default async function ResumenSemanal({
       ldl: item.ldl,
       labels: messages.summary.labValues,
     })),
-    comidas_recientes: filteredComidas.slice(0, 5).map((item) => ({
+    comidas_recientes: filteredComidas.slice(0, 5).map((item: (typeof filteredComidas)[number]) => ({
       alimento_principal: item.alimento_principal,
       nota: item.nota,
       foto_url: item.foto_url,
@@ -503,7 +503,7 @@ export default async function ResumenSemanal({
 
           {Object.keys(medicamentosResumen).length > 0 ? (
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {Object.entries(medicamentosResumen).map(([medicamento, total]) => (
+              {Object.entries(medicamentosResumen as Record<string, number>).map(([medicamento, total]: [string, number]) => (
                 <article key={medicamento} className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4">
                   <p className="text-sm font-bold text-slate-900">{medicamento}</p>
                   <p className="mt-1 text-xs text-slate-500">
@@ -703,7 +703,7 @@ export default async function ResumenSemanal({
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  {paciente.laboratorios.map((laboratorio, idx) => {
+                  {paciente.laboratorios.map((laboratorio: (typeof paciente.laboratorios)[number], idx: number) => {
                     // Combine vision result from current call with DB data if vision is null
                     const visionRes = labVisionResults[idx];
                     const effectiveData = visionRes || {

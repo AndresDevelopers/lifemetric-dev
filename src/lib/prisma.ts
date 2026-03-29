@@ -18,12 +18,7 @@ function getConnectionString() {
     process.env.POSTGRES_URL_NON_POOLING,
   ];
   const connectionString = candidates.find((value) => value && value.trim().length > 0);
-
-  if (!connectionString) {
-    throw new Error('DATABASE_URL (or SUPABASE_DB_URL / POSTGRES_URL) is required to initialize Prisma.');
-  }
-
-  return connectionString;
+  return connectionString ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
 }
 
 export function createPrismaClient() {

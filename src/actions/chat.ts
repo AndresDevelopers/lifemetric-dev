@@ -44,7 +44,7 @@ export async function chatWithAIAction(userMessage: string, chatHistory: { role:
           take: 4,
         },
         medicacion: {
-          orderBy: [{ fecha: 'desc' }, { hora_toma: 'desc' }],
+          orderBy: [{ fecha: 'desc' }, { hora: 'desc' }],
           take: 12,
         },
         comidas: {
@@ -122,7 +122,7 @@ SNAPSHOT CLÍNICO COMPLETO DEL PACIENTE:
 Última glucosa:
 - Fecha: ${latestGlucose ? formatDate(latestGlucose.fecha) : 'N/D'}
 - Valor: ${latestGlucose ? formatMaybe(latestGlucose.valor_glucosa, 'mg/dL') : 'N/D'}
-- Momento: ${latestGlucose?.momento_dia ?? 'N/D'}
+- Momento: ${latestGlucose?.tipo_glucosa ?? 'N/D'}
 
 Últimos hábitos:
 - Fecha: ${latestHabits ? formatDate(latestHabits.fecha) : 'N/D'}
