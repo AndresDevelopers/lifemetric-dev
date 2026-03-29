@@ -96,11 +96,6 @@ export default async function Home() {
         <h1 className="text-xl font-black tracking-tighter text-blue-800 uppercase">
           Lifemetric
         </h1>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 text-xs font-black ring-2 ring-white shadow-sm">
-            {paciente.nombre.charAt(0)}
-          </div>
-        </div>
       </header>
 
       <div className="relative z-10 p-6 md:p-10 max-w-5xl mx-auto flex flex-col gap-10 pb-32">

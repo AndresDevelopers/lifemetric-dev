@@ -13,6 +13,10 @@ const readmePath = path.join(process.cwd(), 'README.md');
 const productCatalogPath = path.join(process.cwd(), 'src', 'lib', 'productCatalog.ts');
 const medicationActionPath = path.join(process.cwd(), 'src', 'actions', 'medicacion.ts');
 const medicationPagePath = path.join(process.cwd(), 'src', 'app', 'medicacion', 'nuevo', 'page.tsx');
+const chatWidgetPath = path.join(process.cwd(), 'src', 'components', 'ChatWidget.tsx');
+const medicationCatalogPath = path.join(process.cwd(), 'src', 'lib', 'medicationCatalog.ts');
+const mealPagePath = path.join(process.cwd(), 'src', 'app', 'comidas', 'nuevo', 'page.tsx');
+const mealActionPath = path.join(process.cwd(), 'src', 'actions', 'comida.ts');
 
 const home = fs.readFileSync(homePath, 'utf8');
 const summary = fs.readFileSync(summaryPath, 'utf8');
@@ -24,10 +28,15 @@ const readme = fs.readFileSync(readmePath, 'utf8');
 const productCatalog = fs.readFileSync(productCatalogPath, 'utf8');
 const medicationAction = fs.readFileSync(medicationActionPath, 'utf8');
 const medicationPage = fs.readFileSync(medicationPagePath, 'utf8');
+const chatWidget = fs.readFileSync(chatWidgetPath, 'utf8');
+const medicationCatalog = fs.readFileSync(medicationCatalogPath, 'utf8');
+const mealPage = fs.readFileSync(mealPagePath, 'utf8');
+const mealAction = fs.readFileSync(mealActionPath, 'utf8');
 
 test('home quick actions include laboratories shortcut', () => {
   assert.match(home, /href="\/laboratorios\/nuevo"/);
   assert.match(home, /messages\.home\.labsTitle/);
+  assert.doesNotMatch(home, /paciente\.nombre\.charAt\(0\)/);
 });
 
 test('summary payload includes inferred glucose fallback when user has no logs', () => {
@@ -98,6 +107,27 @@ test('medication save flow blocks restricted products and enforces photo-name ma
   assert.match(medicationAction, /photo_validation_required/);
   assert.match(medicationAction, /product_name_photo_mismatch/);
   assert.match(medicationPage, /ai_detected_medicamento/);
+});
+
+test('medication form supports optional dose with automatic fallback and catalog guidance', () => {
+  assert.match(medicationAction, /dosis:\s*z\.string\(\)\.optional\(\)/);
+  assert.match(medicationAction, /No especificada/);
+  assert.match(medicationPage, /getMedicationCatalogDescription/);
+  assert.match(medicationPage, /detectedMedicationDescription/);
+  assert.match(medicationCatalog, /metformina/);
+});
+
+test('chat widget exposes history and clear-conversation controls', () => {
+  assert.match(chatWidget, /history/);
+  assert.match(chatWidget, /delete_sweep/);
+  assert.match(chatWidget, /lifemetric_chat_conversations_v1/);
+});
+
+test('meal form auto-fills main food with AI and removes manual notes field', () => {
+  assert.match(mealPage, /inferMealFromPhoto/);
+  assert.doesNotMatch(mealPage, /readOnly/);
+  assert.doesNotMatch(mealPage, /register\("nota"\)/);
+  assert.match(mealAction, /export async function inferMealFromPhoto/);
 });
 
 

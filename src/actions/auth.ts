@@ -14,6 +14,8 @@ import { getSessionPacienteId } from './data';
 import { sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 import { ensurePacienteProfileColumns, updatePacienteProfileExtras } from '@/lib/pacienteProfile';
+import { getStoragePathFromPublicUrl } from '@/lib/storageRetention';
+import { PROMO_FOCUS_PRODUCTS } from '@/lib/productCatalog';
 
 export type AuthActionState = {
   error?: string;
@@ -38,6 +40,8 @@ const registerSchema = z.object({
   alturaCm: z.coerce.number().positive().max(272).optional(),
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
+  productoPermitido: z.enum(PROMO_FOCUS_PRODUCTS),
+  doctorAsignado: z.enum(['Renato', 'Ulysses']),
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
@@ -51,6 +55,11 @@ const recoverSchema = z.object({
   locale: z.string().optional(),
 });
 
+const deleteAccountSchema = z.object({
+  locale: z.string().optional(),
+  confirmPassword: z.string().min(6),
+});
+
 
 function isPacienteColumnMissingError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === 'P2022';
@@ -61,7 +70,16 @@ async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
   await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS idioma TEXT DEFAULT 'es'");
+  await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ");
   await ensurePacienteProfileColumns();
+}
+
+async function touchPacienteLastLogin(pacienteId: string) {
+  await ensurePacienteAuthColumns();
+  await prisma.$executeRaw`
+    UPDATE pacientes SET last_login_at = NOW()
+    WHERE paciente_id = ${pacienteId}::uuid
+  `;
 }
 
 async function findOrCreatePacienteByEmail(input: {
@@ -76,6 +94,8 @@ async function findOrCreatePacienteByEmail(input: {
   fechaNacimiento?: string | null;
   alturaCm?: number | null;
   motivoRegistro?: string | null;
+  productoPermitidoRegistro?: string | null;
+  doctorAsignado?: string | null;
 }) {
   const createPaciente = async () => prisma.paciente.create({
     data: {
@@ -93,7 +113,13 @@ async function findOrCreatePacienteByEmail(input: {
 
   try {
     const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
-    const currentPaciente = paciente ?? await createPaciente();
+    let currentPaciente = paciente;
+    if (!paciente) {
+      currentPaciente = await createPaciente();
+    }
+    if (!currentPaciente) {
+      throw new Error('No se pudo crear el paciente.');
+    }
     await updatePacienteProfileExtras(currentPaciente.paciente_id, {
       fechaNacimiento: input.fechaNacimiento,
       alturaCm: input.alturaCm,
@@ -106,7 +132,13 @@ async function findOrCreatePacienteByEmail(input: {
     }
     await ensurePacienteAuthColumns();
     const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
-    const currentPaciente = paciente ?? await createPaciente();
+    let currentPaciente = paciente;
+    if (!paciente) {
+      currentPaciente = await createPaciente();
+    }
+    if (!currentPaciente) {
+      throw new Error('No se pudo crear el paciente.');
+    }
     await updatePacienteProfileExtras(currentPaciente.paciente_id, {
       fechaNacimiento: input.fechaNacimiento,
       alturaCm: input.alturaCm,
@@ -202,6 +234,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     });
 
     await setSession(paciente.paciente_id);
+    await touchPacienteLastLogin(paciente.paciente_id);
 
     return { success: true };
   } catch (error) {
@@ -285,9 +318,11 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         diagnosticoPrincipal: data.diagnostico,
         newsletterSuscrito: data.newsletterSubscribed ?? true,
         fechaNacimiento: data.fechaNacimiento,
-        alturaCm: data.alturaCm,
-        motivoRegistro: data.diagnostico,
-      });
+            alturaCm: data.alturaCm,
+            motivoRegistro: data.diagnostico,
+            productoPermitidoRegistro: data.productoPermitido,
+            doctorAsignado: data.doctorAsignado,
+          });
     } catch (error) {
       if (signUpData.user?.id) {
         try {
@@ -300,19 +335,21 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       throw error;
     }
 
-    if (signUpData.session) {
-      await setSession(paciente.paciente_id);
-      return { success: true };
-    }
+      if (signUpData.session) {
+          await setSession(paciente.paciente_id);
+          await touchPacienteLastLogin(paciente.paciente_id);
+          return { success: true };
+      }
 
     const { data: autoSignInData } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     });
-    if (autoSignInData.user) {
-      await setSession(paciente.paciente_id);
-      return { success: true };
-    }
+      if (autoSignInData.user) {
+          await setSession(paciente.paciente_id);
+          await touchPacienteLastLogin(paciente.paciente_id);
+          return { success: true };
+      }
 
     const verifyMessage = locale === 'es'
       ? 'Revisa tu correo para verificar tu cuenta y luego inicia sesión.'
@@ -409,16 +446,72 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
     const pacienteId = await getSessionPacienteId();
     if (!pacienteId) redirect('/login');
 
-    const locale = normalizeLocale(formData.get('locale')?.toString());
+    const parsed = deleteAccountSchema.parse(Object.fromEntries(formData.entries()));
+    const locale = normalizeLocale(parsed.locale);
     const messages = getMessages(locale);
-
-    await prisma.paciente.delete({
+    const paciente = await prisma.paciente.findUnique({
       where: { paciente_id: pacienteId },
+      select: { email: true, password_hash: true },
     });
+    if (!paciente) {
+      return { error: 'Error' };
+    }
+    const passwordMatches = await bcrypt.compare(parsed.confirmPassword, paciente.password_hash);
+    if (!passwordMatches) {
+      return { error: messages.auth.messages.invalidCredentials };
+    }
+
+    const mealPhotos = await prisma.comida.findMany({
+      where: { paciente_id: pacienteId, foto_url: { not: null } },
+      select: { foto_url: true },
+    });
+    const mealPaths = mealPhotos
+      .map((item: { foto_url: string | null }) => getStoragePathFromPublicUrl(item.foto_url ?? '', 'comidas'))
+      .filter((value: string | null): value is string => Boolean(value));
+
+    const supabaseService = createSupabaseServerClient({ useServiceRole: true });
+    const { data: usersPage } = await supabaseService.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const authUser = usersPage.users.find((item) => item.email?.toLowerCase() === paciente.email.toLowerCase());
+
+    const replacementHash = await bcrypt.hash(crypto.randomUUID(), 10);
+    await prisma.$transaction([
+      prisma.glucosa.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.habito.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.comida.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.registroMedicacion.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.paciente.update({
+        where: { paciente_id: pacienteId },
+        data: {
+          nombre: 'Cuenta',
+          apellido: 'Eliminada',
+          email: `deleted-${pacienteId}@lifemetric.invalid`,
+          password_hash: replacementHash,
+          newsletter_suscrito: false,
+          diagnostico_principal: 'Cuenta eliminada',
+          activo: false,
+          medicacion_base: null,
+          objetivo_clinico: null,
+          cintura_inicial_cm: null,
+          peso_inicial_kg: null,
+        },
+      }),
+    ]);
+
+    if (mealPaths.length) {
+      await supabaseService.storage.from('comidas').remove(mealPaths);
+    }
+    if (authUser?.id) {
+      await supabaseService.auth.admin.deleteUser(authUser.id);
+    }
 
     await deleteSession();
-    return { success: true, message: messages.settings.accountDeleted };
+    redirect(`/login?accountDeleted=1&lang=${locale}`);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      const locale = normalizeLocale(formData.get('locale')?.toString());
+      const authMessages = getMessages(locale).auth.messages;
+      return { error: authMessages.invalidData };
+    }
     console.error(error);
     return { error: 'Error' };
   }

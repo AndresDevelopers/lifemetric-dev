@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useActionState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { loginAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
   const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const router = useRouter();
+  const searchParams = useSearchParams();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const appBrandLogoUrl = process.env.NEXT_PUBLIC_APP_BRAND_LOGO_URL?.trim() ?? '';
   const appIconUrl = process.env.NEXT_PUBLIC_APP_ICON_URL?.trim() ?? '';
@@ -25,6 +26,7 @@ export default function LoginPage() {
       router.push('/');
     }
   }, [state, router]);
+  const showDeletedMessage = searchParams.get('accountDeleted') === '1';
 
   return (
     <div className="w-full py-12 px-4 sm:px-8 relative grid place-items-start md:place-items-center">
@@ -42,7 +44,13 @@ export default function LoginPage() {
           
           <div className="z-10 relative">
             {appBrandLogoUrl ? (
-              <img src={appBrandLogoUrl} alt={appName} className="h-14 md:h-16 w-auto max-w-[320px] object-contain mb-5" />
+              <div className="w-full py-4 md:py-6">
+                <img
+                  src={appBrandLogoUrl}
+                  alt={appName}
+                  className="w-full h-auto max-h-44 md:max-h-52 object-contain"
+                />
+              </div>
             ) : (
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
                 {appIconUrl ? (
@@ -80,6 +88,12 @@ export default function LoginPage() {
             <div className="mb-6 p-4 rounded-xl bg-[var(--color-error-container)] text-[var(--color-on-error-container)] flex items-center gap-2 text-sm font-semibold">
               <span className="material-symbols-outlined">error</span>
               {state.error}
+            </div>
+          )}
+          {showDeletedMessage && (
+            <div className="mb-6 p-4 rounded-xl bg-emerald-100 text-emerald-800 flex items-center gap-2 text-sm font-semibold">
+              <span className="material-symbols-outlined">check_circle</span>
+              {messages.settings.accountDeleted}
             </div>
           )}
 

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { estimateMealFromImage } from "@/lib/ai/gemini";
 import { checkRateLimit } from "@/lib/redis";
+import { z } from "zod";
 
 interface ComidaInput {
   paciente_id: string;
@@ -18,6 +19,12 @@ interface ComidaInput {
   grasa_g?: number;
   fibra_g?: number;
 }
+
+const mealPhotoSchema = z.object({
+  paciente_id: z.string().uuid(),
+  foto_url: z.string().url(),
+  locale: z.enum(["es", "en"]),
+});
 
 function getClasificacionProteina(proteina?: number): string {
   if (proteina === undefined) return "desconocida";
@@ -42,6 +49,32 @@ function getClasificacionFinal(carbs: string, fibra: string, proteina: string): 
   return "Regular";
 }
 
+export async function inferMealFromPhoto(input: z.infer<typeof mealPhotoSchema>) {
+  const parsedInput = mealPhotoSchema.safeParse(input);
+  if (!parsedInput.success) {
+    return { success: false as const, error: "invalid_input" };
+  }
+
+  const isAllowed = await checkRateLimit(`estimate_meal:${parsedInput.data.paciente_id}`);
+  if (!isAllowed) {
+    return { success: false as const, error: "ai_rate_limited" };
+  }
+
+  try {
+    const estimate = await estimateMealFromImage({
+      imageUrl: parsedInput.data.foto_url,
+      locale: parsedInput.data.locale,
+    });
+    if (!estimate) {
+      return { success: false as const, error: "ai_unavailable" };
+    }
+
+    return { success: true as const, data: estimate };
+  } catch {
+    return { success: false as const, error: "ai_failed" };
+  }
+}
+
 export async function clasificarYGuardarComida(data: ComidaInput) {
   let aiData: Partial<ComidaInput> = {};
 
@@ -54,7 +87,6 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
       estimate = await estimateMealFromImage({
         imageUrl: data.foto_url,
         locale: "es",
-        notes: data.nota,
       });
       } catch (error) {
         console.error("Error estimando comida con IA:", error);

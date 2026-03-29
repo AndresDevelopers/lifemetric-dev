@@ -9,6 +9,7 @@ import { getSessionPacienteId } from "@/actions/data";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { autofillLaboratorioFromDocumentAction, guardarLaboratorioAction } from "@/actions/laboratorio";
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
+import { supabase } from "@/lib/supabase";
 
 const labSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -63,7 +64,6 @@ export default function SubirLaboratorios() {
     if (!file) return;
 
     setDocumentName(file.name);
-    setValue("archivo_url", file.name);
 
     const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
       scanning: labsMessages.virusScanning,
@@ -81,6 +81,15 @@ export default function SubirLaboratorios() {
 
     setIsAutofilling(true);
     try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `laboratorios/${crypto.randomUUID()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from("laboratorios").upload(filePath, file);
+      if (uploadError) {
+        throw uploadError;
+      }
+      const { data: publicUrlData } = supabase.storage.from("laboratorios").getPublicUrl(filePath);
+      setValue("archivo_url", publicUrlData.publicUrl);
+
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result ?? ""));

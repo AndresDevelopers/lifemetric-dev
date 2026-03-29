@@ -7,7 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect, useRef } from "react";
 import { getSessionPacienteId } from "@/actions/data";
-import { clasificarYGuardarComida } from "@/actions/comida";
+import { clasificarYGuardarComida, inferMealFromPhoto } from "@/actions/comida";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { supabase } from "@/lib/supabase";
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
@@ -17,7 +17,6 @@ const comidaSchema = z.object({
   fecha: z.string(),
   hora: z.string(),
   tipo_comida: z.enum(["Desayuno", "Comida", "Cena", "Colacion"]),
-  nota: z.string().optional(),
   alimento_principal: z.string().optional(),
   foto_url: z.string().optional(),
 });
@@ -26,6 +25,8 @@ type FormValues = z.infer<typeof comidaSchema>;
 
 export default function NuevaComida() {
   const [loading, setLoading] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [pacienteId, setPacienteId] = useState<string>("");
   const { locale, messages } = useLocale();
   const foodMessages = messages.foodForm;
   
@@ -46,7 +47,10 @@ export default function NuevaComida() {
   useEffect(() => {
     async function loadData() {
       const pId = await getSessionPacienteId();
-      if (pId) setValue("paciente_id", pId);
+      if (pId) {
+        setPacienteId(pId);
+        setValue("paciente_id", pId);
+      }
     }
     loadData();
   }, [setValue]);
@@ -55,6 +59,7 @@ export default function NuevaComida() {
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,6 +108,29 @@ export default function NuevaComida() {
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
+
+      try {
+        const photoUrl = await uploadImage(file);
+        setUploadedPhotoUrl(photoUrl);
+        setValue("foto_url", photoUrl);
+
+        if (!pacienteId) return;
+
+        setAnalyzingPhoto(true);
+        const aiResult = await inferMealFromPhoto({
+          paciente_id: pacienteId,
+          foto_url: photoUrl,
+          locale,
+        });
+
+        if (aiResult.success && aiResult.data?.alimento_principal) {
+          setValue("alimento_principal", aiResult.data.alimento_principal, { shouldValidate: true });
+        }
+      } catch (error) {
+        console.error("Error with meal AI autofill:", error);
+      } finally {
+        setAnalyzingPhoto(false);
+      }
     } else {
       alert(foodMessages.imageOnly);
     }
@@ -133,7 +161,9 @@ export default function NuevaComida() {
     setLoading(true);
     try {
       let foto_url = data.foto_url;
-      if (imageFile) {
+      if (uploadedPhotoUrl) {
+        foto_url = uploadedPhotoUrl;
+      } else if (imageFile) {
         foto_url = await uploadImage(imageFile);
       }
 
@@ -144,8 +174,9 @@ export default function NuevaComida() {
         alert(foodMessages.saveSuccess);
         setImageFile(null);
         setImagePreview(null);
+        setUploadedPhotoUrl(null);
         setValue("alimento_principal", "");
-        setValue("nota", "");
+        setValue("foto_url", "");
       } else {
         alert(response.error || foodMessages.saveError);
       }
@@ -251,6 +282,9 @@ export default function NuevaComida() {
                         e.stopPropagation();
                         setImageFile(null);
                         setImagePreview(null);
+                        setUploadedPhotoUrl(null);
+                        setValue("foto_url", "");
+                        setValue("alimento_principal", "");
                       }}
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
@@ -267,7 +301,7 @@ export default function NuevaComida() {
 
             <div className="flex items-center justify-between mt-6">
               <span className="text-label-sm font-bold uppercase tracking-widest text-slate-500">
-                {foodMessages.mainFoodAndNotes}
+                {foodMessages.mainFoodLabel}
               </span>
             </div>
             
@@ -279,13 +313,12 @@ export default function NuevaComida() {
               />
             </div>
 
-            <div className="relative mt-2 hover:translate-y-px">
-              <input
-                {...register("nota")}
-                className="w-full bg-surface-container-highest/50 border-none rounded-2xl py-4 px-5 text-on-surface placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 transition-all"
-                placeholder={foodMessages.notePlaceholder}
-              />
-            </div>
+            {analyzingPhoto && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl animate-pulse">
+                <span className="material-symbols-outlined text-blue-600 animate-spin">progress_activity</span>
+                <span className="text-sm font-medium text-blue-700">{foodMessages.aiAnalyzing}</span>
+              </div>
+            )}
 
             <button
               disabled={loading}

@@ -13,6 +13,9 @@ const sessionPath = path.join(process.cwd(), 'src', 'lib', 'session.ts');
 const prismaConfigPath = path.join(process.cwd(), 'prisma.config.ts');
 const prismaLibPath = path.join(process.cwd(), 'src', 'lib', 'prisma.ts');
 const supabaseLibPath = path.join(process.cwd(), 'src', 'lib', 'supabase.ts');
+const retentionRoutePath = path.join(process.cwd(), 'src', 'app', 'api', 'maintenance', 'storage-retention', 'route.ts');
+const labPagePath = path.join(process.cwd(), 'src', 'app', 'laboratorios', 'nuevo', 'page.tsx');
+const storageRetentionLibPath = path.join(process.cwd(), 'src', 'lib', 'storageRetention.ts');
 const readmePath = path.join(process.cwd(), 'README.md');
 
 const layout = fs.readFileSync(layoutPath, 'utf8');
@@ -25,6 +28,9 @@ const session = fs.readFileSync(sessionPath, 'utf8');
 const prismaConfig = fs.readFileSync(prismaConfigPath, 'utf8');
 const prismaLib = fs.readFileSync(prismaLibPath, 'utf8');
 const supabaseLib = fs.readFileSync(supabaseLibPath, 'utf8');
+const retentionRoute = fs.readFileSync(retentionRoutePath, 'utf8');
+const labPage = fs.readFileSync(labPagePath, 'utf8');
+const storageRetentionLib = fs.readFileSync(storageRetentionLibPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 const envExample = fs.readFileSync(path.join(process.cwd(), '.env.example'), 'utf8');
 
@@ -48,7 +54,7 @@ test('login bootstraps paciente row when supabase auth user exists but profile r
   assert.match(auth, /signInWithPassword/);
   assert.match(auth, /if \(!paciente\)/);
   assert.match(auth, /getDefaultPacienteData/);
-  assert.match(auth, /password_hash:\s*await bcrypt\.hash\(data\.password,\s*10\)/);
+  assert.match(auth, /password_hash:\s*await bcrypt\.hash\((data|input)\.password,\s*10\)/);
 });
 
 test('auth actions support botid provider fallback and login sends captchaProvider', () => {
@@ -57,6 +63,7 @@ test('auth actions support botid provider fallback and login sends captchaProvid
   assert.match(auth, /x-vercel-botid/);
   assert.match(auth, /isBotIdBlocked/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
+  assert.match(login, /accountDeleted/);
 });
 
 test('auth actions use supabase auth for sign in, sign up and recovery', () => {
@@ -76,6 +83,8 @@ test('register page does not auto-redirect when registration requires email veri
   assert.match(register, /state\?\.success && !state\?\.message/);
   assert.match(register, /name="fechaNacimiento"/);
   assert.match(register, /name="diagnostico"/);
+  assert.match(register, /name="productoPermitido"/);
+  assert.match(register, /name="doctorAsignado"/);
   assert.match(register, /diagnosisOptions\.map/);
 });
 
@@ -102,4 +111,25 @@ test('login action handles prisma runtime errors without exposing server error m
 test('readme documents auth runtime resilience checks', () => {
   assert.match(readme, /Resiliencia de autenticación y runtime/);
   assert.match(readme, /Turnstile no está disponible/i);
+});
+
+test('delete account keeps lab evidence while purging user data and uploaded meal images', () => {
+  assert.match(auth, /registroMedicacion\.deleteMany/);
+  assert.match(auth, /comida\.deleteMany/);
+  assert.match(auth, /paciente\.update/);
+  assert.match(auth, /Cuenta eliminada/);
+  assert.match(auth, /storage\.from\('comidas'\)\.remove/);
+  assert.match(auth, /confirmPassword/);
+  assert.match(auth, /bcrypt\.compare/);
+  assert.match(auth, /redirect\(`\/login\?accountDeleted=1&lang=\$\{locale\}`\)/);
+});
+
+test('laboratory uploads use dedicated storage bucket and retention route exists', () => {
+  assert.match(labPage, /storage\.from\("laboratorios"\)\.upload/);
+  assert.match(retentionRoute, /MEAL_IMAGE_RETENTION_DAYS/);
+  assert.match(retentionRoute, /LAB_IMAGE_RETENTION_DAYS/);
+  assert.match(retentionRoute, /deletedInactiveAccounts/);
+  assert.match(retentionRoute, /last_login_at/);
+  assert.match(storageRetentionLib, /365/);
+  assert.match(storageRetentionLib, /730/);
 });
