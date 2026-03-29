@@ -40,6 +40,8 @@ export default function AjustesPage() {
   const [user, setUser] = useState<SettingsUser>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [motivoRegistro, setMotivoRegistro] = useState('');
+  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [alturaCm, setAlturaCm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,12 +50,25 @@ export default function AjustesPage() {
       if (data) {
         setUser(data);
         setMotivoRegistro(data.motivo_registro ?? '');
+        setFechaNacimiento(data.fecha_nacimiento ? new Date(data.fecha_nacimiento).toISOString().split('T')[0] : '');
+        setAlturaCm(data.altura_cm != null ? String(data.altura_cm) : '');
         if (data.avatar_url) setAvatarPreview(data.avatar_url);
         if (data.idioma) setLocale(data.idioma as Locale);
       }
     }
     loadUser();
   }, []);
+
+  const handleProfileSubmit = () => {
+    setUser((prev: SettingsUser) => (prev
+      ? {
+          ...prev,
+          fecha_nacimiento: fechaNacimiento || null,
+          altura_cm: alturaCm ? Number(alturaCm) : null,
+          motivo_registro: motivoRegistro || null,
+        }
+      : prev));
+  };
 
   const handleLanguageChange = (newLocale: Locale) => {
     setLocale(newLocale);
@@ -121,7 +136,7 @@ export default function AjustesPage() {
               {messages.settings.profileInfo}
             </h2>
             
-            <form action={profileFormAction} className="space-y-6">
+            <form action={profileFormAction} onSubmit={handleProfileSubmit} className="space-y-6">
               <input type="hidden" name="locale" value={locale} />
               <input type="hidden" name="avatar_url" value={avatarPreview || ''} />
               
@@ -202,7 +217,8 @@ export default function AjustesPage() {
                   <input
                     type="date"
                     name="fecha_nacimiento"
-                    defaultValue={user.fecha_nacimiento ? new Date(user.fecha_nacimiento).toISOString().split('T')[0] : ''}
+                    value={fechaNacimiento}
+                    onChange={(event) => setFechaNacimiento(event.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
@@ -216,7 +232,8 @@ export default function AjustesPage() {
                     max="272"
                     step="0.1"
                     name="altura_cm"
-                    defaultValue={user.altura_cm ?? ''}
+                    value={alturaCm}
+                    onChange={(event) => setAlturaCm(event.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
@@ -302,7 +319,7 @@ export default function AjustesPage() {
                   id="newsletterToggleSettings"
                   type="checkbox"
                   checked={!!user.newsletter_suscrito}
-                  onChange={(event) => setUser((prev) => (prev ? { ...prev, newsletter_suscrito: event.target.checked } : prev))}
+                  onChange={(event) => setUser((prev: SettingsUser) => (prev ? { ...prev, newsletter_suscrito: event.target.checked } : prev))}
                   className="h-5 w-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 transition-all"
                 />
                 <span className="text-sm font-bold text-slate-700">{messages.settings.emailSubscriptionToggle}</span>

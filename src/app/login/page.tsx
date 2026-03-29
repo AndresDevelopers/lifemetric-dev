@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const router = useRouter();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
+  const appBrandLogoUrl = process.env.NEXT_PUBLIC_APP_BRAND_LOGO_URL?.trim() ?? '';
+  const appIconUrl = process.env.NEXT_PUBLIC_APP_ICON_URL?.trim() ?? '';
   const { locale, messages } = useLocale();
   const loginMessages = messages.auth.login;
 
@@ -39,10 +41,18 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
           
           <div className="z-10 relative">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
-              <span className="material-symbols-outlined text-5xl">vital_signs</span>
-              {' '}{appName}
-            </h1>
+            {appBrandLogoUrl ? (
+              <img src={appBrandLogoUrl} alt={appName} className="h-14 md:h-16 w-auto max-w-[320px] object-contain mb-5" />
+            ) : (
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
+                {appIconUrl ? (
+                  <img src={appIconUrl} alt={appName} className="w-12 h-12 md:w-14 md:h-14 rounded-2xl object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-5xl">vital_signs</span>
+                )}
+                {' '}{appName}
+              </h1>
+            )}
             <p className="text-[var(--color-primary-fixed)] text-lg md:text-xl font-medium mb-8 leading-relaxed">
               {messages.common.appDescription} <br/> {messages.common.appDescriptionDetail}
             </p>
