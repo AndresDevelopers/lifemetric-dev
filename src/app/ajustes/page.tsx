@@ -235,12 +235,9 @@ export default function AjustesPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                   {messages.settings.fields.registrationReason}
                 </label>
-                <textarea
-                  name="motivo_registro"
-                  defaultValue={user.motivo_registro ?? ''}
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
-                />
+                <div className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-sm">
+                  {user.motivo_registro || messages.settings.fields.registrationReasonFallback}
+                </div>
               </div>
 
               {profileState?.error && (
@@ -270,13 +267,10 @@ export default function AjustesPage() {
             <form action={subscriptionFormAction} className="space-y-4">
               <input type="hidden" name="locale" value={locale} />
               <input type="hidden" name="newsletterSubscribed" value={String(!!user.newsletter_suscrito)} />
-              <input
-                type="email"
-                name="email"
-                defaultValue={user.email}
-                required
-                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 dark:bg-slate-700/50 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
-              />
+              <input type="hidden" name="email" value={user.email} />
+              <div className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200 font-semibold text-sm">
+                {user.email}
+              </div>
               <label htmlFor="newsletterToggleSettings" className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer group">
                 <input
                   id="newsletterToggleSettings"

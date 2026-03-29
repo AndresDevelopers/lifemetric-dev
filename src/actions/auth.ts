@@ -469,7 +469,6 @@ const profileSchema = z.object({
   fecha_nacimiento: z.string().optional(),
   avatar_url: z.string().optional(),
   altura_cm: z.coerce.number().positive().max(272).optional(),
-  motivo_registro: z.string().max(400).optional(),
 });
 
 export async function updateProfileAction(prevState: AuthActionState, formData: FormData) {
@@ -515,7 +514,6 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
       fechaNacimiento: data.fecha_nacimiento || null,
       avatarUrl: data.avatar_url || null,
       alturaCm: typeof data.altura_cm === 'number' ? data.altura_cm : null,
-      motivoRegistro: data.motivo_registro?.trim() ? data.motivo_registro.trim() : null,
     });
     revalidateTag(`paciente-${pacienteId}`, 'max');
 
