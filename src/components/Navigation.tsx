@@ -131,6 +131,14 @@ export default function Navigation({ userName }: NavigationProps) {
                     <span className="material-symbols-outlined text-violet-600 dark:text-violet-400">feedback</span>
                     <span className="font-semibold">{messages.navigation.feedback}</span>
                   </Link>
+                  <Link
+                    href="/changelog"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-4 px-4 py-4 rounded-2xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-cyan-600 dark:text-cyan-400">history_toggle_off</span>
+                    <span className="font-semibold">{messages.navigation.changelog}</span>
+                  </Link>
 
                   <form action={logoutAction} className="block">
                     <button
@@ -296,6 +304,13 @@ export default function Navigation({ userName }: NavigationProps) {
           >
             <span className="material-symbols-outlined">feedback</span>
             <span className="text-sm font-semibold">{messages.navigation.feedback}</span>
+          </Link>
+          <Link
+            href="/changelog"
+            className="w-full flex items-center gap-4 px-4 py-3 mt-2 rounded-lg text-left text-cyan-700 dark:text-cyan-300 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition-all"
+          >
+            <span className="material-symbols-outlined">history_toggle_off</span>
+            <span className="text-sm font-semibold">{messages.navigation.changelog}</span>
           </Link>
         </div>
         <form action={logoutAction} className="px-3 pt-3 border-t border-slate-200 dark:border-slate-800">

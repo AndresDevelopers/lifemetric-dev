@@ -51,6 +51,7 @@ const messages = {
       medication: 'Medicinas',
       labs: 'Laboratorios',
       feedback: 'Feedback',
+      changelog: 'Changelog',
       logout: 'Cerrar sesión',
     },
     auth: {
@@ -434,6 +435,14 @@ const messages = {
       invalid: 'Revisa el formulario. Faltan datos o el mensaje es muy corto.',
       error: 'No se pudo enviar tu feedback. Intenta nuevamente.',
     },
+    changelog: {
+      badge: 'Transparencia de cambios',
+      title: 'Changelog de hoy',
+      subtitle: 'La IA resume los commits del día en un lenguaje simple para que entiendas qué cambió en la app.',
+      todaySummary: 'Resumen en lenguaje claro',
+      commitList: 'Commits del día',
+      noCommits: 'No hay commits registrados hoy.',
+    },
     chat: {
       title: 'Asistente IA',
       placeholder: 'Escribe un mensaje...',
@@ -476,6 +485,7 @@ const messages = {
       medication: 'Meds',
       labs: 'Labs',
       feedback: 'Feedback',
+      changelog: 'Changelog',
       logout: 'Sign out',
     },
     auth: {
@@ -858,6 +868,14 @@ const messages = {
       success: 'Thanks for your feedback. We received it successfully.',
       invalid: 'Please review the form. Missing data or message is too short.',
       error: 'Could not send your feedback. Please try again.',
+    },
+    changelog: {
+      badge: 'Change transparency',
+      title: "Today's changelog",
+      subtitle: 'AI summarizes today’s commits in simple words so users can understand what changed in the app.',
+      todaySummary: 'Plain-language summary',
+      commitList: "Today's commits",
+      noCommits: 'No commits were registered today.',
     },
     chat: {
       title: 'AI Assistant',
