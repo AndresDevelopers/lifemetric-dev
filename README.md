@@ -41,6 +41,12 @@ pnpm exec tsc --noEmit
 pnpm build
 ```
 
+## Resiliencia de autenticación y runtime
+
+- Si **Turnstile no está disponible** (bloqueo de script, timeout o falta de `NEXT_PUBLIC_TURNSTILE_SITE_KEY`), los formularios de autenticación no deben quedar bloqueados indefinidamente en cliente.
+- El **rate limiting** se aplica con Upstash Redis usando comandos nativos (`INCR` + `EXPIRE`) para reducir dependencias críticas en runtime.
+- Evita introducir imports de paquetes opcionales en rutas críticas (`layout`, auth) sin fallback explícito, para prevenir errores 500 por resolución de módulos.
+
 
 ## Email y AI
 

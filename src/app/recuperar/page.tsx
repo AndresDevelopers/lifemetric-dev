@@ -9,6 +9,7 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 export default function RecoverPage() {
   const [state, action, isPending] = useActionState(recoveryAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
   const { locale, messages } = useLocale();
   const recoverMessages = messages.auth.recover;
 
@@ -68,11 +69,14 @@ export default function RecoverPage() {
               </div>
             </div>
 
-            <TurnstileWidget onVerify={(t) => setCaptchaToken(t)} />
+            <TurnstileWidget
+              onVerify={(token) => setCaptchaToken(token)}
+              onRequirementChange={setIsCaptchaRequired}
+            />
 
             <button
               type="submit"
-              disabled={isPending || !captchaToken}
+              disabled={isPending || (isCaptchaRequired && !captchaToken)}
               className="w-full py-3.5 px-4 bg-[var(--color-secondary)] hover:bg-[var(--color-on-secondary-fixed-variant)] text-white font-semibold rounded-xl transition-all shadow-lg shadow-[var(--color-secondary)]/30 hover:shadow-[var(--color-secondary)]/50 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isPending ? (

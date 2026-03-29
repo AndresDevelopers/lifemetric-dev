@@ -11,6 +11,7 @@ import { translateTemplate } from '@/lib/i18n';
 export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
   const router = useRouter();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const { locale, messages } = useLocale();
@@ -122,11 +123,14 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            <TurnstileWidget onVerify={(t) => setCaptchaToken(t)} />
+            <TurnstileWidget
+              onVerify={(token) => setCaptchaToken(token)}
+              onRequirementChange={setIsCaptchaRequired}
+            />
 
             <button
               type="submit"
-              disabled={isPending || !captchaToken}
+              disabled={isPending || (isCaptchaRequired && !captchaToken)}
               className="w-full py-3.5 px-4 bg-[var(--color-tertiary)] hover:bg-[var(--color-on-tertiary-fixed-variant)] text-white font-semibold rounded-xl transition-all shadow-lg shadow-[var(--color-tertiary)]/30 hover:shadow-[var(--color-tertiary)]/50 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isPending ? (

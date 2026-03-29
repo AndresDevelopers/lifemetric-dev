@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
-import { Analytics } from '@vercel/analytics/react';
 import Navigation from "@/components/Navigation";
 import ChatWidget from "@/components/ChatWidget";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
@@ -57,7 +56,6 @@ export default async function RootLayout({
             {user && <ChatWidget />}
           </main>
         </LocaleProvider>
-        <Analytics />
       </body>
     </html>
   );
