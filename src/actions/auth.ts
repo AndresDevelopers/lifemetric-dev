@@ -65,6 +65,16 @@ function isPacienteColumnMissingError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === 'P2022';
 }
 
+function isNextRedirectError(error: unknown): error is { digest: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'digest' in error &&
+    typeof (error as { digest?: unknown }).digest === 'string' &&
+    (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+  );
+}
+
 async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
@@ -507,6 +517,9 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
     await deleteSession();
     redirect(`/login?accountDeleted=1&lang=${locale}`);
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
     if (error instanceof z.ZodError) {
       const locale = normalizeLocale(formData.get('locale')?.toString());
       const authMessages = getMessages(locale).auth.messages;
