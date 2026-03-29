@@ -31,7 +31,7 @@ const registerSchema = z.object({
   apellido: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  edad: z.number().int().min(1),
+  fechaNacimiento: z.string().min(1),
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
   captchaToken: z.string().optional(),
@@ -86,6 +86,20 @@ function getDefaultPacienteData(email: string) {
     usa_glucometro: false,
     newsletter_suscrito: true,
   };
+}
+
+function calculateAgeFromBirthDate(fechaNacimiento: string): number {
+  const birth = new Date(fechaNacimiento);
+  if (Number.isNaN(birth.getTime())) {
+    return 18;
+  }
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const monthDelta = now.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getDate() < birth.getDate())) {
+    age -= 1;
+  }
+  return Math.max(1, age);
 }
 
 export async function loginAction(prevState: AuthActionState, formData: FormData) {
@@ -177,7 +191,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     const rawData = Object.fromEntries(formData.entries());
     const parsedData = {
         ...rawData,
-        edad: Number.parseInt(rawData.edad as string, 10),
+        fechaNacimiento: (rawData.fechaNacimiento as string | undefined) ?? '',
         newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
     const data = registerSchema.parse(parsedData);
@@ -223,22 +237,47 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
+    const edadCalculada = calculateAgeFromBirthDate(data.fechaNacimiento);
 
-    let paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
-    if (!paciente) {
-      paciente = await prisma.paciente.create({
-        data: {
-          nombre: data.nombre,
-          apellido: data.apellido,
-          email: data.email,
-          password_hash: hashedPassword,
-          newsletter_suscrito: data.newsletterSubscribed ?? true,
-          edad: data.edad,
-          sexo: data.sexo,
-          diagnostico_principal: data.diagnostico,
-          usa_glucometro: false,
-        },
-      });
+    let paciente;
+    try {
+      paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
+      if (!paciente) {
+        paciente = await prisma.paciente.create({
+          data: {
+            nombre: data.nombre,
+            apellido: data.apellido,
+            email: data.email,
+            password_hash: hashedPassword,
+            newsletter_suscrito: data.newsletterSubscribed ?? true,
+            edad: edadCalculada,
+            sexo: data.sexo,
+            diagnostico_principal: data.diagnostico,
+            usa_glucometro: false,
+          },
+        });
+      }
+    } catch (error) {
+      if (!isPacienteColumnMissingError(error)) {
+        throw error;
+      }
+      await ensurePacienteAuthColumns();
+      paciente = await prisma.paciente.findFirst({ where: { email: data.email } });
+      if (!paciente) {
+        paciente = await prisma.paciente.create({
+          data: {
+            nombre: data.nombre,
+            apellido: data.apellido,
+            email: data.email,
+            password_hash: hashedPassword,
+            newsletter_suscrito: data.newsletterSubscribed ?? true,
+            edad: edadCalculada,
+            sexo: data.sexo,
+            diagnostico_principal: data.diagnostico,
+            usa_glucometro: false,
+          },
+        });
+      }
     }
 
     if (signUpData.session) {

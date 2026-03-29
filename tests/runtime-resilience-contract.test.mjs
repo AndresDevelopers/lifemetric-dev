@@ -65,12 +65,17 @@ test('auth actions use supabase auth for sign in, sign up and recovery', () => {
   assert.match(auth, /signUp/);
   assert.match(auth, /resetPasswordForEmail/);
   assert.match(auth, /autoSignInData/);
+  assert.match(auth, /fechaNacimiento/);
+  assert.match(auth, /calculateAgeFromBirthDate/);
   assert.match(supabaseLib, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(envExample, /SUPABASE_SERVICE_ROLE_KEY=/);
 });
 
 test('register page does not auto-redirect when registration requires email verification', () => {
   assert.match(register, /state\?\.success && !state\?\.message/);
+  assert.match(register, /name="fechaNacimiento"/);
+  assert.match(register, /name="diagnostico"/);
+  assert.match(register, /diagnosisOptions\.map/);
 });
 
 test('session signing supports auth secret fallback chain', () => {

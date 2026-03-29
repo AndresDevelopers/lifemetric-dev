@@ -17,6 +17,9 @@ export default function RegisterPage() {
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const { locale, messages } = useLocale();
   const registerMessages = messages.auth.register;
+  const diagnosisOptions = locale === 'es'
+    ? ['Control', 'Diabetes tipo 1', 'Diabetes tipo 2', 'Hipertensión', 'Otra']
+    : ['Routine check', 'Type 1 diabetes', 'Type 2 diabetes', 'Hypertension', 'Other'];
 
   useEffect(() => {
     if (state?.success && !state?.message) {
@@ -99,8 +102,8 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                <div className="space-y-1">
-                 <label htmlFor="edad" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.age}</label>
-                 <input id="edad" type="number" name="edad" min="1" max="150" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
+                 <label htmlFor="fechaNacimiento" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.age}</label>
+                 <input id="fechaNacimiento" type="date" name="fechaNacimiento" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
                <div className="space-y-1 sm:col-span-2">
@@ -115,7 +118,12 @@ export default function RegisterPage() {
 
             <div className="space-y-1">
                 <label htmlFor="diagnostico" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.diagnosis}</label>
-                <input id="diagnostico" type="text" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={registerMessages.diagnosisPlaceholder} required />
+                <select id="diagnostico" name="diagnostico" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required>
+                  <option value="">{messages.common.select}</option>
+                  {diagnosisOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
             </div>
 
 
