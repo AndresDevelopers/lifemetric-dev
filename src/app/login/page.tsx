@@ -39,16 +39,17 @@ export default function LoginPage() {
       <div className="glass-surface w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-white/20 relative z-10 transition-all duration-500 hover:shadow-[var(--color-primary-fixed-dim)]/20 hover:shadow-3xl">
         
         {/* Left Side: Branding / Clinical Aesthetic */}
-        <div className="md:w-1/2 p-10 md:p-16 flex flex-col justify-between bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-surface-tint)] text-[var(--color-on-primary)] relative overflow-hidden">
+        <div className="md:w-1/2 p-10 md:p-16 flex flex-col justify-between bg-gradient-to-br from-[#0d4e92] via-[#0c5fae] to-[#1273c4] text-[var(--color-on-primary)] relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.14),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(103,232,249,0.12),transparent_40%)] pointer-events-none"></div>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
           
           <div className="z-10 relative">
             {appBrandLogoUrl ? (
-              <div className="w-full py-4 md:py-6">
+              <div className="w-full py-4 md:py-6 px-5 md:px-6 rounded-3xl bg-[#0b3d75]/35 border border-white/20 backdrop-blur-sm shadow-[0_12px_36px_rgba(4,18,43,0.35)]">
                 <img
                   src={appBrandLogoUrl}
                   alt={appName}
-                  className="w-full h-auto max-h-44 md:max-h-52 object-contain"
+                  className="w-full h-auto max-h-44 md:max-h-52 object-contain drop-shadow-[0_8px_20px_rgba(255,255,255,0.32)]"
                 />
               </div>
             ) : (
@@ -61,7 +62,7 @@ export default function LoginPage() {
                 {' '}{appName}
               </h1>
             )}
-            <p className="text-[var(--color-primary-fixed)] text-lg md:text-xl font-medium mb-8 leading-relaxed">
+            <p className="text-[#dff3ff] text-lg md:text-xl font-medium mb-8 leading-relaxed">
               {messages.common.appDescription} <br/> {messages.common.appDescriptionDetail}
             </p>
           </div>
