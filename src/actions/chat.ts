@@ -78,7 +78,7 @@ export async function chatWithAIAction(userMessage: string, chatHistory: { role:
     const latestLabs = patientSnapshot.laboratorios.slice(0, 3);
 
     const medicationSummary = latestMedicationEntries.length
-      ? latestMedicationEntries.map((item: (typeof latestMedicationEntries)[number]) => `- ${formatDate(item.fecha)} ${item.hora_toma ?? ''} | ${item.medicamento ?? 'N/D'} | ${item.dosis ?? 'N/D'} | estado: ${item.estado_toma ?? 'N/D'}`).join('\n')
+      ? latestMedicationEntries.map((item: (typeof latestMedicationEntries)[number]) => `- ${formatDate(item.fecha)} ${item.hora ? new Date(item.hora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : ''} | ${item.medicamento ?? 'N/D'} | ${item.dosis ?? 'N/D'} | estado: ${item.estado_toma ?? 'N/D'}`).join('\n')
       : '- Sin registros recientes.';
 
     const mealSummary = latestMeals.length
