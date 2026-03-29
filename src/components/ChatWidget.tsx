@@ -4,6 +4,17 @@ import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { chatWithAIAction } from "@/actions/chat";
 
+const CHAT_STORAGE_KEY = "lifemetric_chat_conversations_v1";
+const MAX_SAVED_CONVERSATIONS = 8;
+
+type ChatRole = "assistant" | "user" | "ai";
+type ChatMessage = { role: ChatRole; content: string };
+type StoredConversation = {
+  id: string;
+  createdAt: string;
+  messages: ChatMessage[];
+};
+
 function renderInlineMarkdown(text: string) {
   const segments = text.split(/(\*\*[^*]+\*\*)/g);
 
@@ -55,22 +66,83 @@ function renderAssistantMarkdown(content: string) {
 export default function ChatWidget() {
   const { messages } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [input, setInput] = useState("");
   // Chat history state initialized with translated greeting.
-  const [chatHistory, setChatHistory] = useState<{ role: "assistant" | "user" | "ai"; content: string }[]>(() => [
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => [
     {
       role: "assistant", // Using assistant for internal UI, will map to 'ai' for action
       content: messages.chat.welcome,
     },
   ]);
+  const [savedConversations, setSavedConversations] = useState<StoredConversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const createWelcomeMessage = () => [{ role: "assistant" as const, content: messages.chat.welcome }];
+
+  useEffect(() => {
+    setChatHistory(createWelcomeMessage());
+    setSavedConversations([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.chat.welcome]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(CHAT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as StoredConversation[];
+      if (Array.isArray(parsed)) {
+        setSavedConversations(parsed.filter((item) => item.messages?.length));
+      }
+    } catch {
+      setSavedConversations([]);
+    }
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [chatHistory, isOpen]);
+
+  const persistConversations = (conversations: StoredConversation[]) => {
+    setSavedConversations(conversations);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(conversations));
+    }
+  };
+
+  const saveCurrentConversationToHistory = () => {
+    const meaningfulMessages = chatHistory.filter((item) => item.content.trim() && item.content !== messages.chat.welcome);
+    if (!meaningfulMessages.length) return;
+
+    const nextConversation: StoredConversation = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      messages: chatHistory,
+    };
+
+    const updated = [nextConversation, ...savedConversations].slice(0, MAX_SAVED_CONVERSATIONS);
+    persistConversations(updated);
+  };
+
+  const handleStartNewConversation = () => {
+    if (isLoading) return;
+    saveCurrentConversationToHistory();
+    setChatHistory(createWelcomeMessage());
+    setInput("");
+    setShowHistoryPanel(false);
+  };
+
+  const handleRecoverConversation = (id: string) => {
+    const selected = savedConversations.find((item) => item.id === id);
+    if (!selected) return;
+    setChatHistory(selected.messages);
+    setShowHistoryPanel(false);
+    setIsOpen(true);
+  };
 
   const handleSendMessage = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -173,13 +245,59 @@ export default function ChatWidget() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all active:scale-95"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowHistoryPanel((prev) => !prev)}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all active:scale-95"
+              aria-label={messages.chat.history}
+            >
+              <span className="material-symbols-outlined">history</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleStartNewConversation}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all active:scale-95"
+              aria-label={messages.chat.newConversation}
+            >
+              <span className="material-symbols-outlined">delete_sweep</span>
+            </button>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all active:scale-95"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
         </div>
+
+        {showHistoryPanel && (
+          <div className="px-4 py-3 border-b border-slate-200/80 dark:border-white/10 bg-white/60 dark:bg-slate-900/40 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.chat.history}</p>
+            {savedConversations.length ? (
+              <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                {savedConversations.map((conversation) => {
+                  const preview = conversation.messages.find((item) => item.role === "user")?.content ?? messages.chat.welcome;
+                  return (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      onClick={() => handleRecoverConversation(conversation.id)}
+                      className="w-full text-left px-3 py-2 rounded-xl bg-slate-100/70 dark:bg-slate-800/60 hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      <p className="text-[11px] text-slate-500 dark:text-slate-300">
+                        {new Date(conversation.createdAt).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-700 dark:text-slate-100 truncate">{preview}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">{messages.chat.emptyHistory}</p>
+            )}
+          </div>
+        )}
 
         {/* Messages */}
         <div

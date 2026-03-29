@@ -42,7 +42,13 @@ export default function LoginPage() {
           
           <div className="z-10 relative">
             {appBrandLogoUrl ? (
-              <img src={appBrandLogoUrl} alt={appName} className="h-14 md:h-16 w-auto max-w-[320px] object-contain mb-5" />
+              <div className="w-full py-4 md:py-6">
+                <img
+                  src={appBrandLogoUrl}
+                  alt={appName}
+                  className="w-full h-auto max-h-44 md:max-h-52 object-contain"
+                />
+              </div>
             ) : (
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
                 {appIconUrl ? (

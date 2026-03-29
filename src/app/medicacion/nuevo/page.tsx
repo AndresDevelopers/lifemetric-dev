@@ -10,6 +10,7 @@ import { getSessionPacienteId } from "@/actions/data";
 import { guardarRegistroMedicacion, inferMedicationFromPhoto } from "@/actions/medicacion";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
+import { getMedicationCatalogDescription } from "@/lib/medicationCatalog";
 import { supabase } from "@/lib/supabase";
 
 const medicacionSchema = z.object({
@@ -17,7 +18,7 @@ const medicacionSchema = z.object({
   fecha: z.string(),
   hora: z.string(),
   medicamento: z.string().min(2, "Obligatorio"),
-  dosis: z.string().min(1, "Obligatorio"),
+  dosis: z.string().optional(),
   estado_toma: z.enum(["tomada", "olvidada", "omitida_por_efecto", "retrasada"]),
   comentarios: z.string().optional()
 });
@@ -28,6 +29,7 @@ export default function NuevaMedicacion() {
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [detectedMedicationName, setDetectedMedicationName] = useState<string | null>(null);
+  const [detectedMedicationDescription, setDetectedMedicationDescription] = useState<string | null>(null);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -147,6 +149,8 @@ export default function NuevaMedicacion() {
         if (response.data.medicamento) {
           setDetectedMedicationName(response.data.medicamento);
           setValue("medicamento", response.data.medicamento, { shouldValidate: true });
+          const catalogDescription = getMedicationCatalogDescription(response.data.medicamento, locale);
+          setDetectedMedicationDescription(catalogDescription ?? response.data.descripcion_para_que_sirve ?? null);
         }
         if (response.data.dosis) {
           setValue("dosis", response.data.dosis, { shouldValidate: true });
@@ -193,6 +197,7 @@ export default function NuevaMedicacion() {
       setValue("comentarios", "");
       setImagePreview(null);
       setDetectedMedicationName(null);
+      setDetectedMedicationDescription(null);
     } catch {
       alert(medicationMessages.saveError);
     } finally {
@@ -261,8 +266,8 @@ export default function NuevaMedicacion() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setImagePreview(null);
-      setDetectedMedicationName(null);
                         setDetectedMedicationName(null);
+                        setDetectedMedicationDescription(null);
                       }}
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
@@ -279,6 +284,14 @@ export default function NuevaMedicacion() {
                 <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-xl animate-pulse">
                   <span className="material-symbols-outlined text-blue-600 animate-spin">progress_activity</span>
                   <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{medicationMessages.aiAnalyzing}</span>
+                </div>
+              )}
+              {detectedMedicationDescription && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    {medicationMessages.aiDescriptionTitle}
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-900">{detectedMedicationDescription}</p>
                 </div>
               )}
             </div>

@@ -71,6 +71,23 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
 - La IA del resumen incorpora un marco de producto para ThermoRush en recomendaciones (uso sugerido antes de desayuno/almuerzo, enfoque en apetito-estrés-energía-glucosa, y advertencia de que no reemplaza tratamiento médico).
 - Se agregó control de catálogo para IA/chat: productos permitidos para sugerencia comercial y productos restringidos que nunca deben mencionarse.
 - En medicación, si el nombre ingresado pertenece al catálogo controlado, se exige validación por foto IA y coincidencia nombre↔imagen antes de guardar.
+- En medicación, la IA completa automáticamente nombre/dosis al subir foto; además, cuando identifica un medicamento del catálogo, muestra debajo de la imagen una descripción breve de para qué se utiliza.
+- La dosis en el formulario de medicación es opcional; si no se captura, se guarda como "No especificada" para mantener consistencia del registro.
+- El widget de chat incluye iconos de historial y limpieza de conversación para recuperar sesiones previas o iniciar una nueva conversación rápidamente.
+- En login, el logo de marca se adapta para ocupar casi todo el ancho de su fila con padding vertical para mantener proporción visual en logos alargados.
+- En comidas, al subir foto la IA autocompleta automáticamente el campo del plato principal y se eliminó el campo de "cómo te sientes" del formulario para simplificar el guardado.
+- Tanto en comidas como en medicación, los nombres autocompletados por IA siguen siendo editables para corrección manual del usuario.
+- En la página de inicio autenticada se removió el indicador circular junto al título del header para un diseño más limpio.
+- Retención automática de archivos:
+  - Imágenes de comidas: se eliminan automáticamente a los **365 días**.
+  - Archivos/imágenes de laboratorios: se eliminan automáticamente a los **2 años**.
+- Al eliminar cuenta desde Ajustes se purgan registros del usuario (comidas, glucosa, hábitos, medicación y datos personales), pero se conservan temporalmente las evidencias de laboratorio hasta cumplir su retención de 2 años para mejora de modelos de IA.
+
+### Job de retención (cron)
+
+- Endpoint: `POST /api/maintenance/storage-retention`
+- Auth: header `Authorization: Bearer <MAINTENANCE_JOB_TOKEN>`
+- Configura `MAINTENANCE_JOB_TOKEN` en `.env`.
 
 
 ## Escaneo anti-malware en subida de archivos

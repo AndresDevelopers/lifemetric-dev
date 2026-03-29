@@ -14,6 +14,7 @@ import { getSessionPacienteId } from './data';
 import { sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 import { ensurePacienteProfileColumns, updatePacienteProfileExtras } from '@/lib/pacienteProfile';
+import { getStoragePathFromPublicUrl } from '@/lib/storageRetention';
 
 export type AuthActionState = {
   error?: string;
@@ -93,7 +94,13 @@ async function findOrCreatePacienteByEmail(input: {
 
   try {
     const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
-    const currentPaciente = paciente ?? await createPaciente();
+    let currentPaciente = paciente;
+    if (!paciente) {
+      currentPaciente = await createPaciente();
+    }
+    if (!currentPaciente) {
+      throw new Error('No se pudo crear el paciente.');
+    }
     await updatePacienteProfileExtras(currentPaciente.paciente_id, {
       fechaNacimiento: input.fechaNacimiento,
       alturaCm: input.alturaCm,
@@ -106,7 +113,13 @@ async function findOrCreatePacienteByEmail(input: {
     }
     await ensurePacienteAuthColumns();
     const paciente = await prisma.paciente.findFirst({ where: { email: input.email } });
-    const currentPaciente = paciente ?? await createPaciente();
+    let currentPaciente = paciente;
+    if (!paciente) {
+      currentPaciente = await createPaciente();
+    }
+    if (!currentPaciente) {
+      throw new Error('No se pudo crear el paciente.');
+    }
     await updatePacienteProfileExtras(currentPaciente.paciente_id, {
       fechaNacimiento: input.fechaNacimiento,
       alturaCm: input.alturaCm,
@@ -411,10 +424,56 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
 
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const messages = getMessages(locale);
-
-    await prisma.paciente.delete({
+    const paciente = await prisma.paciente.findUnique({
       where: { paciente_id: pacienteId },
+      select: { email: true },
     });
+    if (!paciente) {
+      return { error: 'Error' };
+    }
+
+    const mealPhotos = await prisma.comida.findMany({
+      where: { paciente_id: pacienteId, foto_url: { not: null } },
+      select: { foto_url: true },
+    });
+    const mealPaths = mealPhotos
+      .map((item: { foto_url: string | null }) => getStoragePathFromPublicUrl(item.foto_url ?? '', 'comidas'))
+      .filter((value: string | null): value is string => Boolean(value));
+
+    const supabaseService = createSupabaseServerClient({ useServiceRole: true });
+    const { data: usersPage } = await supabaseService.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const authUser = usersPage.users.find((item) => item.email?.toLowerCase() === paciente.email.toLowerCase());
+
+    const replacementHash = await bcrypt.hash(crypto.randomUUID(), 10);
+    await prisma.$transaction([
+      prisma.glucosa.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.habito.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.comida.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.registroMedicacion.deleteMany({ where: { paciente_id: pacienteId } }),
+      prisma.paciente.update({
+        where: { paciente_id: pacienteId },
+        data: {
+          nombre: 'Cuenta',
+          apellido: 'Eliminada',
+          email: `deleted-${pacienteId}@lifemetric.invalid`,
+          password_hash: replacementHash,
+          newsletter_suscrito: false,
+          diagnostico_principal: 'Cuenta eliminada',
+          activo: false,
+          medicacion_base: null,
+          objetivo_clinico: null,
+          cintura_inicial_cm: null,
+          peso_inicial_kg: null,
+        },
+      }),
+    ]);
+
+    if (mealPaths.length) {
+      await supabaseService.storage.from('comidas').remove(mealPaths);
+    }
+    if (authUser?.id) {
+      await supabaseService.auth.admin.deleteUser(authUser.id);
+    }
 
     await deleteSession();
     return { success: true, message: messages.settings.accountDeleted };

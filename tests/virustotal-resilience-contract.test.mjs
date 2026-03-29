@@ -13,6 +13,7 @@ const route = fs.readFileSync(routePath, 'utf8');
 
 test('env example documents VirusTotal key', () => {
   assert.match(envExample, /VIRUSTOTAL_API_KEY=""/);
+  assert.match(envExample, /MAINTENANCE_JOB_TOKEN=/);
 });
 
 test('readme documents resilient anti-malware flow', () => {
