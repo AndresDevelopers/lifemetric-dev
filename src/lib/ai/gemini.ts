@@ -1,13 +1,22 @@
 import { z } from 'zod';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const AI_GATEWAY_BASE_URL = 'https://ai-gateway.vercel.sh/v1';
+const DEFAULT_AI_MODEL = 'google/gemini-2.0-flash-001';
 
-const geminiResponseSchema = z.object({
-  candidates: z
+const aiGatewayResponseSchema = z.object({
+  choices: z
     .array(
       z.object({
-        content: z.object({
-          parts: z.array(z.object({ text: z.string().optional() })),
+        message: z.object({
+          content: z.union([
+            z.string(),
+            z.array(
+              z.object({
+                type: z.string().optional(),
+                text: z.string().optional(),
+              }),
+            ),
+          ]),
         }),
       }),
     )
@@ -56,79 +65,89 @@ export const labVisionSchema = z.object({
   acido_urico: z.number().min(0).max(30).nullable().optional(),
 });
 
-function getGeminiApiKey(): string {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getAIGatewayApiKey(): string {
+  const apiKey = process.env.AI_GATEWAY_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY no está configurada.');
+    throw new Error('AI_GATEWAY_API_KEY no está configurada.');
   }
 
   return apiKey;
 }
 
 export function canUseGemini(): boolean {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return Boolean(process.env.AI_GATEWAY_API_KEY);
 }
 
 export function getGeminiModel(): string {
-  return process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  return process.env.AI_GATEWAY_MODEL ?? DEFAULT_AI_MODEL;
+}
+
+function normalizeContent(content: string | Array<{ type?: string; text?: string }>): string {
+  if (typeof content === 'string') return content.trim();
+
+  return content
+    .map((part) => part.text?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join('\n')
+    .trim();
 }
 
 export async function generateGeminiText(input: GeminiPromptInput, retryCount = 0): Promise<string> {
   const model = input.model ?? getGeminiModel();
-  const apiKey = getGeminiApiKey();
+  const apiKey = getAIGatewayApiKey();
 
   const MAX_RETRIES = 5;
-  const BASE_DELAY = 1000; // 1s
+  const BASE_DELAY = 1000;
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`, {
+    const response = await fetch(`${AI_GATEWAY_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        contents: [
+        model,
+        messages: [
           {
             role: 'user',
-            parts: [{ text: input.prompt }],
+            content: input.prompt,
           },
         ],
-        generationConfig: {
-          temperature: input.temperature ?? 0.3,
-          maxOutputTokens: input.maxOutputTokens ?? 512,
-        },
+        temperature: input.temperature ?? 0.3,
+        max_tokens: input.maxOutputTokens ?? 512,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      
-      // Manejo de Error 429 (Rate Limit / Quota Exceeded)
       if (response.status === 429 && retryCount < MAX_RETRIES) {
-        // Exponencial backoff con jitter (variación aleatoria)
         const jitter = Math.random() * 500;
         const delay = BASE_DELAY * Math.pow(2, retryCount) + jitter;
-        
-        console.warn(`Gemini 429 - Retrying in ${Math.round(delay)}ms... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+
+        console.warn(
+          `AI Gateway 429 - Retrying in ${Math.round(delay)}ms... (Attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
         await new Promise((resolve) => setTimeout(resolve, delay));
         return generateGeminiText(input, retryCount + 1);
       }
 
-      throw new Error(`Gemini error (${response.status}): ${errorText}`);
+      throw new Error(`AI Gateway error (${response.status}): ${errorText}`);
     }
 
-    const parsed = geminiResponseSchema.parse(await response.json());
-    return parsed.candidates?.[0]?.content.parts[0]?.text?.trim() ?? '';
+    const parsed = aiGatewayResponseSchema.parse(await response.json());
+    return normalizeContent(parsed.choices?.[0]?.message.content ?? '');
   } catch (error: unknown) {
     if (
       retryCount < MAX_RETRIES &&
       error instanceof Error &&
       (error.name === 'AbortError' || error.name === 'TypeError')
     ) {
-      // Reintentar en errores de red transitorios si es posible
       const jitter = Math.random() * 500;
       const delay = BASE_DELAY * Math.pow(2, retryCount) + jitter;
-      console.warn(`Gemini network error - Retrying in ${Math.round(delay)}ms... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      console.warn(
+        `AI Gateway network error - Retrying in ${Math.round(delay)}ms... (Attempt ${retryCount + 1}/${MAX_RETRIES})`,
+      );
       await new Promise((resolve) => setTimeout(resolve, delay));
       return generateGeminiText(input, retryCount + 1);
     }
@@ -178,7 +197,6 @@ export async function buildClinicalSuggestions(params: {
     return null;
   }
 }
-
 
 export async function extractLabValuesFromImage(params: {
   imageUrl: string;

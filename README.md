@@ -56,7 +56,7 @@ pnpm build
 La app ahora incluye integración server-side con:
 
 - **Resend** para correos transaccionales (recuperación de contraseña y suscripción/desuscripción por correo, incluyendo check por defecto en registro).
-- **Gemini** vía API REST para futuras funciones de IA, con modelo configurable en `GEMINI_MODEL`.
+- **Vercel AI Gateway** (endpoint OpenAI-compatible) para funciones de IA, con modelo configurable en `AI_GATEWAY_MODEL`.
 
 Configura las variables nuevas en `.env` usando `.env.example` como guía.
 
