@@ -27,6 +27,7 @@ type FormValues = z.infer<typeof medicacionSchema>;
 export default function NuevaMedicacion() {
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [detectedMedicationName, setDetectedMedicationName] = useState<string | null>(null);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -144,6 +145,7 @@ export default function NuevaMedicacion() {
 
       if (response.success && response.data) {
         if (response.data.medicamento) {
+          setDetectedMedicationName(response.data.medicamento);
           setValue("medicamento", response.data.medicamento, { shouldValidate: true });
         }
         if (response.data.dosis) {
@@ -165,9 +167,22 @@ export default function NuevaMedicacion() {
       const response = await guardarRegistroMedicacion({
         ...data,
         comentarios: data.comentarios || undefined,
+        ai_detected_medicamento: detectedMedicationName ?? undefined,
       });
 
       if (!response.success) {
+        if (response.error === "restricted_product") {
+          alert("Este producto está restringido y no puede registrarse.");
+          return;
+        }
+        if (response.error === "photo_validation_required") {
+          alert("Para este producto debes subir una foto válida del medicamento antes de guardarlo.");
+          return;
+        }
+        if (response.error === "product_name_photo_mismatch") {
+          alert("El nombre ingresado no coincide con el producto detectado en la foto. Verifica por seguridad.");
+          return;
+        }
         alert(medicationMessages.saveError);
         return;
       }
@@ -177,6 +192,7 @@ export default function NuevaMedicacion() {
       setValue("dosis", "");
       setValue("comentarios", "");
       setImagePreview(null);
+      setDetectedMedicationName(null);
     } catch {
       alert(medicationMessages.saveError);
     } finally {
@@ -245,6 +261,8 @@ export default function NuevaMedicacion() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setImagePreview(null);
+      setDetectedMedicationName(null);
+                        setDetectedMedicationName(null);
                       }}
                     >
                       <span className="material-symbols-outlined text-sm">close</span>

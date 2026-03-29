@@ -5,6 +5,7 @@ import { estimateMedicationFromImage } from "@/lib/ai/gemini";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/redis";
 import { getSessionPacienteId } from "@/actions/data";
+import { isBannedPromoProduct, isControlledPromoProduct, matchesSameProductName } from "@/lib/productCatalog";
 
 const medicacionInputSchema = z.object({
   paciente_id: z.string().uuid(),
@@ -14,6 +15,7 @@ const medicacionInputSchema = z.object({
   dosis: z.string().min(1),
   estado_toma: z.enum(["tomada", "olvidada", "omitida_por_efecto", "retrasada"]),
   comentarios: z.string().optional(),
+  ai_detected_medicamento: z.string().optional(),
 });
 
 const medicationPhotoSchema = z.object({
@@ -56,6 +58,20 @@ export async function guardarRegistroMedicacion(input: z.infer<typeof medicacion
   }
 
   try {
+    if (isBannedPromoProduct(parsedInput.data.medicamento)) {
+      return { success: false as const, error: "restricted_product" };
+    }
+
+    if (isControlledPromoProduct(parsedInput.data.medicamento)) {
+      if (!parsedInput.data.ai_detected_medicamento) {
+        return { success: false as const, error: "photo_validation_required" };
+      }
+
+      if (!matchesSameProductName(parsedInput.data.medicamento, parsedInput.data.ai_detected_medicamento)) {
+        return { success: false as const, error: "product_name_photo_mismatch" };
+      }
+    }
+
     const medicacion = await prisma.registroMedicacion.create({
       data: {
         paciente_id: parsedInput.data.paciente_id,
