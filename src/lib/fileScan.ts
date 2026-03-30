@@ -14,8 +14,6 @@ type ScanApiResponse = {
 };
 
 export async function guardFileUploadWithVirusTotal(file: File, locale: Locale, status: ScanStatusMessages): Promise<boolean> {
-  alert(status.scanning);
-
   try {
     const payload = new FormData();
     payload.append("file", file);
@@ -26,10 +24,7 @@ export async function guardFileUploadWithVirusTotal(file: File, locale: Locale, 
       body: payload,
     });
 
-    if (!response.ok) {
-      alert(`${status.fallbackPrefix} Error ${response.status}.`);
-      return true;
-    }
+    if (!response.ok) return true;
 
     const result = (await response.json()) as ScanApiResponse;
 
@@ -37,16 +32,8 @@ export async function guardFileUploadWithVirusTotal(file: File, locale: Locale, 
       alert(`${status.blockedPrefix} ${result.message}`.trim());
       return false;
     }
-
-    if (result.mode === "skipped") {
-      alert(`${status.fallbackPrefix} ${result.message}`.trim());
-      return true;
-    }
-
-    alert(`${status.successPrefix} ${result.message}`.trim());
     return true;
   } catch {
-    alert(status.fallbackPrefix);
     return true;
   }
 }
