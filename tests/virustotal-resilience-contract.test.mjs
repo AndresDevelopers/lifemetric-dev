@@ -6,10 +6,12 @@ import path from 'node:path';
 const envPath = path.join(process.cwd(), '.env.example');
 const readmePath = path.join(process.cwd(), 'README.md');
 const routePath = path.join(process.cwd(), 'src', 'app', 'api', 'security', 'scan-file', 'route.ts');
+const fileScanPath = path.join(process.cwd(), 'src', 'lib', 'fileScan.ts');
 
 const envExample = fs.readFileSync(envPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 const route = fs.readFileSync(routePath, 'utf8');
+const fileScan = fs.readFileSync(fileScanPath, 'utf8');
 
 test('env example documents VirusTotal key', () => {
   assert.match(envExample, /VIRUSTOTAL_API_KEY=""/);
@@ -25,4 +27,10 @@ test('scan route keeps resilient fallback when API key is missing or API fails',
   assert.match(route, /if \(!apiKey\)/);
   assert.match(route, /mode: "skipped"/);
   assert.match(route, /toUserMessage\(locale, "fallback"\)/);
+});
+
+test('upload guard avoids exposing scanning/fallback internals through alerts', () => {
+  assert.doesNotMatch(fileScan, /alert\(status\.scanning\)/);
+  assert.doesNotMatch(fileScan, /status\.fallbackPrefix/);
+  assert.match(fileScan, /alert\(`\$\{status\.blockedPrefix\} \$\{result\.message\}`\.trim\(\)\)/);
 });

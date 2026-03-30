@@ -29,13 +29,13 @@ const toUserMessage = (locale: "es" | "en", key: "clean" | "blocked" | "fallback
   const messages = {
     es: {
       clean: "Archivo verificado: sin amenazas detectadas. Continuando con la subida.",
-      blocked: "Archivo bloqueado por seguridad: VirusTotal detectó señales maliciosas.",
-      fallback: "No se pudo validar en VirusTotal ahora mismo. Continuamos con la subida para mantener disponibilidad.",
+      blocked: "Archivo bloqueado por seguridad: detectamos señales de riesgo.",
+      fallback: "No pudimos completar la validación de seguridad en este momento. Continuamos con la subida para mantener disponibilidad.",
     },
     en: {
       clean: "File verified: no threats detected. Continuing upload.",
-      blocked: "File blocked for safety: VirusTotal detected malicious indicators.",
-      fallback: "VirusTotal is temporarily unavailable. Continuing upload to preserve availability.",
+      blocked: "File blocked for safety: risk indicators were detected.",
+      fallback: "We could not complete security validation right now. Continuing upload to preserve availability.",
     },
   };
 
