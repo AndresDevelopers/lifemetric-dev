@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const DEFAULT_FROM_EMAIL = 'Lifemetric <no-reply@lifemetric.app>';
-const SENDGRID_API_URL = 'https://api.sendgrid.com/v3/mail/send';
 
 export type EmailPayload = {
   to: string | string[];
@@ -13,15 +12,6 @@ export type EmailPayload = {
   replyTo?: string;
 };
 
-
-function getSendGridKey(): string | null {
-  const key = process.env.SENDGRID_API_KEY;
-  if (!key || key.trim().length === 0) {
-    return null;
-  }
-
-  return key;
-}
 
 function getResendKey(): string | null {
   const key = process.env.RESEND_API_KEY;
@@ -43,49 +33,87 @@ function stripHtml(html: string): string {
 }
 
 
-async function sendEmailWithSendGrid(payload: EmailPayload): Promise<boolean> {
-  const apiKey = getSendGridKey();
-  if (!apiKey) {
-    return false;
-  }
-
+async function sendEmailWithNodemailer(payload: EmailPayload): Promise<boolean> {
   try {
-    const from = payload.from ?? process.env.SENDGRID_FROM_EMAIL ?? process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
+    const importer = new Function("return import('nodemailer')") as () => Promise<unknown>;
+    const nodemailerModule = await importer();
+    const nodemailer = (nodemailerModule as { default?: unknown }).default as {
+      createTransport: (config: unknown) => { sendMail: (message: unknown) => Promise<unknown> };
+      createTestAccount: () => Promise<{ user: string; pass: string }>;
+      getTestMessageUrl?: (info: unknown) => string | false;
+    };
+
+    if (!nodemailer?.createTransport) {
+      return false;
+    }
+
+    const from = payload.from ?? process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
     const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
 
-    const response = await fetch(SENDGRID_API_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: { email: from.includes('<') ? from.slice(from.indexOf('<') + 1, from.indexOf('>')) : from, name: from.includes('<') ? from.split('<')[0].trim() : undefined },
-        personalizations: [{ to: recipients.map((email) => ({ email })) }],
+    const smtpUrl = process.env.SMTP_URL;
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = Number(process.env.SMTP_PORT ?? '587');
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+
+    const transport = smtpUrl
+      ? nodemailer.createTransport(smtpUrl)
+      : smtpHost
+        ? nodemailer.createTransport({
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpPort === 465,
+            auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
+          })
+        : null;
+
+    if (transport) {
+      await transport.sendMail({
+        from,
+        to: recipients.join(', '),
         subject: payload.subject,
-        content: [
-          { type: 'text/plain', value: payload.text?.trim() || stripHtml(payload.html) },
-          { type: 'text/html', value: payload.html },
-        ],
-      }),
+        html: payload.html,
+        text: payload.text?.trim() || stripHtml(payload.html),
+        replyTo: payload.replyTo,
+      });
+      return true;
+    }
+
+    const testAccount = await nodemailer.createTestAccount();
+    const testTransport = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
     });
 
-    if (!response.ok) {
-      const body = await response.text();
-      console.warn(`SendGrid fallback failed (${response.status}): ${body.slice(0, 300)}`);
-      return false;
+    const info = await testTransport.sendMail({
+      from,
+      to: recipients.join(', '),
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text?.trim() || stripHtml(payload.html),
+      replyTo: payload.replyTo,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl?.(info);
+    if (previewUrl) {
+      console.warn('Correo enviado a bandeja de prueba de nodemailer:', previewUrl);
     }
 
     return true;
   } catch (error) {
-    console.warn('Fallo al enviar correo con SendGrid fallback:', error);
+    console.warn('Fallo al enviar correo con nodemailer fallback:', error);
     return false;
   }
 }
 
 async function sendEmailWithFallback(payload: EmailPayload): Promise<void> {
-  const sentBySendGrid = await sendEmailWithSendGrid(payload);
-  if (sentBySendGrid) {
+  const sentByNodemailer = await sendEmailWithNodemailer(payload);
+  if (sentByNodemailer) {
     return;
   }
 
@@ -133,7 +161,7 @@ export async function sendEmailWithResend(payload: EmailPayload): Promise<void> 
   const apiKey = getResendKey();
   
   if (!apiKey) {
-    console.warn('RESEND_API_KEY no configurada. Intentando fallback con sendmail del sistema.');
+    console.warn('RESEND_API_KEY no configurada. Intentando fallback con nodemailer/sendmail.');
     await sendEmailWithFallback(payload);
     return;
   }
@@ -159,7 +187,7 @@ export async function sendEmailWithResend(payload: EmailPayload): Promise<void> 
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.warn(`Error de Resend (${response.status}). Activando fallback sendmail.`);
+      console.warn(`Error de Resend (${response.status}). Activando fallback nodemailer/sendmail.`);
       if (errorBody) {
         console.warn('Detalle resumido de Resend:', errorBody.slice(0, 300));
       }
