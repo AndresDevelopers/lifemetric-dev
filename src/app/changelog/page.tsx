@@ -9,13 +9,10 @@ type CommitEntry = {
   subject: string;
 };
 
-function getTodayCommits(): CommitEntry[] {
+function getTrackedCommits(): CommitEntry[] {
   try {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const since = start.toISOString();
-    const until = now.toISOString();
-    const output = execSync(`git log --since="${since}" --until="${until}" --pretty=format:"%H|%cI|%s"`, {
+    const since = '2026-04-03T00:00:00.000Z';
+    const output = execSync(`git log main --since="${since}" --pretty=format:"%H|%cI|%s"`, {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
@@ -99,7 +96,7 @@ export default async function ChangelogPage() {
   const messages = getMessages(locale);
   const changelogMessages = messages.changelog;
 
-  const commits = getTodayCommits();
+  const commits = getTrackedCommits();
   const summary = await summarizeCommitsWithAI(commits, locale);
 
   return (
@@ -111,7 +108,6 @@ export default async function ChangelogPage() {
         <section className="rounded-[2.5rem] bg-gradient-to-br from-blue-900 via-indigo-900 to-blue-800 p-8 md:p-10 text-white shadow-2xl shadow-blue-900/20">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-100">{changelogMessages.badge}</p>
           <h1 className="mt-4 text-3xl md:text-4xl font-black tracking-tight">{changelogMessages.title}</h1>
-          <p className="mt-3 max-w-3xl text-blue-100/90 text-sm md:text-base">{changelogMessages.subtitle}</p>
         </section>
 
         <section className="rounded-[2.5rem] bg-white p-6 md:p-8 border border-white shadow-xl shadow-slate-200/60">
@@ -119,24 +115,6 @@ export default async function ChangelogPage() {
           <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-100 px-4 py-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
             {summary}
           </div>
-        </section>
-
-        <section className="rounded-[2.5rem] bg-white p-6 md:p-8 border border-white shadow-xl shadow-slate-200/60">
-          <h2 className="text-sm font-black uppercase tracking-[0.14em] text-slate-500">{changelogMessages.commitList}</h2>
-          {commits.length ? (
-            <ul className="mt-4 space-y-3">
-              {commits.map((commit) => (
-                <li key={commit.hash} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-sm font-semibold text-slate-900">{commit.subject}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {new Date(commit.date).toLocaleString(locale)} · {commit.hash.slice(0, 8)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-4 text-sm text-slate-500">{changelogMessages.noCommits}</p>
-          )}
         </section>
       </div>
     </div>

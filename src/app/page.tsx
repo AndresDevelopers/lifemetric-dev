@@ -8,8 +8,8 @@ import {
   inferLocaleFromRequest,
   translateTemplate,
 } from '@/lib/i18n';
-import { verifySession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
+import { getSessionPacienteId } from '@/actions/data';
 
 
 function formatAverageMedicationTime(entries: { hora: Date }[]): string {
@@ -33,8 +33,6 @@ function formatAverageMedicationTime(entries: { hora: Date }[]): string {
 export default async function Home() {
   const cookieStore = await cookies();
   const headerStore = await headers();
-  const sessionToken = cookieStore.get('lifemetric_session')?.value;
-  
   const locale = inferLocaleFromRequest({
     cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
     explicitCookie: cookieStore.get(LOCALE_EXPLICIT_COOKIE_NAME)?.value,
@@ -42,26 +40,12 @@ export default async function Home() {
     country: headerStore.get('x-vercel-ip-country') ?? headerStore.get('cf-ipcountry'),
     city: headerStore.get('x-vercel-ip-city') ?? headerStore.get('cf-ipcity'),
   });
-  
+
   const messages = getMessages(locale);
-
-  if (!sessionToken) {
+  const pacienteId = await getSessionPacienteId();
+  if (!pacienteId) {
     redirect('/login');
   }
-
-  const payload = await verifySession(sessionToken);
-  if (!payload) {
-    redirect('/login');
-  }
-
-  let parsedPayload;
-  try {
-    parsedPayload = JSON.parse(payload);
-  } catch {
-    redirect('/login');
-  }
-
-  const pacienteId = parsedPayload.pacienteId;
   const paciente = await prisma.paciente.findUnique({
     where: { paciente_id: pacienteId },
     include: {

@@ -12,7 +12,7 @@ import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { resolveAppBaseUrl } from '@/lib/url';
 import { deleteSession, setSession } from '@/lib/session';
 import { getSessionPacienteId } from './data';
-import { sendNewsletterSubscriptionEmail } from '@/lib/email';
+import { sendLoginAccessEmail, sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 import { ensurePacienteProfileColumns, updatePacienteProfileExtras } from '@/lib/pacienteProfile';
 import { getStoragePathFromPublicUrl } from '@/lib/storageRetention';
@@ -234,8 +234,18 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       return { error: authMessages.wrongPassword };
     }
 
-    await setSession(paciente.paciente_id);
     await touchPacienteLastLogin(paciente.paciente_id);
+    await setSession(paciente.paciente_id);
+
+    const headerStore = await headers();
+    await sendLoginAccessEmail({
+      to: data.email,
+      locale,
+      appName: process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric',
+      ipAddress: headerStore.get('x-forwarded-for') ?? headerStore.get('x-real-ip'),
+      userAgent: headerStore.get('user-agent'),
+      loggedAtIso: new Date().toISOString(),
+    });
 
     return { success: true };
   } catch (error) {
@@ -344,8 +354,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     }
 
       if (signUpData.session) {
-          await setSession(paciente.paciente_id);
           await touchPacienteLastLogin(paciente.paciente_id);
+          await setSession(paciente.paciente_id);
           return { success: true };
       }
 
@@ -354,8 +364,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       password: data.password,
     });
       if (autoSignInData.user) {
-          await setSession(paciente.paciente_id);
           await touchPacienteLastLogin(paciente.paciente_id);
+          await setSession(paciente.paciente_id);
           return { success: true };
       }
 

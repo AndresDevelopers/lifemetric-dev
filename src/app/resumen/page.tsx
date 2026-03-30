@@ -1,5 +1,4 @@
 import { cookies, headers } from "next/headers";
-import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
@@ -14,6 +13,7 @@ import {
   inferLocaleFromRequest,
 } from "@/lib/i18n";
 import { getPacienteProfileExtras } from "@/lib/pacienteProfile";
+import { getSessionPacienteId } from "@/actions/data";
 
 function escapeCsvValue(value: string | number): string {
   const normalized = String(value).replaceAll('"', '""');
@@ -118,7 +118,6 @@ export default async function ResumenSemanal({
 
   const cookieStore = await cookies();
   const headerStore = await headers();
-  const sessionToken = cookieStore.get('lifemetric_session')?.value;
   const locale = inferLocaleFromRequest({
     cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
     explicitCookie: cookieStore.get(LOCALE_EXPLICIT_COOKIE_NAME)?.value,
@@ -128,23 +127,10 @@ export default async function ResumenSemanal({
   });
   const messages = getMessages(locale);
   
-  if (!sessionToken) {
+  const pacienteId = await getSessionPacienteId();
+  if (!pacienteId) {
     redirect('/login');
   }
-
-  const payload = await verifySession(sessionToken);
-  if (!payload) {
-    redirect('/login');
-  }
-
-  let parsedPayload;
-  try {
-    parsedPayload = JSON.parse(payload);
-  } catch {
-    redirect('/login');
-  }
-
-  const pacienteId = parsedPayload.pacienteId;
 
   const hoy = new Date();
   const unaSemanaAtras = new Date();

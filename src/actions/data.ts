@@ -14,7 +14,22 @@ export async function getSessionPacienteId() {
   if (!payload) return null;
   
   try {
-    const parsedPayload = JSON.parse(payload);
+    const parsedPayload = JSON.parse(payload) as { pacienteId?: string; timestamp?: number };
+    if (!parsedPayload.pacienteId || typeof parsedPayload.timestamp !== 'number') return null;
+
+    const sessionRows = await prisma.$queryRaw<Array<{ last_login_at: Date | null }>>`
+      SELECT last_login_at
+      FROM pacientes
+      WHERE paciente_id = ${parsedPayload.pacienteId}::uuid
+      LIMIT 1
+    `;
+
+    const lastLoginAt = sessionRows[0]?.last_login_at ?? null;
+    const lastLoginMs = lastLoginAt ? new Date(lastLoginAt).getTime() : null;
+    if (lastLoginMs && parsedPayload.timestamp + 2000 < lastLoginMs) {
+      return null;
+    }
+
     return parsedPayload.pacienteId;
   } catch {
     return null;

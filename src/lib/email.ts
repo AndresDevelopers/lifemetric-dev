@@ -102,3 +102,48 @@ export async function sendNewsletterSubscriptionEmail(params: {
     text: message,
   });
 }
+
+
+export async function sendLoginAccessEmail(params: {
+  to: string;
+  locale: 'es' | 'en';
+  appName: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  loggedAtIso: string;
+}): Promise<void> {
+  const subject =
+    params.locale === 'es'
+      ? `Nuevo inicio de sesión en ${params.appName}`
+      : `New sign-in on ${params.appName}`;
+
+  const ipText = params.ipAddress ?? (params.locale === 'es' ? 'No disponible' : 'Not available');
+  const agentText = params.userAgent ?? (params.locale === 'es' ? 'No disponible' : 'Not available');
+  const intro =
+    params.locale === 'es'
+      ? 'Detectamos un inicio de sesión reciente en tu cuenta.'
+      : 'We detected a recent sign-in to your account.';
+
+  const bodyEs = `
+    <p>${intro}</p>
+    <p><strong>Fecha y hora (UTC):</strong> ${params.loggedAtIso}</p>
+    <p><strong>IP:</strong> ${ipText}</p>
+    <p><strong>Dispositivo:</strong> ${agentText}</p>
+    <p>Si no reconoces esta actividad, cambia tu contraseña de inmediato.</p>
+  `;
+
+  const bodyEn = `
+    <p>${intro}</p>
+    <p><strong>Date & time (UTC):</strong> ${params.loggedAtIso}</p>
+    <p><strong>IP:</strong> ${ipText}</p>
+    <p><strong>Device:</strong> ${agentText}</p>
+    <p>If you do not recognize this activity, change your password immediately.</p>
+  `;
+
+  await sendEmailWithResend({
+    to: params.to,
+    subject,
+    html: params.locale === 'es' ? bodyEs : bodyEn,
+    text: `${intro} | ${params.loggedAtIso} | IP: ${ipText} | Device: ${agentText}`,
+  });
+}
