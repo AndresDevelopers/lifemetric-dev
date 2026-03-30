@@ -136,6 +136,7 @@ const messages = {
       labsSubtitle: 'Sube resultados de análisis',
       quickActions: 'Acciones Rápidas',
       healthOverview: 'Resumen de Salud',
+      medicationAverageTime: 'Hora promedio de medicación',
     },
     summary: {
       title: 'Resumen semanal',
@@ -267,6 +268,7 @@ const messages = {
       momentOfDay: 'Momento del día',
       fasting: 'Ayuno',
       beforeMeal: 'Antes de comer',
+      beforeDinner: 'Previo a la cena',
       oneHourAfterMeal: '1h post-comida',
       twoHoursAfterMeal: '2h post-comida',
       linkMeal: 'Relacionar con comida',
@@ -438,8 +440,8 @@ const messages = {
     changelog: {
       badge: 'Transparencia de cambios',
       title: 'Changelog de hoy',
-      subtitle: 'La IA resume los commits del día en un lenguaje simple para que entiendas qué cambió en la app.',
-      todaySummary: 'Resumen en lenguaje claro',
+      subtitle: 'Resumen diario de commits explicado en lenguaje simple para que entiendas qué cambió en la app.',
+      todaySummary: 'Resumen diario de cambios',
       commitList: 'Commits del día',
       noCommits: 'No hay commits registrados hoy.',
     },
@@ -570,6 +572,7 @@ const messages = {
       labsSubtitle: 'Upload test results',
       quickActions: 'Quick Actions',
       healthOverview: 'Health Overview',
+      medicationAverageTime: 'Average medication time',
     },
     summary: {
       title: 'Weekly summary',
@@ -701,6 +704,7 @@ const messages = {
       momentOfDay: 'Time of day',
       fasting: 'Fasting',
       beforeMeal: 'Before meal',
+      beforeDinner: 'Before dinner',
       oneHourAfterMeal: '1h post-meal',
       twoHoursAfterMeal: '2h post-meal',
       linkMeal: 'Link to meal',
@@ -872,8 +876,8 @@ const messages = {
     changelog: {
       badge: 'Change transparency',
       title: "Today's changelog",
-      subtitle: 'AI summarizes today’s commits in simple words so users can understand what changed in the app.',
-      todaySummary: 'Plain-language summary',
+      subtitle: 'Daily commit summary written in simple language so users can understand what changed in the app.',
+      todaySummary: 'Daily change summary',
       commitList: "Today's commits",
       noCommits: 'No commits were registered today.',
     },

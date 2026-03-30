@@ -12,7 +12,7 @@ const glucosaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
   fecha: z.string(),
   hora: z.string(),
-  tipo_glucosa: z.enum(["ayuno", "antes_comer", "1h_post", "2h_post"]),
+  tipo_glucosa: z.enum(["ayuno", "antes_comer", "antes_cena", "1h_post", "2h_post"]),
   valor_glucosa: z.number().min(20).max(600),
   comida_relacionada_id: z.string().optional(),
 });
@@ -121,6 +121,9 @@ export default function NuevaGlucosa() {
                 </button>
                 <button type="button" onClick={() => setValue("tipo_glucosa", "antes_comer")} className={`py-4 rounded-2xl font-bold transition-all ${getTipoStyle("antes_comer")}`}>
                   {glucoseMessages.beforeMeal}
+                </button>
+                <button type="button" onClick={() => setValue("tipo_glucosa", "antes_cena")} className={`py-4 rounded-2xl font-bold transition-all ${getTipoStyle("antes_cena")}`}>
+                  {glucoseMessages.beforeDinner}
                 </button>
                 <button type="button" onClick={() => setValue("tipo_glucosa", "1h_post")} className={`py-4 rounded-2xl font-bold transition-all ${getTipoStyle("1h_post")}`}>
                   {glucoseMessages.oneHourAfterMeal}

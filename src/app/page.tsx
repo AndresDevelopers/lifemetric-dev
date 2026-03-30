@@ -11,6 +11,25 @@ import {
 import { verifySession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 
+
+function formatAverageMedicationTime(entries: { hora: Date }[]): string {
+  if (entries.length === 0) {
+    return '--:--';
+  }
+
+  const totalMinutes = entries.reduce((acc, entry) => {
+    const hour = entry.hora.getHours();
+    const minute = entry.hora.getMinutes();
+    return acc + (hour * 60) + minute;
+  }, 0);
+
+  const averageMinutes = Math.round(totalMinutes / entries.length);
+  const avgHour = Math.floor(averageMinutes / 60) % 24;
+  const avgMinute = averageMinutes % 60;
+
+  return `${String(avgHour).padStart(2, '0')}:${String(avgMinute).padStart(2, '0')}`;
+}
+
 export default async function Home() {
   const cookieStore = await cookies();
   const headerStore = await headers();
@@ -80,9 +99,7 @@ export default async function Home() {
   const exerciseToday = paciente.habitos?.[0]?.ejercicio_min ?? 0;
   const sleepToday = paciente.habitos?.[0]?.sueno_horas ?? 0;
   
-  const totalMedication = paciente.medicacion.length;
-  const takenMedication = paciente.medicacion.filter((m: (typeof paciente.medicacion)[number]) => m.estado_toma?.toLowerCase() === 'tomada').length;
-  const adherence = totalMedication === 0 ? 0 : Math.round((takenMedication / totalMedication) * 100);
+  const averageMedicationTime = formatAverageMedicationTime(paciente.medicacion);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-surface-container-low">
@@ -167,9 +184,9 @@ export default async function Home() {
               bgColor="bg-indigo-50"
             />
             <MetricCard
-              label={messages.summary.medicationAdherence}
-              value={String(adherence)}
-              unit="%"
+              label={messages.home.medicationAverageTime}
+              value={averageMedicationTime}
+              unit="hh:mm"
               icon="medication"
               color="text-orange-400"
               bgColor="bg-orange-50"
