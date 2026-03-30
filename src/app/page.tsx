@@ -66,6 +66,11 @@ export default async function Home() {
     where: { paciente_id: pacienteId },
     include: {
       glucosa: {
+        where: {
+          fecha: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
+        },
         orderBy: { fecha: 'desc' },
         take: 1,
       },

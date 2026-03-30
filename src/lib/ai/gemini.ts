@@ -45,6 +45,7 @@ export const mealVisionSchema = z.object({
   carbohidratos_g: z.number().min(0).max(400).optional(),
   grasa_g: z.number().min(0).max(250).optional(),
   fibra_g: z.number().min(0).max(120).optional(),
+  meal_description: z.string().min(10).max(500).optional(),
 });
 
 const suggestionsSchema = z.object({
@@ -181,8 +182,8 @@ export async function estimateMealFromImage(params: {
 
   const prompt =
     params.locale === 'es'
-      ? `Analiza la imagen de comida: ${params.imageUrl}. Notas: ${params.notes ?? 'sin notas'}. Devuelve SOLO JSON con claves alimento_principal, kcal_estimadas, proteina_g, carbohidratos_g, grasa_g, fibra_g.`
-      : `Analyze this meal image: ${params.imageUrl}. Notes: ${params.notes ?? 'no notes'}. Return ONLY JSON with keys alimento_principal, kcal_estimadas, proteina_g, carbohidratos_g, grasa_g, fibra_g.`;
+      ? `Analiza la imagen de comida: ${params.imageUrl}. Notas: ${params.notes ?? 'sin notas'}. Devuelve SOLO JSON con claves alimento_principal, kcal_estimadas, proteina_g, carbohidratos_g, grasa_g, fibra_g y meal_description (descripción clara del plato y sus detalles).`
+      : `Analyze this meal image: ${params.imageUrl}. Notes: ${params.notes ?? 'no notes'}. Return ONLY JSON with keys alimento_principal, kcal_estimadas, proteina_g, carbohidratos_g, grasa_g, fibra_g and meal_description (clear plate description with details).`;
 
   try {
     const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 350 });
