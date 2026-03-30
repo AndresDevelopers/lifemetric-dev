@@ -6,6 +6,7 @@ import Navigation from "@/components/Navigation";
 import ChatWidget from "@/components/ChatWidget";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import { getSessionPaciente } from "@/actions/data";
+import { resolveAppBaseUrl } from "@/lib/url";
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -15,9 +16,9 @@ import {
 export async function generateMetadata(): Promise<Metadata> {
   const appName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Lifemetric";
   const faviconUrl = process.env.NEXT_PUBLIC_APP_FAVICON_URL?.trim() || "/favicon.ico";
-  const appBaseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim() || "http://localhost:3000";
+  const appBaseUrl = resolveAppBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
   return {
-    metadataBase: new URL(appBaseUrl),
+    metadataBase: appBaseUrl,
     title: {
       default: appName,
       template: `%s | ${appName}`,

@@ -53,6 +53,7 @@ export async function getSessionPaciente() {
       avatar_url: profileExtras.avatar_url,
       altura_cm: profileExtras.altura_cm,
       motivo_registro: profileExtras.motivo_registro,
+      producto_permitido_registro: profileExtras.producto_permitido_registro,
     };
   } catch (error) {
     console.error("Error fetching patient, returning fallback:", error);
@@ -69,6 +70,7 @@ export async function getSessionPaciente() {
       avatar_url: null,
       altura_cm: null,
       motivo_registro: null,
+      producto_permitido_registro: null,
     };
   }
 }
