@@ -66,6 +66,7 @@ export default function NuevaComida() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -144,13 +145,17 @@ export default function NuevaComida() {
       alert(foodMessages.imageOnly);
       return;
     }
+    setIsUploading(true);
     const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
       scanning: foodMessages.virusScanning,
       blockedPrefix: foodMessages.virusBlocked,
       fallbackPrefix: foodMessages.virusFallback,
       successPrefix: foodMessages.virusPassed,
     });
-    if (!canProceed) return;
+    if (!canProceed) {
+      setIsUploading(false);
+      return;
+    }
 
     setImageFile(file);
     const reader = new FileReader();
@@ -164,6 +169,8 @@ export default function NuevaComida() {
       await runAiPhotoAnalysis(photoUrl);
     } catch (error) {
       console.error("Error with image upload:", error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -333,6 +340,11 @@ export default function NuevaComida() {
                   {imagePreview ? (
                     <div className="relative w-full h-full rounded-xl overflow-hidden">
                       <Image src={imagePreview} alt={foodMessages.mealPhoto} fill className="object-cover" />
+                    </div>
+                  ) : isUploading ? (
+                    <div className="flex flex-col items-center text-slate-500 pointer-events-none">
+                      <span className="material-symbols-outlined text-4xl mb-2 opacity-50 animate-spin">sync</span>
+                      <p className="text-sm font-medium text-center">{foodMessages.uploadingImage}</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center text-slate-500 pointer-events-none">

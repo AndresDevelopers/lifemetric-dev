@@ -236,7 +236,7 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
         grasa_g: finalData.grasa_g,
         fibra_g: finalData.fibra_g,
         clasificacion_proteina: class_proteina,
-        clasificacion_carbohydrato: class_carbidrato,
+        clasificacion_carbidrato: class_carbidrato,
         clasificacion_fibra: class_fibra,
         clasificacion_final: class_final,
         razon_inadecuada: finalData.razon_inadecuada ?? null,

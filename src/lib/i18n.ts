@@ -264,6 +264,7 @@ const messages = {
       virusPassed: 'Verificación completada. Archivo seguro, iniciando subida.',
       virusBlocked: 'Subida bloqueada.',
       virusFallback: 'No pudimos completar la validación en este momento. Continuaremos con la subida.',
+      uploadingImage: 'Subiendo imagen...',
     },
     glucoseForm: {
       title: 'Registrar glucosa',

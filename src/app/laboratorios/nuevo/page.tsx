@@ -246,34 +246,36 @@ export default function SubirLaboratorios() {
             </div>
 
             {/* Sección: Subida de documento PDF/Imagen */}
-            <div 
-              className="border-2 border-dashed border-teal-200 rounded-3xl p-6 hover:bg-teal-50 transition-all cursor-pointer"
-              onClick={handleFileClick}
-            >
-              <div className="flex flex-col items-center justify-center text-center">
-                <span className="material-symbols-outlined text-5xl text-teal-500 mb-3">
-                  {uploadProgress === 'idle' ? 'upload_file' : 
-                   uploadProgress === 'scanning' || uploadProgress === 'uploading' ? 'cloud_upload' :
-                   uploadProgress === 'analyzing' ? 'auto_awesome' : 'check_circle'}
-                </span>
-                <span className="text-base font-bold text-teal-700">{labsMessages.clickToUpload}</span>
-                <span className="text-xs text-teal-500/70 mt-2">{labsMessages.uploadHint}</span>
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">JPG</span>
-                  <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">PNG</span>
-                  <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">PDF</span>
+            {uploadProgress === 'idle' && (
+              <div 
+                className="border-2 border-dashed border-teal-200 rounded-3xl p-6 hover:bg-teal-50 transition-all cursor-pointer"
+                onClick={handleFileClick}
+              >
+                <div className="flex flex-col items-center justify-center text-center">
+                  <span className="material-symbols-outlined text-5xl text-teal-500 mb-3">
+                    {uploadProgress === 'idle' ? 'upload_file' : 
+                     uploadProgress === 'scanning' || uploadProgress === 'uploading' ? 'cloud_upload' :
+                     uploadProgress === 'analyzing' ? 'auto_awesome' : 'check_circle'}
+                  </span>
+                  <span className="text-base font-bold text-teal-700">{labsMessages.clickToUpload}</span>
+                  <span className="text-xs text-teal-500/70 mt-2">{labsMessages.uploadHint}</span>
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">JPG</span>
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">PNG</span>
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">PDF</span>
+                  </div>
                 </div>
+                <input 
+                  id="archivo_input" 
+                  type="file" 
+                  className="hidden" 
+                  accept=".pdf,image/jpeg,image/png,application/pdf" 
+                  onChange={onSelectFile}
+                  aria-label="Subir archivo de laboratorio"
+                  title="Seleccionar archivo PDF, JPG o PNG"
+                />
               </div>
-              <input 
-                id="archivo_input" 
-                type="file" 
-                className="hidden" 
-                accept=".pdf,image/jpeg,image/png,application/pdf" 
-                onChange={onSelectFile}
-                aria-label="Subir archivo de laboratorio"
-                title="Seleccionar archivo PDF, JPG o PNG"
-              />
-            </div>
+            )}
 
             {/* Estado de subida */}
             {uploadProgress !== 'idle' && (
