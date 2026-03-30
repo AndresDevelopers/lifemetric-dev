@@ -14,7 +14,22 @@ export async function getSessionPacienteId() {
   if (!payload) return null;
   
   try {
-    const parsedPayload = JSON.parse(payload);
+    const parsedPayload = JSON.parse(payload) as { pacienteId?: string; timestamp?: number };
+    if (!parsedPayload.pacienteId || typeof parsedPayload.timestamp !== 'number') return null;
+
+    const sessionRows = await prisma.$queryRaw<Array<{ last_login_at: Date | null }>>`
+      SELECT last_login_at
+      FROM pacientes
+      WHERE paciente_id = ${parsedPayload.pacienteId}::uuid
+      LIMIT 1
+    `;
+
+    const lastLoginAt = sessionRows[0]?.last_login_at ?? null;
+    const lastLoginMs = lastLoginAt ? new Date(lastLoginAt).getTime() : null;
+    if (lastLoginMs && parsedPayload.timestamp + 2000 < lastLoginMs) {
+      return null;
+    }
+
     return parsedPayload.pacienteId;
   } catch {
     return null;
@@ -53,6 +68,7 @@ export async function getSessionPaciente() {
       avatar_url: profileExtras.avatar_url,
       altura_cm: profileExtras.altura_cm,
       motivo_registro: profileExtras.motivo_registro,
+      producto_permitido_registro: profileExtras.producto_permitido_registro,
     };
   } catch (error) {
     console.error("Error fetching patient, returning fallback:", error);
@@ -69,6 +85,7 @@ export async function getSessionPaciente() {
       avatar_url: null,
       altura_cm: null,
       motivo_registro: null,
+      producto_permitido_registro: null,
     };
   }
 }

@@ -5,6 +5,7 @@ import { getSessionPaciente } from "@/actions/data";
 import { checkRateLimit } from "@/lib/redis";
 import { getPromoProductGuidance } from "@/lib/productCatalog";
 import { prisma } from "@/lib/prisma";
+import { getPacienteProfileExtras } from "@/lib/pacienteProfile";
 
 function formatDate(value?: Date | null): string {
   return value ? value.toISOString().split('T')[0] : 'N/D';
@@ -58,6 +59,8 @@ export async function chatWithAIAction(userMessage: string, chatHistory: { role:
       return { success: false, text: "No se encontró el perfil clínico del paciente." };
     }
 
+    const profileExtras = await getPacienteProfileExtras(session.paciente_id);
+
     const latestLab = await prisma.laboratorio.findFirst({
       where: { paciente_id: session.paciente_id },
       orderBy: { fecha_estudio: 'desc' },
@@ -83,7 +86,7 @@ export async function chatWithAIAction(userMessage: string, chatHistory: { role:
       : '- Sin registros recientes.';
 
     const mealSummary = latestMeals.length
-      ? latestMeals.map((item: (typeof latestMeals)[number]) => `- ${formatDate(item.fecha)} ${item.hora ?? ''} | ${item.tipo_comida ?? 'N/D'} | ${item.alimento_principal ?? 'N/D'}`).join('\n')
+      ? latestMeals.map((item: (typeof latestMeals)[number]) => `- ${formatDate(item.fecha)} ${item.hora ?? ''} | ${item.tipo_comida ?? 'N/D'} | Alimento: ${item.alimento_principal ?? 'N/D'} | Nota: ${item.nota ?? 'N/D'}`).join('\n')
       : '- Sin registros recientes.';
 
     const labsSummary = latestLabs.length
@@ -101,6 +104,7 @@ REGLAS CRÍTICAS:
 5. En recomendaciones comerciales, usa solo productos permitidos y NUNCA menciones productos restringidos.
 6. Si la persona NO toma medicación activa y el contexto clínico lo permite, puedes reforzar el uso prudente de productos permitidos como apoyo (siempre con disclaimer médico).
 7. Si el usuario pregunta sobre exámenes o laboratorios y detectas que sus resultados están desactualizados (más de 3 meses), recomienda actualizarse con un nuevo examen.
+8. Si el usuario pide ayuda para usar la app, guíalo con pasos concretos usando los módulos disponibles (Inicio, Comidas, Glucosa, Hábitos, Medicación, Laboratorios, Resumen, Ajustes).
 
 MARCO DE PRODUCTOS:
 ${getPromoProductGuidance('es')}
@@ -110,9 +114,15 @@ CONTEXTO DE LABORATORIOS DEL PACIENTE:
 - ¿Está desactualizado (>3 meses)?: ${labDataIsOutdated ? 'Sí' : 'No'}.
 
 SNAPSHOT CLÍNICO COMPLETO DEL PACIENTE:
-- Nombre: ${patientSnapshot.nombre} ${patientSnapshot.apellido}
+- Nombre: ${patientSnapshot.nombre}
+- Apellido: ${patientSnapshot.apellido}
+- Correo electrónico: ${formatMaybe(patientSnapshot.email)}
+- Fecha de nacimiento: ${formatDate(profileExtras.fecha_nacimiento)}
 - Sexo: ${formatMaybe(patientSnapshot.sexo)}
 - Edad: ${formatMaybe(patientSnapshot.edad, 'años')}
+- Producto seleccionado: ${formatMaybe(profileExtras.producto_permitido_registro)}
+- Altura: ${formatMaybe(profileExtras.altura_cm, 'cm')}
+- Motivo de registro: ${formatMaybe(profileExtras.motivo_registro)}
 - Diagnóstico principal: ${formatMaybe(patientSnapshot.diagnostico_principal)}
 - Objetivo clínico: ${formatMaybe(patientSnapshot.objetivo_clinico)}
 - Medicación base: ${formatMaybe(patientSnapshot.medicacion_base)}

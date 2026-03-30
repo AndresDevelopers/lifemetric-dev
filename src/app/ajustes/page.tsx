@@ -12,6 +12,7 @@ import {
 import { getSessionPaciente } from '@/actions/data';
 import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
 import { getMessages, normalizeLocale, getBrowserLocale, persistLocale, type Locale } from '@/lib/i18n';
+import { PROMO_FOCUS_PRODUCTS } from '@/lib/productCatalog';
 
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
 
@@ -40,6 +41,7 @@ export default function AjustesPage() {
   const [user, setUser] = useState<SettingsUser>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [motivoRegistro, setMotivoRegistro] = useState('');
+  const [productoPermitidoRegistro, setProductoPermitidoRegistro] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [alturaCm, setAlturaCm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +52,7 @@ export default function AjustesPage() {
       if (data) {
         setUser(data);
         setMotivoRegistro(data.motivo_registro ?? '');
+        setProductoPermitidoRegistro(data.producto_permitido_registro ?? '');
         setFechaNacimiento(data.fecha_nacimiento ? new Date(data.fecha_nacimiento).toISOString().split('T')[0] : '');
         setAlturaCm(data.altura_cm != null ? String(data.altura_cm) : '');
         if (data.avatar_url) setAvatarPreview(data.avatar_url);
@@ -67,6 +70,7 @@ export default function AjustesPage() {
           fecha_nacimiento: parsedBirthDate,
           altura_cm: alturaCm ? Number(alturaCm) : null,
           motivo_registro: motivoRegistro || null,
+          producto_permitido_registro: productoPermitidoRegistro || null,
         }
       : prev));
   };
@@ -258,30 +262,38 @@ export default function AjustesPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                   {messages.settings.fields.registrationReason}
                 </label>
-                <div className="flex items-center gap-2">
-                  <select
-                    name="motivo_registro"
-                    value={motivoRegistro}
-                    onChange={(event) => setMotivoRegistro(event.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
-                  >
-                    <option value="">{messages.settings.fields.registrationReasonFallback}</option>
-                    {diagnosisOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setMotivoRegistro('')}
-                    className="h-11 w-11 shrink-0 rounded-xl border border-gray-200 dark:border-slate-600 text-slate-500 hover:text-red-600 hover:border-red-300 transition-colors"
-                    aria-label={messages.common.close}
-                    title={messages.common.close}
-                  >
-                    ✕
-                  </button>
-                </div>
+                <select
+                  name="motivo_registro"
+                  value={motivoRegistro}
+                  onChange={(event) => setMotivoRegistro(event.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
+                >
+                  <option value="">{messages.settings.fields.registrationReasonFallback}</option>
+                  {diagnosisOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                  {messages.auth.register.allowedProduct}
+                </label>
+                <select
+                  name="producto_permitido_registro"
+                  value={productoPermitidoRegistro}
+                  onChange={(event) => setProductoPermitidoRegistro(event.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
+                >
+                  <option value="">{messages.common.select}</option>
+                  {PROMO_FOCUS_PRODUCTS.map((product) => (
+                    <option key={product} value={product}>
+                      {product}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {profileState?.error && (

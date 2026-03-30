@@ -1,5 +1,4 @@
 import { cookies, headers } from "next/headers";
-import { verifySession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
@@ -14,6 +13,7 @@ import {
   inferLocaleFromRequest,
 } from "@/lib/i18n";
 import { getPacienteProfileExtras } from "@/lib/pacienteProfile";
+import { getSessionPacienteId } from "@/actions/data";
 
 function escapeCsvValue(value: string | number): string {
   const normalized = String(value).replaceAll('"', '""');
@@ -118,7 +118,6 @@ export default async function ResumenSemanal({
 
   const cookieStore = await cookies();
   const headerStore = await headers();
-  const sessionToken = cookieStore.get('lifemetric_session')?.value;
   const locale = inferLocaleFromRequest({
     cookieLocale: cookieStore.get(LOCALE_COOKIE_NAME)?.value,
     explicitCookie: cookieStore.get(LOCALE_EXPLICIT_COOKIE_NAME)?.value,
@@ -128,23 +127,10 @@ export default async function ResumenSemanal({
   });
   const messages = getMessages(locale);
   
-  if (!sessionToken) {
+  const pacienteId = await getSessionPacienteId();
+  if (!pacienteId) {
     redirect('/login');
   }
-
-  const payload = await verifySession(sessionToken);
-  if (!payload) {
-    redirect('/login');
-  }
-
-  let parsedPayload;
-  try {
-    parsedPayload = JSON.parse(payload);
-  } catch {
-    redirect('/login');
-  }
-
-  const pacienteId = parsedPayload.pacienteId;
 
   const hoy = new Date();
   const unaSemanaAtras = new Date();
@@ -292,7 +278,7 @@ export default async function ResumenSemanal({
     paciente.medicacion.length > 0 ||
     paciente.laboratorios.length > 0;
 
-  const medicamentosResumen = paciente.medicacion.reduce<Record<string, number>>((acc: Record<string, number>, item: (typeof paciente.medicacion)[number]) => {
+  const medicamentosResumen = (paciente.medicacion as Array<{ medicamento?: string | null }>).reduce((acc: Record<string, number>, item) => {
     const key = item.medicamento?.trim() || "Sin nombre";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
@@ -529,13 +515,6 @@ export default async function ResumenSemanal({
           <p className="mt-4 text-sm text-slate-700">
             {aiSuggestions?.summary ?? messages.summary.aiSuggestionsFallback}
           </p>
-
-          {aiSuggestions?.importantAlert && (
-            <article className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-wider text-amber-700">{messages.summary.importantAlert}</p>
-              <p className="mt-1 text-sm text-amber-900">{aiSuggestions.importantAlert}</p>
-            </article>
-          )}
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {aiSuggestions?.centralProblems?.length ? (

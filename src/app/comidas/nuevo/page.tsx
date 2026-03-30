@@ -19,6 +19,7 @@ const comidaSchema = z.object({
   tipo_comida: z.enum(["Desayuno", "Comida", "Cena", "Colacion"]),
   alimento_principal: z.string().optional(),
   foto_url: z.string().optional(),
+  nota: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof comidaSchema>;
@@ -123,8 +124,13 @@ export default function NuevaComida() {
           locale,
         });
 
-        if (aiResult.success && aiResult.data?.alimento_principal) {
-          setValue("alimento_principal", aiResult.data.alimento_principal, { shouldValidate: true });
+        if (aiResult.success) {
+          if (aiResult.data?.alimento_principal) {
+            setValue("alimento_principal", aiResult.data.alimento_principal, { shouldValidate: true });
+          }
+          if (aiResult.data?.meal_description) {
+            setValue("nota", aiResult.data.meal_description, { shouldValidate: true });
+          }
         }
       } catch (error) {
         console.error("Error with meal AI autofill:", error);
@@ -176,6 +182,7 @@ export default function NuevaComida() {
         setImagePreview(null);
         setUploadedPhotoUrl(null);
         setValue("alimento_principal", "");
+        setValue("nota", "");
         setValue("foto_url", "");
       } else {
         alert(response.error || foodMessages.saveError);
@@ -285,6 +292,7 @@ export default function NuevaComida() {
                         setUploadedPhotoUrl(null);
                         setValue("foto_url", "");
                         setValue("alimento_principal", "");
+                        setValue("nota", "");
                       }}
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
@@ -310,6 +318,19 @@ export default function NuevaComida() {
                 {...register("alimento_principal")}
                 className="w-full bg-surface-container-highest/50 border-none rounded-2xl py-4 px-5 text-on-surface placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 transition-all"
                 placeholder={foodMessages.mainFoodPlaceholder}
+              />
+            </div>
+
+
+            <div className="relative">
+              <label className="mb-2 block text-label-sm font-bold uppercase tracking-widest text-slate-500">
+                {foodMessages.notesLabel}
+              </label>
+              <textarea
+                {...register("nota")}
+                rows={3}
+                className="w-full bg-surface-container-highest/50 border-none rounded-2xl py-4 px-5 text-on-surface placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 transition-all"
+                placeholder={foodMessages.notesPlaceholder}
               />
             </div>
 

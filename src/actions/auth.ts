@@ -9,9 +9,10 @@ import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { createSupabaseServerClient } from '@/lib/supabase';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
+import { resolveAppBaseUrl } from '@/lib/url';
 import { deleteSession, setSession } from '@/lib/session';
 import { getSessionPacienteId } from './data';
-import { sendNewsletterSubscriptionEmail } from '@/lib/email';
+import { sendLoginAccessEmail, sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 import { ensurePacienteProfileColumns, updatePacienteProfileExtras } from '@/lib/pacienteProfile';
 import { getStoragePathFromPublicUrl } from '@/lib/storageRetention';
@@ -41,7 +42,7 @@ const registerSchema = z.object({
   sexo: z.string().min(1),
   diagnostico: z.string().min(1),
   productoPermitido: z.enum(PROMO_FOCUS_PRODUCTS),
-  doctorAsignado: z.enum(['Renato', 'Ulysses']),
+  doctorAsignado: z.enum(['Renato', 'Ulysses']).optional(),
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   locale: z.string().optional(),
@@ -233,8 +234,18 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       return { error: authMessages.wrongPassword };
     }
 
-    await setSession(paciente.paciente_id);
     await touchPacienteLastLogin(paciente.paciente_id);
+    await setSession(paciente.paciente_id);
+
+    const headerStore = await headers();
+    await sendLoginAccessEmail({
+      to: data.email,
+      locale,
+      appName: process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric',
+      ipAddress: headerStore.get('x-forwarded-for') ?? headerStore.get('x-real-ip'),
+      userAgent: headerStore.get('user-agent'),
+      loggedAtIso: new Date().toISOString(),
+    });
 
     return { success: true };
   } catch (error) {
@@ -290,7 +301,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     }
 
     const supabase = createSupabaseServerClient({ useServiceRole: false });
-    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const appUrl = resolveAppBaseUrl(process.env.NEXT_PUBLIC_BASE_URL).toString();
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -343,8 +354,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     }
 
       if (signUpData.session) {
-          await setSession(paciente.paciente_id);
           await touchPacienteLastLogin(paciente.paciente_id);
+          await setSession(paciente.paciente_id);
           return { success: true };
       }
 
@@ -353,8 +364,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       password: data.password,
     });
       if (autoSignInData.user) {
-          await setSession(paciente.paciente_id);
           await touchPacienteLastLogin(paciente.paciente_id);
+          await setSession(paciente.paciente_id);
           return { success: true };
       }
 
@@ -406,7 +417,7 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
        }
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const appUrl = resolveAppBaseUrl(process.env.NEXT_PUBLIC_BASE_URL).toString();
     await ensurePacienteAuthColumns();
     const paciente = await prisma.paciente.findFirst({
       where: { email: data.email },
@@ -592,6 +603,7 @@ const profileSchema = z.object({
     z.number().positive().max(272).optional()
   ),
   motivo_registro: z.string().max(400).optional(),
+  producto_permitido_registro: z.enum(PROMO_FOCUS_PRODUCTS).optional(),
 });
 
 export async function updateProfileAction(prevState: AuthActionState, formData: FormData) {
@@ -638,6 +650,7 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
       avatarUrl: data.avatar_url || null,
       alturaCm: typeof data.altura_cm === 'number' ? data.altura_cm : null,
       motivoRegistro: data.motivo_registro?.trim() ? data.motivo_registro.trim() : null,
+      productoPermitidoRegistro: data.producto_permitido_registro || null,
     });
     revalidateTag(`paciente-${pacienteId}`, 'max');
 
