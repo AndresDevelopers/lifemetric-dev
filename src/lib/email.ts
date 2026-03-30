@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const DEFAULT_FROM_EMAIL = 'Lifemetric <no-reply@lifemetric.app>';
 
@@ -19,11 +21,59 @@ function getResendKey(): string | null {
   return key;
 }
 
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function sendEmailWithSendmail(payload: EmailPayload): Promise<boolean> {
+  try {
+    const from = payload.from ?? process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
+    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
+    const textBody = payload.text?.trim() || stripHtml(payload.html);
+
+    const message = [
+      `From: ${from}`,
+      `To: ${recipients.join(', ')}`,
+      `Subject: ${payload.subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset=UTF-8',
+      '',
+      textBody,
+      '',
+    ].join('\n');
+
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn('sendmail', ['-t', '-i']);
+      child.on('error', reject);
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        reject(new Error(`sendmail exited with code ${code}`));
+      });
+      child.stdin.write(message);
+      child.stdin.end();
+    });
+    return true;
+  } catch (error) {
+    console.warn('Fallo al enviar correo con sendmail del sistema:', error);
+    return false;
+  }
+}
+
 export async function sendEmailWithResend(payload: EmailPayload): Promise<void> {
   const apiKey = getResendKey();
   
   if (!apiKey) {
-    console.warn('RESEND_API_KEY no configurada. El correo no ha sido enviado.');
+    console.warn('RESEND_API_KEY no configurada. Intentando fallback con sendmail del sistema.');
+    await sendEmailWithSendmail(payload);
     return;
   }
 
@@ -48,10 +98,15 @@ export async function sendEmailWithResend(payload: EmailPayload): Promise<void> 
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.warn(`Error de Resend (${response.status}): ${errorBody}`);
+      console.warn(`Error de Resend (${response.status}). Activando fallback sendmail.`);
+      if (errorBody) {
+        console.warn('Detalle resumido de Resend:', errorBody.slice(0, 300));
+      }
+      await sendEmailWithSendmail(payload);
     }
   } catch (error) {
-    console.warn('Fallo al enviar correo con Resend:', error);
+    console.warn('Fallo al enviar correo con Resend. Activando fallback sendmail:', error);
+    await sendEmailWithSendmail(payload);
   }
 }
 
