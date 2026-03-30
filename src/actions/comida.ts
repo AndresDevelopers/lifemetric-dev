@@ -69,7 +69,17 @@ export async function inferMealFromPhoto(input: z.infer<typeof mealPhotoSchema>)
       return { success: false as const, error: "ai_unavailable" };
     }
 
-    return { success: true as const, data: estimate };
+    const alimentoPrincipal = estimate.alimento_principal?.trim() || estimate.meal_description?.split(/[.,]/)[0]?.trim() || null;
+    const mealDescription = estimate.meal_description?.trim() || (alimentoPrincipal ? `Plato principal: ${alimentoPrincipal}.` : null);
+
+    return {
+      success: true as const,
+      data: {
+        ...estimate,
+        alimento_principal: alimentoPrincipal ?? undefined,
+        meal_description: mealDescription ?? undefined,
+      },
+    };
   } catch {
     return { success: false as const, error: "ai_failed" };
   }

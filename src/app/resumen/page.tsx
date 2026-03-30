@@ -530,13 +530,6 @@ export default async function ResumenSemanal({
             {aiSuggestions?.summary ?? messages.summary.aiSuggestionsFallback}
           </p>
 
-          {aiSuggestions?.importantAlert && (
-            <article className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-wider text-amber-700">{messages.summary.importantAlert}</p>
-              <p className="mt-1 text-sm text-amber-900">{aiSuggestions.importantAlert}</p>
-            </article>
-          )}
-
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {aiSuggestions?.centralProblems?.length ? (
               <article className="rounded-xl bg-slate-50 px-4 py-3">
