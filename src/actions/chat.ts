@@ -17,7 +17,7 @@ function formatMaybe(value: unknown, unit?: string): string {
   return unit ? `${normalized} ${unit}` : String(normalized);
 }
 
-export async function chatWithAIAction(userMessage: string, chatHistory: { role: 'user' | 'ai', content: string }[] = []) {
+export async function chatWithAIAction(userMessage: string, chatHistory: { role: 'user' | 'ai', content: string }[] = [], imageUrl?: string) {
   try {
     const session = await getSessionPaciente();
     if (!session) {
@@ -157,8 +157,9 @@ Asistente:`;
 
     const result = await generateGeminiText({ 
       prompt: fullPrompt,
+      imageUrl: imageUrl,
       temperature: 0.7,
-      maxOutputTokens: 512
+      maxOutputTokens: 1024
     });
 
     return { success: true, text: result };

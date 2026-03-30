@@ -16,6 +16,8 @@ interface Comida {
   clasificacion_final: string | null;
   nota: string | null;
   foto_url: string | null;
+  razon_inadecuada: string | null;
+  alternativa_saludable: string | null;
 }
 
 export default function HistorialComidas({ initialComidas }: { readonly initialComidas: readonly Comida[] }) {
@@ -46,19 +48,19 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
     if (initialComidas.length > 0) {
       const firstComida = initialComidas[0];
       const date = new Date(firstComida.fecha);
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
     return getTodayStr();
   });
 
   const [viewMonth, setViewMonth] = useState<number>(() => {
-    return new Date(filterDate + 'T00:00:00Z').getUTCMonth();
+    return new Date(filterDate + 'T00:00:00').getMonth();
   });
   const [viewYear, setViewYear] = useState<number>(() => {
-    return new Date(filterDate + 'T00:00:00Z').getUTCFullYear();
+    return new Date(filterDate + 'T00:00:00').getFullYear();
   });
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -66,10 +68,10 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     for (const comida of initialComidas) {
-      years.add(new Date(comida.fecha).getUTCFullYear());
+      years.add(new Date(comida.fecha).getFullYear());
     }
     // Add current year if not present
-    years.add(new Date().getUTCFullYear());
+    years.add(new Date().getFullYear());
     return Array.from(years).sort((a, b) => b - a);
   }, [initialComidas]);
 
@@ -90,9 +92,9 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
     const dates = new Set<string>();
     for (const comida of initialComidas) {
       const d = new Date(comida.fecha);
-      const year = d.getUTCFullYear();
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
       dates.add(`${year}-${month}-${day}`);
     }
     return dates;
@@ -134,9 +136,9 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
   const filteredComidas = useMemo(() => {
     return initialComidas.filter((comida) => {
       const date = new Date(comida.fecha);
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
       return dateStr === filterDate;
     });
@@ -301,8 +303,8 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
                 onClick={() => {
                   if (!day.hasData) return;
                   setFilterDate(day.dateStr);
-                  setViewMonth(new Date(`${day.dateStr}T00:00:00Z`).getUTCMonth());
-                  setViewYear(new Date(`${day.dateStr}T00:00:00Z`).getUTCFullYear());
+                  setViewMonth(new Date(`${day.dateStr}T00:00:00`).getMonth());
+                  setViewYear(new Date(`${day.dateStr}T00:00:00`).getFullYear());
                 }}
                 disabled={!day.hasData}
                 className={`flex flex-col items-center min-w-[72px] h-[100px] py-4 rounded-3xl transition-all duration-300 relative group shrink-0 ${getDateButtonClass(day.dateStr, day.hasData)}`}
@@ -407,6 +409,11 @@ export default function HistorialComidas({ initialComidas }: { readonly initialC
                 }`}>
                   {translateFoodClassification(comida.clasificacion_final, locale)}
                 </div>
+                {comida.razon_inadecuada && (
+                  <p className="text-[10px] text-rose-600 max-w-[120px] text-right leading-tight">
+                    {comida.razon_inadecuada}
+                  </p>
+                )}
                 <span className="text-[15px] font-black text-slate-800 tracking-tighter">
                   {comida.kcal_estimadas || 0} <span className="text-[10px] text-slate-400 uppercase font-black">kcal</span>
                 </span>

@@ -27,7 +27,12 @@ type FormValues = z.infer<typeof comidaSchema>;
 export default function NuevaComida() {
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [aiReason, setAiReason] = useState<string | null>(null);
+  const [aiPersonalized, setAiPersonalized] = useState(false);
   const [pacienteId, setPacienteId] = useState<string>("");
+  const [esSaludable, setEsSaludable] = useState<boolean | undefined>(undefined);
+  const [razonInadecuada, setRazonInadecuada] = useState<string | null>(null);
+  const [alternativaSaludable, setAlternativaSaludable] = useState<string | null>(null);
   const { locale, messages } = useLocale();
   const foodMessages = messages.foodForm;
   
@@ -78,67 +83,87 @@ export default function NuevaComida() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const runAiPhotoAnalysis = async (photoUrl: string) => {
+    setAnalyzingPhoto(true);
+    try {
+      // Read directly to avoid race condition with useEffect/setState
+      const pid = pacienteId || await getSessionPacienteId();
+      if (!pid) return;
+
+      const aiResult = await inferMealFromPhoto({
+        paciente_id: pid,
+        foto_url: photoUrl,
+        locale,
+      });
+
+      if (aiResult.success && aiResult.data) {
+        const { alimento_principal, alimento_principal_razon, meal_description, es_saludable, razon_inadecuada, alternativa_saludable } = aiResult.data;
+        if (alimento_principal) {
+          setValue("alimento_principal", alimento_principal, { shouldValidate: true });
+        }
+        if (alimento_principal_razon) {
+          setAiReason(alimento_principal_razon);
+          setAiPersonalized(true);
+        }
+        if (meal_description) {
+          setValue("nota", meal_description, { shouldValidate: true });
+        }
+        // Guardar info de salud del alimento
+        if (es_saludable !== undefined && es_saludable !== null) {
+          setEsSaludable(es_saludable);
+        }
+        if (razon_inadecuada) {
+          setRazonInadecuada(razon_inadecuada);
+        }
+        if (alternativa_saludable) {
+          setAlternativaSaludable(alternativa_saludable);
+        }
+      } else {
+        console.error("[AI] inferMealFromPhoto failed — error code:", (aiResult as { success: false; error: string }).error);
+        alert(foodMessages.aiFailed);
+      }
+    } catch (error) {
+      console.error("Error with meal AI autofill:", error);
+    } finally {
+      setAnalyzingPhoto(false);
     }
   };
 
   const handleFile = async (file: File) => {
-    if (file.type.startsWith("image/")) {
-      const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
-        scanning: foodMessages.virusScanning,
-        blockedPrefix: foodMessages.virusBlocked,
-        fallbackPrefix: foodMessages.virusFallback,
-        successPrefix: foodMessages.virusPassed,
-      });
-
-      if (!canProceed) {
-        return;
-      }
-
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      try {
-        const photoUrl = await uploadImage(file);
-        setUploadedPhotoUrl(photoUrl);
-        setValue("foto_url", photoUrl);
-
-        if (!pacienteId) return;
-
-        setAnalyzingPhoto(true);
-        const aiResult = await inferMealFromPhoto({
-          paciente_id: pacienteId,
-          foto_url: photoUrl,
-          locale,
-        });
-
-        if (aiResult.success) {
-          if (aiResult.data?.alimento_principal) {
-            setValue("alimento_principal", aiResult.data.alimento_principal, { shouldValidate: true });
-          }
-          if (aiResult.data?.meal_description) {
-            setValue("nota", aiResult.data.meal_description, { shouldValidate: true });
-          }
-        }
-      } catch (error) {
-        console.error("Error with meal AI autofill:", error);
-      } finally {
-        setAnalyzingPhoto(false);
-      }
-    } else {
+    if (!file.type.startsWith("image/")) {
       alert(foodMessages.imageOnly);
+      return;
+    }
+    const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
+      scanning: foodMessages.virusScanning,
+      blockedPrefix: foodMessages.virusBlocked,
+      fallbackPrefix: foodMessages.virusFallback,
+      successPrefix: foodMessages.virusPassed,
+    });
+    if (!canProceed) return;
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => { setImagePreview(e.target?.result as string); };
+    reader.readAsDataURL(file);
+
+    try {
+      const photoUrl = await uploadImage(file);
+      setUploadedPhotoUrl(photoUrl);
+      setValue("foto_url", photoUrl);
+      await runAiPhotoAnalysis(photoUrl);
+    } catch (error) {
+      console.error("Error with image upload:", error);
     }
   };
 
@@ -184,6 +209,8 @@ export default function NuevaComida() {
         setValue("alimento_principal", "");
         setValue("nota", "");
         setValue("foto_url", "");
+        setAiReason(null);
+        setAiPersonalized(false);
       } else {
         alert(response.error || foodMessages.saveError);
       }
@@ -263,47 +290,57 @@ export default function NuevaComida() {
               <span className="text-label-sm font-bold uppercase tracking-widest text-slate-500">
                 {foodMessages.mealPhoto} ({messages.common.optional})
               </span>
-              <div
-                className={`relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all ${dragActive ? 'border-primary bg-primary/10' : 'border-slate-300 bg-surface-container-highest/50'} ${imagePreview ? 'p-2' : 'h-40'}`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleChange}
-                />
-
-                {imagePreview ? (
-                  <div className="relative w-full h-48 rounded-xl overflow-hidden">
-                    <Image src={imagePreview} alt={foodMessages.mealPhoto} fill className="object-cover" />
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImageFile(null);
-                        setImagePreview(null);
-                        setUploadedPhotoUrl(null);
-                        setValue("foto_url", "");
-                        setValue("alimento_principal", "");
-                        setValue("nota", "");
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center text-slate-500 pointer-events-none">
-                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">add_a_photo</span>
-                    <p className="text-sm font-medium text-center">{foodMessages.dragAndDrop}<br/>{foodMessages.clickToSelect}</p>
-                  </div>
+              <div className="relative">
+                {/* Close button is outside the drag-zone div to avoid nested <button> */}
+                {imagePreview && (
+                  <button
+                    type="button"
+                    className="absolute top-3 right-3 z-10 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview(null);
+                      setUploadedPhotoUrl(null);
+                      setValue("foto_url", "");
+                      setValue("alimento_principal", "");
+                      setValue("nota", "");
+                      setAiReason(null);
+                      setAiPersonalized(false);
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
                 )}
+                {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className={`relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all w-full ${dragActive ? 'border-primary bg-primary/10' : 'border-slate-300 bg-surface-container-highest/50'} ${imagePreview ? 'p-2 h-48' : 'h-40'}`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleChange}
+                  />
+
+                  {imagePreview ? (
+                    <div className="relative w-full h-full rounded-xl overflow-hidden">
+                      <Image src={imagePreview} alt={foodMessages.mealPhoto} fill className="object-cover" />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-slate-500 pointer-events-none">
+                      <span className="material-symbols-outlined text-4xl mb-2 opacity-50">add_a_photo</span>
+                      <p className="text-sm font-medium text-center">{foodMessages.dragAndDrop}<br/>{foodMessages.clickToSelect}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -311,14 +348,48 @@ export default function NuevaComida() {
               <span className="text-label-sm font-bold uppercase tracking-widest text-slate-500">
                 {foodMessages.mainFoodLabel}
               </span>
+              {aiPersonalized && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>neurology</span>
+                  {foodMessages.aiContextReady}
+                </span>
+              )}
             </div>
-            
+
             <div className="relative">
               <input
                 {...register("alimento_principal")}
                 className="w-full bg-surface-container-highest/50 border-none rounded-2xl py-4 px-5 text-on-surface placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 transition-all"
                 placeholder={foodMessages.mainFoodPlaceholder}
               />
+              {aiReason && esSaludable === false ? (
+                <div className="mt-2 flex items-start gap-2 px-4 py-3 bg-red-50/80 border border-red-100 rounded-xl">
+                  <span className="material-symbols-outlined text-red-500 text-base mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+                  <div>
+                    <p className="text-xs font-semibold text-red-700 mb-0.5">{foodMessages.aiMainFoodReason}</p>
+                    <p className="text-xs text-red-600 leading-relaxed">{razonInadecuada || aiReason}</p>
+                  </div>
+                </div>
+              ) : aiReason ? (
+                <div className="mt-2 flex items-start gap-2 px-4 py-3 bg-blue-50/80 border border-blue-100 rounded-xl">
+                  <span className="material-symbols-outlined text-blue-500 text-base mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  <div>
+                    <p className="text-xs font-semibold text-blue-700 mb-0.5">{foodMessages.aiMainFoodReason}</p>
+                    <p className="text-xs text-blue-600 leading-relaxed">{aiReason}</p>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Alternativa saludable cuando el alimento no es recomendado */}
+              {esSaludable === false && alternativaSaludable && (
+                <div className="mt-2 flex items-start gap-2 px-4 py-3 bg-emerald-50/80 border border-emerald-100 rounded-xl">
+                  <span className="material-symbols-outlined text-emerald-500 text-base mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>lightbulb</span>
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-700 mb-0.5">¿Qué puedes comer?</p>
+                    <p className="text-xs text-emerald-600 leading-relaxed">{alternativaSaludable}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
 

@@ -8,7 +8,7 @@ const CHAT_STORAGE_KEY = "lifemetric_chat_conversations_v1";
 const MAX_SAVED_CONVERSATIONS = 8;
 
 type ChatRole = "assistant" | "user" | "ai";
-type ChatMessage = { role: ChatRole; content: string };
+type ChatMessage = { role: ChatRole; content: string; imageUrl?: string };
 type StoredConversation = {
   id: string;
   createdAt: string;
@@ -77,6 +77,7 @@ export default function ChatWidget() {
   ]);
   const [savedConversations, setSavedConversations] = useState<StoredConversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const createWelcomeMessage = () => [{ role: "assistant" as const, content: messages.chat.welcome }];
@@ -151,8 +152,9 @@ export default function ChatWidget() {
     const userMessage = input.trim();
     setInput("");
     
-    const newUserMsg = { role: "user" as const, content: userMessage };
+    const newUserMsg = { role: "user" as const, content: userMessage, imageUrl: selectedImage ?? undefined };
     setChatHistory((prev) => [...prev, newUserMsg]);
+    setSelectedImage(null);
     setIsLoading(true);
 
     try {
@@ -166,7 +168,7 @@ export default function ChatWidget() {
           content: m.content
         }));
 
-      const response = await chatWithAIAction(userMessage, historyForAction);
+      const response = await chatWithAIAction(userMessage, historyForAction, newUserMsg.imageUrl);
       
       if (response.success) {
         setChatHistory((prev) => [...prev, { role: "assistant", content: response.text }]);
@@ -321,7 +323,18 @@ export default function ChatWidget() {
                   }
                 `}
               >
-                {msg.role === "assistant" ? renderAssistantMarkdown(msg.content) : msg.content}
+                {msg.role === "assistant" ? renderAssistantMarkdown(msg.content) : (
+                <div className="flex flex-col gap-2">
+                  {msg.imageUrl && (
+                    <img 
+                      src={msg.imageUrl} 
+                      alt="Imagen adjunta" 
+                      className="max-w-full h-auto rounded-lg object-cover border border-slate-200 dark:border-white/10"
+                    />
+                  )}
+                  <span>{msg.content}</span>
+                </div>
+              )}
               </div>
             </div>
           ))}
@@ -340,10 +353,56 @@ export default function ChatWidget() {
 
         {/* Input */}
         <div className="p-5 bg-white/20 dark:bg-white/5">
+          {selectedImage && (
+            <div className="mb-3 relative inline-block">
+              <img 
+                src={selectedImage} 
+                alt="Imagen seleccionada" 
+                className="h-20 w-auto rounded-lg object-cover border-2 border-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors shadow-md"
+                aria-label="Eliminar imagen"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <form
             onSubmit={handleSendMessage}
             className="relative flex items-center gap-2"
           >
+            <label
+              htmlFor="chat-image-upload"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+                selectedImage 
+                  ? "bg-blue-600 text-white" 
+                  : "bg-slate-200 dark:bg-slate-700 text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-600"
+              }`}
+              aria-label="Subir imagen"
+            >
+              <span className="material-symbols-outlined font-bold">
+                {selectedImage ? "image" : "photo_camera"}
+              </span>
+            </label>
+            <input
+              id="chat-image-upload"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setSelectedImage(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="hidden"
+            />
             <input
               type="text"
               value={input}
@@ -353,12 +412,12 @@ export default function ChatWidget() {
             />
             <button
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={(!input.trim() && !selectedImage) || isLoading}
               className={`
                 w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg
                 transition-all active:scale-95 disabled:opacity-50
                 ${
-                  input.trim() && !isLoading
+                  (input.trim() || selectedImage) && !isLoading
                     ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
                     : "bg-slate-400"
                 }

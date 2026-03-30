@@ -26,7 +26,13 @@ export async function getSessionPacienteId() {
 
     const lastLoginAt = sessionRows[0]?.last_login_at ?? null;
     const lastLoginMs = lastLoginAt ? new Date(lastLoginAt).getTime() : null;
-    if (lastLoginMs && parsedPayload.timestamp + 2000 < lastLoginMs) {
+    // Invalidate sessions that were issued more than 30 seconds BEFORE the last recorded login.
+    // This protects against session fixation while tolerating the race condition between
+    // setSession() (cookie) and touchPacienteLastLogin() (DB update) during the login flow.
+    // A 30-second tolerance comfortably covers any DB/network latency.
+    // NOTE: This check is bypassed in development to allow multiple concurrent sessions.
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev && lastLoginMs && parsedPayload.timestamp + 30_000 < lastLoginMs) {
       return null;
     }
 
@@ -62,11 +68,21 @@ export async function getSessionPaciente() {
     if (!paciente) return null;
 
     const profileExtras = await getPacienteProfileExtras(pacienteId);
+    // Convert Prisma Decimal fields to plain numbers so they can be passed
+    // to Client Components across the Server → Client boundary.
+    const alturaCmRaw = profileExtras.altura_cm;
+    let alturaCm: number | null = null;
+    if (alturaCmRaw != null) {
+      const withToNumber = alturaCmRaw as unknown as { toNumber?: () => number };
+      alturaCm = typeof withToNumber.toNumber === 'function'
+        ? withToNumber.toNumber()
+        : Number(alturaCmRaw);
+    }
     return {
       ...paciente,
       fecha_nacimiento: profileExtras.fecha_nacimiento,
       avatar_url: profileExtras.avatar_url,
-      altura_cm: profileExtras.altura_cm,
+      altura_cm: alturaCm,
       motivo_registro: profileExtras.motivo_registro,
       producto_permitido_registro: profileExtras.producto_permitido_registro,
     };

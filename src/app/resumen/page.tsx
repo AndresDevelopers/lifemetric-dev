@@ -159,9 +159,9 @@ export default async function ResumenSemanal({
         where: { fecha: { gte: startDate, lte: endDate } }
       },
       laboratorios: {
-        where: { fecha_estudio: { gte: startDate, lte: endDate } },
+        // Obtener todos los laboratorios para sugerencias AI (sin filtro de fecha)
         orderBy: { fecha_estudio: 'desc' },
-        take: 6
+        take: 10
       },
       medicacion: {
         where: { fecha: { gte: startDate, lte: endDate } }
@@ -189,6 +189,18 @@ export default async function ResumenSemanal({
   const isLabDataOlderThanThreeMonths = latestLabOverall
     ? new Date(latestLabOverall.fecha_estudio) < ninetyDaysAgo
     : false;
+
+  // Obtener laboratorios más antiguos para contexto de IA (último año)
+  const allLaboratorios = await prisma.laboratorio.findMany({
+    where: { paciente_id: pacienteId },
+    orderBy: { fecha_estudio: 'desc' },
+    take: 10
+  });
+  
+  // Encontrar el laboratorio con más datos (valores numéricos)
+  const laboratorioConDatos = allLaboratorios.find((l: { hba1c: unknown; glucosa_ayuno: unknown; trigliceridos: unknown; hdl: unknown; ldl: unknown }) => 
+    l.hba1c != null || l.glucosa_ayuno != null || l.trigliceridos != null || l.hdl != null || l.ldl != null
+  );
 
   // Run AI vision extraction sequentially (to avoid concurrent 429s) 
   // and only for labs that don't have extracted values yet
@@ -248,7 +260,8 @@ export default async function ResumenSemanal({
     return d >= startDate && d <= endDate;
   });
   const comidasRegistradas = filteredComidas.length;
-  const comidasInadecuadas = filteredComidas.filter((c: (typeof filteredComidas)[number]) => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length; 
+  const comidasInadecuadasCount = filteredComidas.filter((c: (typeof filteredComidas)[number]) => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length;
+  const comidasInadecuadas = filteredComidas.filter((c: (typeof filteredComidas)[number]) => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo'); 
   const glucosaEstimadaPorComida = estimateGlucoseFromMeals(
     filteredComidas.map((item: (typeof filteredComidas)[number]) => ({
       carbohidratos_g: item.carbohidratos_g != null ? Number(item.carbohidratos_g) : null,
@@ -278,6 +291,17 @@ export default async function ResumenSemanal({
     paciente.medicacion.length > 0 ||
     paciente.laboratorios.length > 0;
 
+  // Detectar alertas reales: glucosa alta o trigliceridos altos
+  const tieneGlucosaAlta = paciente.glucosa.some((g: (typeof paciente.glucosa)[number]) => g.valor_glucosa > 140) || 
+    (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140);
+  
+  const tieneTrigliceridosAltos = allLaboratorios.some((lab: typeof allLaboratorios[number]) => 
+    lab.trigliceridos != null && Number(lab.trigliceridos) > 200
+  );
+  
+  const tieneAlertaReal = tieneGlucosaAlta || tieneTrigliceridosAltos;
+  const mostrarAlerta = hasAlertData && tieneAlertaReal;
+
   const medicamentosResumen = (paciente.medicacion as Array<{ medicamento?: string | null }>).reduce((acc: Record<string, number>, item) => {
     const key = item.medicamento?.trim() || "Sin nombre";
     acc[key] = (acc[key] ?? 0) + 1;
@@ -297,7 +321,8 @@ export default async function ResumenSemanal({
     promedio_glucosa: promedioGlucosaConFallback,
     comidas: {
       registradas_semana: comidasRegistradas,
-      inadecuadas: comidasInadecuadas,
+      inadecuadas: comidasInadecuadasCount,
+      inadecuadas_list: comidasInadecuadas,
     },
     habitos: {
       dias_ejercicio: diasEjercicio,
@@ -317,15 +342,23 @@ export default async function ResumenSemanal({
     medicamentos: medicamentosResumen,
     tiene_habitos: paciente.habitos.length > 0,
     tiene_medicacion: paciente.medicacion.length > 0,
-    tiene_laboratorios: paciente.laboratorios.length > 0,
-    laboratorios: paciente.laboratorios.map((item: (typeof paciente.laboratorios)[number]) => ({
+    tiene_laboratorios: allLaboratorios.length > 0,
+    // Usar todos los laboratorios (no solo los de la semana) para contexto de IA
+    // Incluir TODOS los valores de laboratorio disponibles para mejor contexto de IA
+    laboratorios: allLaboratorios.map((item: typeof allLaboratorios[number]) => ({
       fecha: item.fecha_estudio,
       hba1c: item.hba1c ? Number(item.hba1c) : null,
       glucosa_ayuno: item.glucosa_ayuno,
       trigliceridos: item.trigliceridos,
       hdl: item.hdl,
       ldl: item.ldl,
-      labels: messages.summary.labValues,
+      insulina: item.insulina ? Number(item.insulina) : null,
+      alt: item.alt ? Number(item.alt) : null,
+      ast: item.ast ? Number(item.ast) : null,
+      tsh: item.tsh ? Number(item.tsh) : null,
+      creatinina: item.creatinina ? Number(item.creatinina) : null,
+      acido_urico: item.acido_urico ? Number(item.acido_urico) : null,
+      pcr_us: item.pcr_us ? Number(item.pcr_us) : null,
     })),
     comidas_recientes: filteredComidas.slice(0, 5).map((item: (typeof filteredComidas)[number]) => ({
       alimento_principal: item.alimento_principal,
@@ -335,6 +368,12 @@ export default async function ResumenSemanal({
       carbohidratos_g: item.carbohidratos_g,
       fibra_g: item.fibra_g,
       proteina_g: item.proteina_g,
+    })),
+    comidas_inadecuadas: data.comidas.inadecuadas_list.map((item: (typeof filteredComidas)[number]) => ({
+      alimento_principal: item.alimento_principal,
+      nota: item.nota,
+      clasificacion_final: item.clasificacion_final,
+      fecha: item.fecha instanceof Date ? item.fecha.toISOString().split('T')[0] : String(item.fecha).split('T')[0],
     })),
     glucosa_real_registrada: paciente.glucosa.length > 0,
     glucosa_estimada_por_comidas: paciente.glucosa.length > 0 ? null : glucosaEstimadaPorComida,
@@ -423,17 +462,19 @@ export default async function ResumenSemanal({
           </div>
         </div>
 
-        <div className="grid md:grid-cols-1 gap-6">
-          <div className="bg-rose-50 border border-rose-100 rounded-[2rem] p-6 shadow-sm">
-            <div className="flex gap-3 mb-2">
-              <span className="material-symbols-outlined text-rose-500 mt-1" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
-              <div>
-                <h3 className="font-bold text-rose-900">{messages.summary.mainAlert}</h3>
-                <p className="text-rose-800/80 text-sm mt-1">{data.alerta_principal ?? messages.summary.waitingForAlertData}</p>
+        {mostrarAlerta && (
+          <div className="grid md:grid-cols-1 gap-6">
+            <div className="bg-rose-50 border border-rose-100 rounded-[2rem] p-6 shadow-sm">
+              <div className="flex gap-3 mb-2">
+                <span className="material-symbols-outlined text-rose-500 mt-1" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+                <div>
+                  <h3 className="font-bold text-rose-900">{messages.summary.mainAlert}</h3>
+                  <p className="text-rose-800/80 text-sm mt-1">{data.alerta_principal ?? messages.summary.waitingForAlertData}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         <h3 className="text-xl font-bold text-slate-800 mt-8 mb-4">{messages.summary.detailedAnalysis}</h3>
 
@@ -513,7 +554,7 @@ export default async function ResumenSemanal({
           </div>
 
           <p className="mt-4 text-sm text-slate-700">
-            {aiSuggestions?.summary ?? messages.summary.aiSuggestionsFallback}
+            {aiSuggestions?.summary ? aiSuggestions.summary : messages.summary.aiSuggestionsFallback}
           </p>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -752,7 +793,11 @@ export default async function ResumenSemanal({
         </section>
 
         <div className="pt-8 border-t border-slate-100">
-          <HistorialComidas initialComidas={paciente.comidas} />
+          <HistorialComidas initialComidas={paciente.comidas.map((c: (typeof paciente.comidas)[number]) => ({
+            ...c,
+            razon_inadecuada: (c as unknown as { razon_inadecuada: string | null }).razon_inadecuada ?? null,
+            alternativa_saludable: (c as unknown as { alternativa_saludable: string | null }).alternativa_saludable ?? null,
+          }))} />
         </div>
 
       </div>
