@@ -278,7 +278,7 @@ export default async function ResumenSemanal({
     paciente.medicacion.length > 0 ||
     paciente.laboratorios.length > 0;
 
-  const medicamentosResumen = paciente.medicacion.reduce<Record<string, number>>((acc: Record<string, number>, item: (typeof paciente.medicacion)[number]) => {
+  const medicamentosResumen = (paciente.medicacion as Array<{ medicamento?: string | null }>).reduce((acc: Record<string, number>, item) => {
     const key = item.medicamento?.trim() || "Sin nombre";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
