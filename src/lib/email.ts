@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const DEFAULT_FROM_EMAIL = 'Lifemetric <no-reply@lifemetric.app>';
+const SENDGRID_API_URL = 'https://api.sendgrid.com/v3/mail/send';
 
 export type EmailPayload = {
   to: string | string[];
@@ -11,6 +12,16 @@ export type EmailPayload = {
   from?: string;
   replyTo?: string;
 };
+
+
+function getSendGridKey(): string | null {
+  const key = process.env.SENDGRID_API_KEY;
+  if (!key || key.trim().length === 0) {
+    return null;
+  }
+
+  return key;
+}
 
 function getResendKey(): string | null {
   const key = process.env.RESEND_API_KEY;
@@ -29,6 +40,56 @@ function stripHtml(html: string): string {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+
+async function sendEmailWithSendGrid(payload: EmailPayload): Promise<boolean> {
+  const apiKey = getSendGridKey();
+  if (!apiKey) {
+    return false;
+  }
+
+  try {
+    const from = payload.from ?? process.env.SENDGRID_FROM_EMAIL ?? process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
+    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
+
+    const response = await fetch(SENDGRID_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: { email: from.includes('<') ? from.slice(from.indexOf('<') + 1, from.indexOf('>')) : from, name: from.includes('<') ? from.split('<')[0].trim() : undefined },
+        personalizations: [{ to: recipients.map((email) => ({ email })) }],
+        subject: payload.subject,
+        content: [
+          { type: 'text/plain', value: payload.text?.trim() || stripHtml(payload.html) },
+          { type: 'text/html', value: payload.html },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.warn(`SendGrid fallback failed (${response.status}): ${body.slice(0, 300)}`);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.warn('Fallo al enviar correo con SendGrid fallback:', error);
+    return false;
+  }
+}
+
+async function sendEmailWithFallback(payload: EmailPayload): Promise<void> {
+  const sentBySendGrid = await sendEmailWithSendGrid(payload);
+  if (sentBySendGrid) {
+    return;
+  }
+
+  await sendEmailWithSendmail(payload);
 }
 
 async function sendEmailWithSendmail(payload: EmailPayload): Promise<boolean> {
@@ -73,7 +134,7 @@ export async function sendEmailWithResend(payload: EmailPayload): Promise<void> 
   
   if (!apiKey) {
     console.warn('RESEND_API_KEY no configurada. Intentando fallback con sendmail del sistema.');
-    await sendEmailWithSendmail(payload);
+    await sendEmailWithFallback(payload);
     return;
   }
 
@@ -102,11 +163,11 @@ export async function sendEmailWithResend(payload: EmailPayload): Promise<void> 
       if (errorBody) {
         console.warn('Detalle resumido de Resend:', errorBody.slice(0, 300));
       }
-      await sendEmailWithSendmail(payload);
+      await sendEmailWithFallback(payload);
     }
   } catch (error) {
     console.warn('Fallo al enviar correo con Resend. Activando fallback sendmail:', error);
-    await sendEmailWithSendmail(payload);
+    await sendEmailWithFallback(payload);
   }
 }
 
