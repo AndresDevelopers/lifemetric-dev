@@ -157,9 +157,11 @@ export default function SubirLaboratorios() {
       
       if (hasData) {
         // AI successfully extracted values - fill the form
-        Object.entries(ai.data).forEach(([key, value]) => {
-          console.log(`[laboratorios] Setting ${key}:`, value);
-          setValue(key as any, value);
+        const typedData = ai.data as Partial<FormValues>;
+        Object.entries(typedData).forEach(([key, value]) => {
+          if (value !== undefined) {
+            setValue(key as keyof FormValues, value);
+          }
         });
         setUploadProgress('done');
       } else {

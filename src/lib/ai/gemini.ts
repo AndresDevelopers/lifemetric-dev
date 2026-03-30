@@ -363,12 +363,59 @@ export async function estimateMealFromImage(params: {
       maxOutputTokens: 600,
     });
     const clean = response.replaceAll('```json', '').replaceAll('```', '').trim();
-    let parsedJson: unknown;
+    let parsedJson: Record<string, unknown>;
     try {
       parsedJson = JSON.parse(clean);
     } catch {
+      // Recover from truncated JSON responses
       console.error('[estimateMealFromImage] JSON.parse failed. Raw AI response:', clean);
-      return null;
+      
+      let bestIndex = -1;
+      let braceCount = 0;
+      let bracketCount = 0;
+      let inString = false;
+      let escapeNext = false;
+      
+      for (let i = 0; i < clean.length; i++) {
+        const char = clean[i];
+        
+        if (escapeNext) {
+          escapeNext = false;
+          continue;
+        }
+        
+        if (char === '\\' && inString) {
+          escapeNext = true;
+          continue;
+        }
+        
+        if (char === '"') {
+          inString = !inString;
+          continue;
+        }
+        
+        if (inString) continue;
+        
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        else if (char === '[') bracketCount++;
+        else if (char === ']') bracketCount--;
+        
+        if ((char === '}' || char === ']') && braceCount === 0 && bracketCount === 0) {
+          bestIndex = i;
+        }
+      }
+      
+      if (bestIndex > 0) {
+        const truncated = clean.substring(0, bestIndex + 1);
+        try {
+          parsedJson = JSON.parse(truncated);
+        } catch {
+          return null;
+        }
+      } else {
+        return null;
+      }
     }
     const result = mealVisionSchema.safeParse(parsedJson);
     if (!result.success) {
@@ -428,7 +475,7 @@ export async function buildClinicalSuggestions(params: {
       : `Act as an educational metabolic-care assistant. ${labContextBlock ? labContextBlock.replace('DATOS DE LABORATORIO', 'LAB DATA').replace('El paciente tiene estudios recientes', 'The patient has recent studies').replace('Prioriza recomendaciones según estos valores reales del paciente', 'Prioritize recommendations based on these actual values') : ''} Analyze this weekly JSON report: ${JSON.stringify(params.data)}. Also use this product guidance framework for supplements/products recommendations: ${THERMORUSH_CONTEXT.en}. ${getPromoProductGuidance('en')} Rules: ${tieneLabClaro ? `PRIORITY: You have clear laboratory data (HbA1c, fasting glucose, lipid profile, insulin, liver enzymes, thyroid, kidney function and inflammation markers). Use these actual values as the primary basis to personalize clinical recommendations specific to the patient's real laboratory results. ` : ''}1) If glucosa_real_registrada is false, use glucosa_estimada_por_comidas and clearly state it is a meal-based estimate. 2) Medication and labs are optional: if missing, still provide actionable analysis from meals/habits/glucose. 3) In comidas_recientes, always prioritize alimento_principal and nota to personalize nutrition guidance. 4) If there are comidas_inadecuadas in the JSON, the patient needs to know which meals were inadequate and why. In patientMessage, mention the specific inadequate meals the patient logged (alimento_principal and fecha) and offer healthier alternatives. 5) Prioritize practical recommendations by urgency. 6) If motivo_registro exists in the JSON, connect current progress to the patient's original reason for using the app in summary and patientMessage. 7) If you mention ThermoRush, include timing (before breakfast and lunch), expected metabolic rationale, and that it does not replace medical treatment. 8) Never mention restricted products. 9) Keep a clear, supportive and non-alarmist tone, and never replace medical care. Return ONLY valid JSON with this shape: {"summary":"...","centralProblems":["..."],"priorityPlan":["..."],"nutritionFocus":["..."],"lifestyleFocus":["..."],"recommendedLabs":["..."],"productsGuidance":["..."],"expectedProgress":["..."],"patientMessage":"... optional ...","suggestions":["...","..."]}. Max 6 suggestions.`;
 
   try {
-    const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 1024 });
+    const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 1536 });
     const clean = response.replaceAll('```json', '').replaceAll('```', '').trim();
     
     // Debug: log de la respuesta cruda
@@ -513,13 +560,72 @@ export async function extractLabValuesFromImage(params: {
       : `You are a medical assistant expert in interpreting lab results. Analyze the attached clinical laboratory results image. Extract only the numeric values found for: HbA1c (%), fasting glucose (mg/dL), insulin (μU/mL), triglycerides (mg/dL), HDL (mg/dL), LDL (mg/dL), ALT (U/L), AST (U/L), TSH (μIU/mL), hsCRP (mg/L), creatinine (mg/dL), uric acid (mg/dL). If a value does not appear in the image use null. Return ONLY valid JSON with keys: hba1c, glucosa_ayuno, insulina, trigliceridos, hdl, ldl, alt, ast, tsh, pcr_us, creatinina, acido_urico. No extra text, just JSON.`;
 
   try {
-    const response = await generateGeminiText({ prompt, temperature: 0.1, maxOutputTokens: 400 });
+    const response = await generateGeminiText({ prompt, temperature: 0.1, maxOutputTokens: 600 });
     const clean = response.replaceAll('```json', '').replaceAll('```', '').trim();
     
     // Debug: Log the raw response
     console.log('[extractLabValuesFromImage] Raw AI response:', clean);
     
-    const parsedJson = JSON.parse(clean);
+    let parsedJson: Record<string, unknown>;
+    try {
+      parsedJson = JSON.parse(clean);
+    } catch (parseError) {
+      // Intentar recuperar respuestas truncadas
+      console.warn('[extractLabValuesFromImage] JSON parse failed, attempting recovery:', parseError);
+      
+      // Buscar el último cierre válido de objeto
+      let bestIndex = -1;
+      let braceCount = 0;
+      let bracketCount = 0;
+      let inString = false;
+      let escapeNext = false;
+      
+      for (let i = 0; i < clean.length; i++) {
+        const char = clean[i];
+        
+        if (escapeNext) {
+          escapeNext = false;
+          continue;
+        }
+        
+        if (char === '\\' && inString) {
+          escapeNext = true;
+          continue;
+        }
+        
+        if (char === '"') {
+          inString = !inString;
+          continue;
+        }
+        
+        if (inString) continue;
+        
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        else if (char === '[') bracketCount++;
+        else if (char === ']') bracketCount--;
+        
+        // Si encontramos un cierre que balancea el JSON, guardamos la posición
+        if ((char === '}' || char === ']') && braceCount === 0 && bracketCount === 0) {
+          bestIndex = i;
+        }
+      }
+      
+      if (bestIndex > 0) {
+        const truncated = clean.substring(0, bestIndex + 1);
+        console.log('[extractLabValuesFromImage] Attempting recovery with:', truncated);
+        try {
+          parsedJson = JSON.parse(truncated);
+        } catch {
+          console.error('[extractLabValuesFromImage] Recovery failed, returning null');
+          return null;
+        }
+      } else {
+        console.error('[extractLabValuesFromImage] No valid JSON closure found, returning null');
+        return null;
+      }
+    }
+    
     console.log('[extractLabValuesFromImage] Parsed JSON:', parsedJson);
     
     return labVisionSchema.parse(parsedJson);
