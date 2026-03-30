@@ -1,4 +1,4 @@
-export const LOCALE_COOKIE_NAME = 'lifemetric';
+﻿export const LOCALE_COOKIE_NAME = 'lifemetric';
 export const LOCALE_EXPLICIT_COOKIE_NAME = 'lifemetric_locale_explicit';
 
 export type Locale = 'es' | 'en';
@@ -705,7 +705,7 @@ const messages = {
       virusScanning: 'Checking file security before upload...',
       virusPassed: 'Verification completed. File is safe, starting upload.',
       virusBlocked: 'Upload blocked.',
-      virusFallback: 'We couldn’t complete validation right now. Upload will continue.',
+      virusFallback: 'We couldn't complete validation right now. Upload will continue.',
     },
     glucoseForm: {
       title: 'Log glucose',
@@ -769,7 +769,7 @@ const messages = {
       virusScanning: 'Checking file security before upload...',
       virusPassed: 'Verification completed. File is safe, starting upload.',
       virusBlocked: 'Upload blocked.',
-      virusFallback: 'We couldn’t complete validation right now. Upload will continue.',
+      virusFallback: 'We couldn't complete validation right now. Upload will continue.',
     },
     medicationForm: {
       title: 'My medication',
@@ -802,7 +802,7 @@ const messages = {
       virusScanning: 'Checking image security before upload...',
       virusPassed: 'Verification completed. Image is safe, starting upload.',
       virusBlocked: 'Upload blocked.',
-      virusFallback: 'We couldn’t complete validation right now. Upload will continue.',
+      virusFallback: 'We couldn't complete validation right now. Upload will continue.',
     },
     patientForm: {
       title: 'New patient',
@@ -849,7 +849,7 @@ const messages = {
       virusScanning: 'Checking file security before upload...',
       virusPassed: 'Verification completed. File is safe, starting upload.',
       virusBlocked: 'Upload blocked.',
-      virusFallback: 'We couldn’t complete validation right now. Upload will continue.',
+      virusFallback: 'We couldn't complete validation right now. Upload will continue.',
       fields: {
         firstName: 'First Name',
         lastName: 'Last Name',
