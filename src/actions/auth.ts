@@ -65,6 +65,16 @@ function isPacienteColumnMissingError(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && (error as Prisma.PrismaClientKnownRequestError).code === 'P2022';
 }
 
+function isNextRedirectError(error: unknown): error is { digest: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'digest' in error &&
+    typeof (error as { digest?: unknown }).digest === 'string' &&
+    (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+  );
+}
+
 async function ensurePacienteAuthColumns() {
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email TEXT');
   await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
@@ -154,19 +164,6 @@ async function isBotIdBlocked(): Promise<boolean> {
   return botSignal.includes('bot');
 }
 
-function getDefaultPacienteData(email: string) {
-  const username = email.split('@')[0] ?? 'usuario';
-  return {
-    nombre: username,
-    apellido: 'Usuario',
-    edad: 18,
-    sexo: 'No especificado',
-    diagnostico_principal: 'Sin especificar',
-    usa_glucometro: false,
-    newsletter_suscrito: true,
-  };
-}
-
 function calculateAgeFromBirthDate(fechaNacimiento: string): number {
   const birth = new Date(fechaNacimiento);
   if (Number.isNaN(birth.getTime())) {
@@ -211,6 +208,21 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
        }
     }
 
+    await ensurePacienteAuthColumns();
+    const paciente = await prisma.paciente.findFirst({
+      where: { email: data.email },
+      select: { paciente_id: true, password_hash: true },
+    });
+
+    if (!paciente) {
+      return { error: authMessages.accountNotFound };
+    }
+
+    const isPasswordValid = await bcrypt.compare(data.password, paciente.password_hash ?? '');
+    if (!isPasswordValid) {
+      return { error: authMessages.wrongPassword };
+    }
+
     const supabase = createSupabaseServerClient({ useServiceRole: false });
     const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
       email: data.email,
@@ -218,20 +230,8 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     });
 
     if (signInError || !signInData.user) {
-      return { error: authMessages.invalidCredentials };
+      return { error: authMessages.wrongPassword };
     }
-
-    const defaults = getDefaultPacienteData(data.email);
-    const paciente = await findOrCreatePacienteByEmail({
-      email: data.email,
-      password: data.password,
-      nombre: defaults.nombre,
-      apellido: defaults.apellido,
-      edad: defaults.edad,
-      sexo: defaults.sexo,
-      diagnosticoPrincipal: defaults.diagnostico_principal,
-      newsletterSuscrito: defaults.newsletter_suscrito,
-    });
 
     await setSession(paciente.paciente_id);
     await touchPacienteLastLogin(paciente.paciente_id);
@@ -301,7 +301,14 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     if (signUpError) {
       const isDuplicate = /already registered|already been registered|user already exists/i.test(signUpError.message);
-      return { error: isDuplicate ? authMessages.registerEmailUnavailable : authMessages.registerError };
+      const isWeakPassword = /password|6 characters|at least/i.test(signUpError.message);
+      return {
+        error: isDuplicate
+          ? authMessages.registerEmailUnavailable
+          : isWeakPassword
+            ? authMessages.registerWeakPassword
+            : authMessages.registerError,
+      };
     }
 
     const edadCalculada = calculateAgeFromBirthDate(data.fechaNacimiento);
@@ -358,7 +365,12 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
   } catch (error) {
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
-    if (error instanceof z.ZodError) return { error: authMessages.invalidRegisterData };
+    if (error instanceof z.ZodError) {
+      const firstIssuePath = error.issues[0]?.path?.[0];
+      if (firstIssuePath === 'email') return { error: authMessages.registerInvalidEmail };
+      if (firstIssuePath === 'password') return { error: authMessages.registerWeakPassword };
+      return { error: authMessages.registerMissingRequired };
+    }
     console.error(error);
     return { error: authMessages.registerError };
   }
@@ -395,10 +407,23 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
     }
 
     const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    await ensurePacienteAuthColumns();
+    const paciente = await prisma.paciente.findFirst({
+      where: { email: data.email },
+      select: { paciente_id: true },
+    });
+
+    if (!paciente) {
+      return { error: authMessages.accountNotFound };
+    }
+
     const supabase = createSupabaseServerClient({ useServiceRole: false });
-    await supabase.auth.resetPasswordForEmail(data.email, {
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${appUrl}/recuperar`,
     });
+    if (resetError) {
+      return { error: authMessages.recoveryEmailSendError };
+    }
 
     return { success: true, message: authMessages.recoverSuccess };
   } catch (error) {
@@ -507,6 +532,9 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
     await deleteSession();
     redirect(`/login?accountDeleted=1&lang=${locale}`);
   } catch (error) {
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
     if (error instanceof z.ZodError) {
       const locale = normalizeLocale(formData.get('locale')?.toString());
       const authMessages = getMessages(locale).auth.messages;

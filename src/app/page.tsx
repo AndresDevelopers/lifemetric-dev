@@ -81,7 +81,7 @@ export default async function Home() {
   const sleepToday = paciente.habitos?.[0]?.sueno_horas ?? 0;
   
   const totalMedication = paciente.medicacion.length;
-  const takenMedication = paciente.medicacion.filter(m => m.estado_toma?.toLowerCase() === 'tomada').length;
+  const takenMedication = paciente.medicacion.filter((m: (typeof paciente.medicacion)[number]) => m.estado_toma?.toLowerCase() === 'tomada').length;
   const adherence = totalMedication === 0 ? 0 : Math.round((takenMedication / totalMedication) * 100);
 
   return (

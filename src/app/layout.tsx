@@ -1,6 +1,5 @@
 /* eslint-disable @next/next/no-page-custom-font */
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
@@ -13,15 +12,12 @@ import {
   inferLocaleFromRequest,
 } from "@/lib/i18n";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
 export async function generateMetadata(): Promise<Metadata> {
   const appName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Lifemetric";
   const faviconUrl = process.env.NEXT_PUBLIC_APP_FAVICON_URL?.trim() || "/favicon.ico";
+  const appBaseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim() || "http://localhost:3000";
   return {
+    metadataBase: new URL(appBaseUrl),
     title: {
       default: appName,
       template: `%s | ${appName}`,
@@ -59,7 +55,7 @@ export default async function RootLayout({
   const user = await getSessionPaciente();
 
   return (
-    <html lang={locale} className={`${inter.variable} antialiased light`}>
+    <html lang={locale} className="antialiased light">
       <head>
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"

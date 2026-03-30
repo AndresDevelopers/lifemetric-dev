@@ -16,7 +16,7 @@ function getDatabaseFallback() {
     getEnvValue('POSTGRES_URL') ??
     getEnvValue('POSTGRES_PRISMA_URL') ??
     getEnvValue('POSTGRES_URL_NON_POOLING') ??
-    ''
+    'postgresql://postgres:postgres@127.0.0.1:5432/postgres'
   );
 }
 
@@ -24,9 +24,6 @@ function getEnvWithFallback(name: 'DATABASE_URL' | 'DIRECT_URL', fallback: strin
   try {
     return env(name);
   } catch {
-    if (!fallback) {
-      throw new Error(`${name} is not set. Define ${name} or SUPABASE_DB_URL / POSTGRES_URL.`);
-    }
     return fallback;
   }
 }

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useActionState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loginAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
@@ -39,29 +40,36 @@ export default function LoginPage() {
       <div className="glass-surface w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-white/20 relative z-10 transition-all duration-500 hover:shadow-[var(--color-primary-fixed-dim)]/20 hover:shadow-3xl">
         
         {/* Left Side: Branding / Clinical Aesthetic */}
-        <div className="md:w-1/2 p-10 md:p-16 flex flex-col justify-between bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-surface-tint)] text-[var(--color-on-primary)] relative overflow-hidden">
+        <div className="md:w-1/2 px-6 py-8 sm:px-8 sm:py-10 md:p-16 flex flex-col justify-between bg-gradient-to-br from-[#0a3f78] via-[#0b5aa4] to-[#1280cc] text-[var(--color-on-primary)] relative overflow-hidden min-h-[320px] md:min-h-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.14),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(103,232,249,0.12),transparent_40%)] pointer-events-none"></div>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay pointer-events-none"></div>
           
           <div className="z-10 relative">
+            <span className="inline-flex items-center rounded-full border border-cyan-100/30 bg-[#04264f]/40 px-3 py-1 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100/90 mb-4">
+              {locale === 'es' ? 'Plataforma clínica segura' : 'Secure clinical platform'}
+            </span>
             {appBrandLogoUrl ? (
-              <div className="w-full py-4 md:py-6">
-                <img
+              <div className="w-full max-w-[320px] mx-auto md:mx-0 py-3 sm:py-4 md:py-6 px-4 sm:px-5 md:px-6 rounded-3xl bg-[#082f5b]/55 border border-cyan-100/25 backdrop-blur-sm shadow-[0_12px_36px_rgba(4,18,43,0.35)]">
+                <Image
                   src={appBrandLogoUrl}
                   alt={appName}
-                  className="w-full h-auto max-h-44 md:max-h-52 object-contain"
+                  width={560}
+                  height={220}
+                  unoptimized
+                  className="w-full h-auto max-h-28 sm:max-h-36 md:max-h-52 object-contain drop-shadow-[0_10px_24px_rgba(220,244,255,0.34)]"
                 />
               </div>
             ) : (
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 flex items-center gap-3">
                 {appIconUrl ? (
-                  <img src={appIconUrl} alt={appName} className="w-12 h-12 md:w-14 md:h-14 rounded-2xl object-cover" />
+                  <Image src={appIconUrl} alt={appName} width={56} height={56} unoptimized className="w-12 h-12 md:w-14 md:h-14 rounded-2xl object-cover" />
                 ) : (
                   <span className="material-symbols-outlined text-5xl">vital_signs</span>
                 )}
                 {' '}{appName}
               </h1>
             )}
-            <p className="text-[var(--color-primary-fixed)] text-lg md:text-xl font-medium mb-8 leading-relaxed">
+            <p className="text-[#e7f6ff] text-base sm:text-lg md:text-xl font-medium mb-1 mt-5 leading-relaxed max-w-[32ch] mx-auto md:mx-0">
               {messages.common.appDescription} <br/> {messages.common.appDescriptionDetail}
             </p>
           </div>
