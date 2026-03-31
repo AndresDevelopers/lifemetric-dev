@@ -7,6 +7,7 @@ const layoutPath = path.join(process.cwd(), 'src', 'app', 'layout.tsx');
 const redisPath = path.join(process.cwd(), 'src', 'lib', 'redis.ts');
 const turnstilePath = path.join(process.cwd(), 'src', 'components', 'auth', 'TurnstileWidget.tsx');
 const authPath = path.join(process.cwd(), 'src', 'actions', 'auth.ts');
+const dataPath = path.join(process.cwd(), 'src', 'actions', 'data.ts');
 const loginPath = path.join(process.cwd(), 'src', 'app', 'login', 'page.tsx');
 const registerPath = path.join(process.cwd(), 'src', 'app', 'registro', 'page.tsx');
 const sessionPath = path.join(process.cwd(), 'src', 'lib', 'session.ts');
@@ -22,6 +23,7 @@ const layout = fs.readFileSync(layoutPath, 'utf8');
 const redis = fs.readFileSync(redisPath, 'utf8');
 const turnstile = fs.readFileSync(turnstilePath, 'utf8');
 const auth = fs.readFileSync(authPath, 'utf8');
+const dataActions = fs.readFileSync(dataPath, 'utf8');
 const login = fs.readFileSync(loginPath, 'utf8');
 const register = fs.readFileSync(registerPath, 'utf8');
 const session = fs.readFileSync(sessionPath, 'utf8');
@@ -101,11 +103,18 @@ test('prisma config and prisma client support supabase/postgres env fallbacks', 
   assert.match(prismaLib, /process\.env\.SUPABASE_DB_URL/);
   assert.match(prismaLib, /process\.env\.SUPABASE_POOLER_URL/);
   assert.match(prismaLib, /process\.env\.POSTGRES_URL/);
+  assert.doesNotMatch(prismaLib, /127\.0\.0\.1:5432/);
+  assert.match(prismaLib, /Missing database connection string/);
 });
 
 test('login action handles prisma runtime errors without exposing server error message', () => {
   assert.match(auth, /PrismaClientInitializationError/);
   assert.match(auth, /return \{ error: authMessages\.invalidCredentials \}/);
+});
+
+test('session resolver does not fake an authenticated fallback profile when db is unavailable', () => {
+  assert.match(dataActions, /return null;/);
+  assert.doesNotMatch(dataActions, /nombre:\s*"Usuario"/);
 });
 
 test('readme documents auth runtime resilience checks', () => {

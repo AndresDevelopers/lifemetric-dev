@@ -87,22 +87,8 @@ export async function getSessionPaciente() {
       producto_permitido_registro: profileExtras.producto_permitido_registro,
     };
   } catch (error) {
-    console.error("Error fetching patient, returning fallback:", error);
-    // Fallback para evitar bloqueo de UI si la DB no está sincronizada
-    return {
-      paciente_id: pacienteId,
-      nombre: "Usuario",
-      apellido: "",
-      email: "",
-      sexo: "M",
-      newsletter_suscrito: true,
-      idioma: "es",
-      fecha_nacimiento: null,
-      avatar_url: null,
-      altura_cm: null,
-      motivo_registro: null,
-      producto_permitido_registro: null,
-    };
+    console.error("Error fetching patient session:", error);
+    return null;
   }
 }
 

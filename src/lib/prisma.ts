@@ -18,7 +18,14 @@ function getConnectionString() {
     process.env.POSTGRES_URL_NON_POOLING,
   ];
   const connectionString = candidates.find((value) => value && value.trim().length > 0);
-  return connectionString ?? 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
+
+  if (connectionString) {
+    return connectionString;
+  }
+
+  throw new Error(
+    'Missing database connection string. Set DATABASE_URL, DIRECT_URL, SUPABASE_DB_URL, SUPABASE_DATABASE_URL, SUPABASE_POOLER_URL or POSTGRES_* env variables.'
+  );
 }
 
 export function createPrismaClient() {
@@ -32,8 +39,16 @@ export function createPrismaClient() {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function getPrismaClient() {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+  return globalForPrisma.prisma;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getPrismaClient(), prop, receiver);
+  },
+});
