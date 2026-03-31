@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { chatWithAIAction } from "@/actions/chat";
+import type { ChatNavigationAction } from "@/lib/appNavigation";
 import Image from "next/image";
 
 const CHAT_STORAGE_KEY = "lifemetric_chat_conversations_v1";
 const MAX_SAVED_CONVERSATIONS = 8;
 
 type ChatRole = "assistant" | "user" | "ai";
-type ChatMessage = { role: ChatRole; content: string; imageUrl?: string };
+type ChatMessage = { role: ChatRole; content: string; imageUrl?: string; actions?: ChatNavigationAction[] };
 type StoredConversation = {
   id: string;
   createdAt: string;
@@ -65,7 +67,9 @@ function renderAssistantMarkdown(content: string) {
 }
 
 export default function ChatWidget() {
-  const { messages } = useLocale();
+  const { locale, messages } = useLocale();
+  const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [input, setInput] = useState("");
@@ -169,14 +173,23 @@ export default function ChatWidget() {
           content: m.content
         }));
 
-      const response = await chatWithAIAction(userMessage, historyForAction, newUserMsg.imageUrl);
+      const response = await chatWithAIAction(
+        userMessage,
+        historyForAction,
+        newUserMsg.imageUrl,
+        pathname,
+        locale,
+      );
       
       if (response.success) {
-        setChatHistory((prev) => [...prev, { role: "assistant", content: response.text }]);
+        setChatHistory((prev) => [
+          ...prev,
+          { role: "assistant", content: response.text, actions: response.actions },
+        ]);
       } else {
         setChatHistory((prev) => [
           ...prev,
-          { role: "assistant", content: response.text || messages.chat.error },
+          { role: "assistant", content: response.text || messages.chat.error, actions: response.actions },
         ]);
       }
     } catch (error) {
@@ -196,7 +209,7 @@ export default function ChatWidget() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed left-0 top-1/2 -translate-y-1/2 z-[100] group flex items-center transition-all duration-300 pointer-events-auto"
-        aria-label="Toggle AI Assistant"
+        aria-label={messages.chat.toggle}
       >
         <div className={`
           flex items-center gap-2 pl-2 pr-4 py-3 rounded-r-3xl 
@@ -243,7 +256,7 @@ export default function ChatWidget() {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                  Online
+                  {messages.chat.statusOnline}
                 </span>
               </div>
             </div>
@@ -289,7 +302,7 @@ export default function ChatWidget() {
                       className="w-full text-left px-3 py-2 rounded-xl bg-slate-100/70 dark:bg-slate-800/60 hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors"
                     >
                       <p className="text-[11px] text-slate-500 dark:text-slate-300">
-                        {new Date(conversation.createdAt).toLocaleString()}
+                        {new Date(conversation.createdAt).toLocaleString(locale)}
                       </p>
                       <p className="text-xs text-slate-700 dark:text-slate-100 truncate">{preview}</p>
                     </button>
@@ -325,20 +338,38 @@ export default function ChatWidget() {
                 `}
               >
                 {msg.role === "assistant" ? renderAssistantMarkdown(msg.content) : (
-                <div className="flex flex-col gap-2">
-                  {msg.imageUrl && (
-                    <Image
-                      src={msg.imageUrl} 
-                      alt="Imagen adjunta" 
-                      width={400}
-                      height={300}
-                      unoptimized={true}
-                      className="max-w-full h-auto rounded-lg object-cover border border-slate-200 dark:border-white/10"
-                    />
-                  )}
-                  <span>{msg.content}</span>
-                </div>
-              )}
+                  <div className="flex flex-col gap-2">
+                    {msg.imageUrl && (
+                      <Image
+                        src={msg.imageUrl} 
+                        alt={messages.chat.attachedImageAlt}
+                        width={400}
+                        height={300}
+                        unoptimized={true}
+                        className="max-w-full h-auto rounded-lg object-cover border border-slate-200 dark:border-white/10"
+                      />
+                    )}
+                    <span>{msg.content}</span>
+                  </div>
+                )}
+                {msg.role === "assistant" && msg.actions?.length ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {msg.actions.map((action) => (
+                      <button
+                        key={`${idx}-${action.path}-${action.label}`}
+                        type="button"
+                        onClick={() => {
+                          router.push(action.path);
+                          setIsOpen(false);
+                        }}
+                        className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                        title={action.reason}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
           ))}
@@ -361,7 +392,7 @@ export default function ChatWidget() {
             <div className="mb-3 relative inline-block">
               <Image
                 src={selectedImage} 
-                alt="Imagen seleccionada" 
+                alt={messages.chat.selectedImageAlt}
                 width={80}
                 height={80}
                 unoptimized={true}
@@ -371,7 +402,7 @@ export default function ChatWidget() {
                 type="button"
                 onClick={() => setSelectedImage(null)}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors shadow-md"
-                aria-label="Eliminar imagen"
+                aria-label={messages.chat.removeImage}
               >
                 ×
               </button>
@@ -388,7 +419,7 @@ export default function ChatWidget() {
                   ? "bg-blue-600 text-white" 
                   : "bg-slate-200 dark:bg-slate-700 text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-600"
               }`}
-              aria-label="Subir imagen"
+              aria-label={messages.chat.uploadImage}
             >
               <span className="material-symbols-outlined font-bold">
                 {selectedImage ? "image" : "photo_camera"}

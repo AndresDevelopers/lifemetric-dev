@@ -7,8 +7,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect, useRef } from "react";
 import { getSessionPacienteId } from "@/actions/data";
-import { guardarRegistroMedicacion } from "@/actions/medicacion";
+import { guardarRegistroMedicacion, inferMedicationFromPhoto } from "@/actions/medicacion";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { getMedicationCatalogDescription } from "@/lib/medicationCatalog";
 
 const medicacionSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -17,16 +18,18 @@ const medicacionSchema = z.object({
   medicamento: z.string().min(2, "Obligatorio"),
   dosis: z.string().optional(),
   estado_toma: z.enum(["tomada", "olvidada", "omitida_por_efecto", "retrasada"]),
-  comentarios: z.string().optional()
+  comentarios: z.string().optional(),
+  ai_detected_medicamento: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof medicacionSchema>;
 
 export default function NuevaMedicacion() {
   const [loading, setLoading] = useState(false);
-
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [detectedMedicationDescription, setDetectedMedicationDescription] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { locale, messages } = useLocale();
   const medicationMessages = messages.medicationForm;
@@ -39,6 +42,7 @@ export default function NuevaMedicacion() {
       hora: now.toTimeString().slice(0, 5),
       estado_toma: "tomada",
       paciente_id: "",
+      ai_detected_medicamento: "",
     }
   });
 
@@ -51,6 +55,14 @@ export default function NuevaMedicacion() {
   }, [setValue]);
 
   const estado = useWatch({ control, name: "estado_toma" });
+  const medicamento = useWatch({ control, name: "medicamento" });
+
+  useEffect(() => {
+    const detectedMedicationDescription = medicamento
+      ? getMedicationCatalogDescription(medicamento, locale)
+      : null;
+    setDetectedMedicationDescription(detectedMedicationDescription);
+  }, [locale, medicamento]);
 
   const getEstadoStyle = (tipo: string) => {
     return estado === tipo
@@ -91,8 +103,32 @@ export default function NuevaMedicacion() {
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setImagePreview(event.target?.result as string);
+    reader.onload = async (event) => {
+      const imageUrl = event.target?.result as string;
+      setImagePreview(imageUrl);
+      setAnalyzingPhoto(true);
+      try {
+        const result = await inferMedicationFromPhoto({ imageUrl, locale });
+        if (result.success) {
+          const aiMedication = result.data.medicamento?.trim() ?? "";
+          const aiDose = result.data.dosis?.trim() ?? "";
+          setValue("ai_detected_medicamento", aiMedication);
+          if (!medicamento && aiMedication) {
+            setValue("medicamento", aiMedication, { shouldValidate: true });
+          }
+          if (aiDose) {
+            setValue("dosis", aiDose, { shouldValidate: true });
+          }
+
+          const description =
+            getMedicationCatalogDescription(aiMedication || medicamento || "", locale) ??
+            result.data.descripcion_para_que_sirve ??
+            null;
+          setDetectedMedicationDescription(description);
+        }
+      } finally {
+        setAnalyzingPhoto(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -105,6 +141,7 @@ export default function NuevaMedicacion() {
       const response = await guardarRegistroMedicacion({
         ...data,
         comentarios: data.comentarios || undefined,
+        ai_detected_medicamento: data.ai_detected_medicamento || undefined,
       });
 
       if (!response.success) {
@@ -128,7 +165,9 @@ export default function NuevaMedicacion() {
       setValue("medicamento", "");
       setValue("dosis", "");
       setValue("comentarios", "");
+      setValue("ai_detected_medicamento", "");
       setImagePreview(null);
+      setDetectedMedicationDescription(null);
     } catch {
       alert(medicationMessages.saveError);
     } finally {
@@ -231,6 +270,23 @@ export default function NuevaMedicacion() {
                 />
               </div>
             </div>
+
+            <input type="hidden" {...register("ai_detected_medicamento")} />
+
+            {analyzingPhoto && (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                {medicationMessages.aiAnalyzing}
+              </div>
+            )}
+
+            {detectedMedicationDescription && (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                  {medicationMessages.aiDescriptionTitle}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-emerald-800">{detectedMedicationDescription}</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 mt-2">
               <div className="flex flex-col gap-2">

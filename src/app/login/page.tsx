@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useActionState } from 'react';
+import React, { useState, useActionState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { loginAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -157,7 +157,6 @@ export default function LoginPage() {
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
   const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
-  const router = useRouter();
   const searchParams = useSearchParams();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const appBrandLogoUrl = process.env.NEXT_PUBLIC_APP_BRAND_LOGO_URL?.trim() ?? '';
@@ -165,11 +164,6 @@ export default function LoginPage() {
   const { locale, messages } = useLocale();
   const loginMessages = messages.auth.login;
 
-  useEffect(() => {
-    if (state?.success) {
-      router.push('/');
-    }
-  }, [state, router]);
   const showDeletedMessage = searchParams.get('accountDeleted') === '1';
 
   return (

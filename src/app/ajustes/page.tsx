@@ -10,23 +10,15 @@ import {
   updateLanguageAction,
 } from '@/actions/auth';
 import { getSessionPaciente } from '@/actions/data';
+import { useLocale } from '@/components/providers/LocaleProvider';
 import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
-import { getMessages, normalizeLocale, getBrowserLocale, persistLocale, type Locale } from '@/lib/i18n';
+import { type Locale } from '@/lib/i18n';
 import { PROMO_FOCUS_PRODUCTS } from '@/lib/productCatalog';
 
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
 
 export default function AjustesPage() {
-  const [locale, setLocale] = useState<Locale>(() => {
-    // If we are in the browser, check URL first, otherwise fallback to browser default.
-    if (typeof globalThis.window !== 'undefined') {
-      const urlLang = new URLSearchParams(globalThis.window.location.search).get('lang');
-      if (urlLang) return normalizeLocale(urlLang);
-    }
-    return getBrowserLocale();
-  });
-
-  const messages = getMessages(locale);
+  const { locale, setLocale: setAppLocale, messages } = useLocale();
   const diagnosisOptions = locale === 'es'
     ? ['Control', 'Diabetes tipo 1', 'Diabetes tipo 2', 'Hipertensión', 'Otra']
     : ['Routine check', 'Type 1 diabetes', 'Type 2 diabetes', 'Hypertension', 'Other'];
@@ -56,11 +48,11 @@ export default function AjustesPage() {
         setFechaNacimiento(data.fecha_nacimiento ? new Date(data.fecha_nacimiento).toISOString().split('T')[0] : '');
         setAlturaCm(data.altura_cm != null ? String(data.altura_cm) : '');
         if (data.avatar_url) setAvatarPreview(data.avatar_url);
-        if (data.idioma) setLocale(data.idioma as Locale);
+        if (data.idioma) setAppLocale(data.idioma as Locale);
       }
     }
     loadUser();
-  }, []);
+  }, [setAppLocale]);
 
   const handleProfileSubmit = () => {
     const parsedBirthDate = fechaNacimiento ? new Date(`${fechaNacimiento}T00:00:00.000Z`) : null;
@@ -76,8 +68,7 @@ export default function AjustesPage() {
   };
 
   const handleLanguageChange = (newLocale: Locale) => {
-    setLocale(newLocale);
-    persistLocale(newLocale);
+    setAppLocale(newLocale);
     
     // Automatically persist to DB
     const formData = new FormData();

@@ -5,8 +5,10 @@ import path from 'node:path';
 
 const schemaPath = path.join(process.cwd(), 'prisma', 'schema.prisma');
 const retentionSqlPath = path.join(process.cwd(), 'sql', 'account_retention_and_registration_fields.sql');
+const mealActionPath = path.join(process.cwd(), 'src', 'actions', 'comida.ts');
 const schema = fs.readFileSync(schemaPath, 'utf8');
 const retentionSql = fs.readFileSync(retentionSqlPath, 'utf8');
+const mealAction = fs.readFileSync(mealActionPath, 'utf8');
 
 test('schema maps Paciente to pacientes table', () => {
   assert.match(schema, /model\s+Paciente\s+\{[\s\S]*?@@map\("pacientes"\)/m);
@@ -23,4 +25,12 @@ test('sql migration script includes inactivity/login and registration extension 
   assert.match(retentionSql, /producto_permitido_registro/);
   assert.match(retentionSql, /doctor_asignado/);
   assert.match(retentionSql, /last_login_at/);
+  assert.match(retentionSql, /deactivated_at/);
+  assert.match(retentionSql, /inactivity_notification_sent_at/);
+});
+
+test('meal action stays aligned with Prisma comida field names', () => {
+  assert.match(schema, /clasificacion_carbohidrato\s+String\?/);
+  assert.match(mealAction, /clasificacion_carbohidrato:\s*class_carbohidrato/);
+  assert.doesNotMatch(mealAction, /clasificacion_carbidrato/);
 });

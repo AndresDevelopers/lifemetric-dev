@@ -7,7 +7,7 @@ import { extractLabValuesFromImage } from "@/lib/ai/gemini";
 import { checkRateLimit } from "@/lib/redis";
 
 const autofillSchema = z.object({
-  imageUrl: z.string().url({ message: "Debe ser una URL válida" }),
+  imageUrl: z.string().url("Debe ser una URL válida"),
   locale: z.enum(["es", "en"]).default("es"),
 });
 
@@ -27,7 +27,7 @@ const labResultSchema = z.object({
 });
 
 const saveLabSchema = z.object({
-  paciente_id: z.string().uuid({ message: "ID de paciente inválido" }),
+  paciente_id: z.string().uuid(),
   fecha_estudio: z.string().min(10),
   hba1c: z.number().min(0).max(20).optional(),
   glucosa_ayuno: z.number().min(0).max(1000).optional(),
@@ -76,17 +76,18 @@ export async function autofillLaboratorioFromDocumentAction(rawData: unknown) {
     // Filter to only include fields that are defined (not null/undefined)
     const validatedResult: z.infer<typeof labResultSchema> = {};
     
-    const fields = [
-      "hba1c", "glucosa_ayuno", "trigliceridos", "hdl", "ldl", 
-      "insulina", "alt", "ast", "tsh", "creatinina", "acido_urico", "pcr_us"
-    ] as const;
-
-    for (const field of fields) {
-      if (result[field] != null) {
-        // @ts-ignore - we know these fields match between result and validatedResult
-        validatedResult[field] = result[field];
-      }
-    }
+    if (result.hba1c != null) validatedResult.hba1c = result.hba1c;
+    if (result.glucosa_ayuno != null) validatedResult.glucosa_ayuno = result.glucosa_ayuno;
+    if (result.trigliceridos != null) validatedResult.trigliceridos = result.trigliceridos;
+    if (result.hdl != null) validatedResult.hdl = result.hdl;
+    if (result.ldl != null) validatedResult.ldl = result.ldl;
+    if (result.insulina != null) validatedResult.insulina = result.insulina;
+    if (result.alt != null) validatedResult.alt = result.alt;
+    if (result.ast != null) validatedResult.ast = result.ast;
+    if (result.tsh != null) validatedResult.tsh = result.tsh;
+    if (result.creatinina != null) validatedResult.creatinina = result.creatinina;
+    if (result.acido_urico != null) validatedResult.acido_urico = result.acido_urico;
+    if (result.pcr_us != null) validatedResult.pcr_us = result.pcr_us;
 
     return { success: true, data: validatedResult } as const;
   } catch (error) {

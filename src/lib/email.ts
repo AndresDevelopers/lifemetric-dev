@@ -291,3 +291,42 @@ export async function sendLoginAccessEmail(params: {
     text: `${intro} | ${params.loggedAtIso} | IP: ${ipText} | Device: ${agentText}`,
   });
 }
+
+export async function sendAccountDeactivatedEmail(params: {
+  to: string;
+  locale: 'es' | 'en';
+  appName: string;
+  deactivatedAtIso: string;
+  scheduledDeletionAtIso: string;
+}): Promise<void> {
+  const subject =
+    params.locale === 'es'
+      ? `Tu cuenta en ${params.appName} fue desactivada por inactividad`
+      : `Your ${params.appName} account was deactivated due to inactivity`;
+
+  const bodyEs = `
+    <p>Tu cuenta fue desactivada por inactividad.</p>
+    <p><strong>Desactivación (UTC):</strong> ${params.deactivatedAtIso}</p>
+    <p><strong>Eliminación automática prevista (UTC):</strong> ${params.scheduledDeletionAtIso}</p>
+    <p>Durante los próximos 3 meses conservaremos tus datos sin borrarlos. Una vez transcurrido ese período, eliminaremos automáticamente tus datos, archivos e historial asociado.</p>
+  `;
+
+  const bodyEn = `
+    <p>Your account was deactivated due to inactivity.</p>
+    <p><strong>Deactivated at (UTC):</strong> ${params.deactivatedAtIso}</p>
+    <p><strong>Scheduled automatic deletion (UTC):</strong> ${params.scheduledDeletionAtIso}</p>
+    <p>We will preserve your data for the next 3 months without deleting it. Once that grace period ends, we will automatically delete your data, files, and related history.</p>
+  `;
+
+  const intro =
+    params.locale === 'es'
+      ? `Cuenta desactivada: ${params.deactivatedAtIso}. Eliminación automática prevista: ${params.scheduledDeletionAtIso}.`
+      : `Account deactivated: ${params.deactivatedAtIso}. Scheduled automatic deletion: ${params.scheduledDeletionAtIso}.`;
+
+  await sendEmailWithResend({
+    to: params.to,
+    subject,
+    html: params.locale === 'es' ? bodyEs : bodyEn,
+    text: intro,
+  });
+}

@@ -35,7 +35,7 @@ function getClasificacionProteina(proteina?: number): string {
   return proteina < 20 ? "baja" : "adecuada";
 }
 
-function getClasificacionCarbidrato(carbs?: number): string {
+function getClasificacionCarbohidrato(carbs?: number): string {
   if (carbs === undefined) return "desconocido";
   if (carbs > 45) return "alto";
   if (carbs >= 25) return "moderado";
@@ -209,10 +209,10 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
 
   const finalData = { ...data, ...aiData };
   const class_proteina = getClasificacionProteina(finalData.proteina_g);
-  const class_carbidrato = getClasificacionCarbidrato(finalData.carbohidratos_g);
+  const class_carbohidrato = getClasificacionCarbohidrato(finalData.carbohidratos_g);
   const class_fibra = getClasificacionFibra(finalData.fibra_g);
   const class_final = getClasificacionFinal(
-    class_carbidrato, 
+    class_carbohidrato, 
     class_fibra, 
     class_proteina,
     finalData.es_comida_valida ?? true,
@@ -236,7 +236,7 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
         grasa_g: finalData.grasa_g,
         fibra_g: finalData.fibra_g,
         clasificacion_proteina: class_proteina,
-        clasificacion_carbidrato: class_carbidrato,
+        clasificacion_carbohidrato: class_carbohidrato,
         clasificacion_fibra: class_fibra,
         clasificacion_final: class_final,
         razon_inadecuada: finalData.razon_inadecuada ?? null,

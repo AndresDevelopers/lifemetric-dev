@@ -17,6 +17,8 @@ const chatWidgetPath = path.join(process.cwd(), 'src', 'components', 'ChatWidget
 const medicationCatalogPath = path.join(process.cwd(), 'src', 'lib', 'medicationCatalog.ts');
 const mealPagePath = path.join(process.cwd(), 'src', 'app', 'comidas', 'nuevo', 'page.tsx');
 const mealActionPath = path.join(process.cwd(), 'src', 'actions', 'comida.ts');
+const chatActionPath = path.join(process.cwd(), 'src', 'actions', 'chat.ts');
+const appNavigationPath = path.join(process.cwd(), 'src', 'lib', 'appNavigation.ts');
 
 const home = fs.readFileSync(homePath, 'utf8');
 const summary = fs.readFileSync(summaryPath, 'utf8');
@@ -32,6 +34,8 @@ const chatWidget = fs.readFileSync(chatWidgetPath, 'utf8');
 const medicationCatalog = fs.readFileSync(medicationCatalogPath, 'utf8');
 const mealPage = fs.readFileSync(mealPagePath, 'utf8');
 const mealAction = fs.readFileSync(mealActionPath, 'utf8');
+const chatAction = fs.readFileSync(chatActionPath, 'utf8');
+const appNavigation = fs.readFileSync(appNavigationPath, 'utf8');
 
 test('home quick actions include laboratories shortcut', () => {
   assert.match(home, /href="\/laboratorios\/nuevo"/);
@@ -121,6 +125,25 @@ test('chat widget exposes history and clear-conversation controls', () => {
   assert.match(chatWidget, /history/);
   assert.match(chatWidget, /delete_sweep/);
   assert.match(chatWidget, /lifemetric_chat_conversations_v1/);
+});
+
+test('chat guidance uses current route and shared app navigation map', () => {
+  assert.match(chatWidget, /usePathname/);
+  assert.match(chatWidget, /chatWithAIAction\(\s*userMessage,\s*historyForAction,\s*newUserMsg\.imageUrl,\s*pathname,\s*locale/s);
+  assert.match(chatAction, /buildAppNavigationContext/);
+  assert.match(chatAction, /Debes responder SIEMPRE en espanol/);
+  assert.match(chatAction, /You must ALWAYS reply in English/);
+  assert.match(appNavigation, /"\/laboratorios\/nuevo"/);
+  assert.match(appNavigation, /"\/ajustes"/);
+});
+
+test('chat locale strings and live locale sync are wired to the configured app language', () => {
+  assert.match(i18n, /statusOnline/);
+  assert.match(i18n, /historyAssistantLabel/);
+  assert.match(chatAction, /normalizeLocale\(localeInput\)/);
+  assert.match(chatAction, /getPromoProductGuidance\(locale\)/);
+  assert.match(chatWidget, /const \{ locale, messages \} = useLocale\(\)/);
+  assert.match(chatWidget, /toLocaleString\(locale\)/);
 });
 
 test('meal form auto-fills main food with AI and removes manual notes field', () => {

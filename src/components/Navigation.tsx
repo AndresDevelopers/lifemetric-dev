@@ -149,13 +149,6 @@ export default function Navigation({ userName }: NavigationProps) {
                       <span className="font-semibold">{messages.navigation.logout}</span>
                     </button>
                   </form>
-
-                  <button
-                    onClick={() => setIsMenuOpen(false)}
-                    className="w-full mt-2 py-4 rounded-2xl bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-bold active:scale-[0.98] transition-all"
-                  >
-                    {messages.common.close}
-                  </button>
                 </div>
               </div>
             </div>

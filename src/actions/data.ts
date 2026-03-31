@@ -17,14 +17,18 @@ export async function getSessionPacienteId() {
     const parsedPayload = JSON.parse(payload) as { pacienteId?: string; timestamp?: number };
     if (!parsedPayload.pacienteId || typeof parsedPayload.timestamp !== 'number') return null;
 
-    const sessionRows = await prisma.$queryRaw<Array<{ last_login_at: Date | null }>>`
-      SELECT last_login_at
+    const sessionRows = await prisma.$queryRaw<Array<{ last_login_at: Date | null; activo: boolean }>>`
+      SELECT last_login_at, activo
       FROM pacientes
       WHERE paciente_id = ${parsedPayload.pacienteId}::uuid
       LIMIT 1
     `;
 
     const lastLoginAt = sessionRows[0]?.last_login_at ?? null;
+    const isActive = sessionRows[0]?.activo ?? false;
+    if (!isActive) {
+      return null;
+    }
     const lastLoginMs = lastLoginAt ? new Date(lastLoginAt).getTime() : null;
     // Invalidate sessions that were issued more than 30 seconds BEFORE the last recorded login.
     // This protects against session fixation while tolerating the race condition between

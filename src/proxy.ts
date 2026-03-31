@@ -38,6 +38,10 @@ function applyLocaleCookie(request: NextRequest, response: NextResponse) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isInternalAppRequest =
+    request.headers.has('next-action') ||
+    request.headers.has('rsc') ||
+    request.headers.has('next-router-state-tree');
 
   if (
     pathname.startsWith('/_next') ||
@@ -46,6 +50,10 @@ export async function proxy(request: NextRequest) {
     pathname.match(/\.(.*)$/)
   ) {
     return NextResponse.next();
+  }
+
+  if (isInternalAppRequest) {
+    return applyLocaleCookie(request, NextResponse.next());
   }
 
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));

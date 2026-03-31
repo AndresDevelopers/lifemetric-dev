@@ -26,8 +26,6 @@ model Paciente {
   password_hash          String
   newsletter_suscrito    Boolean             @default(true)
   idioma                 String              @default("es")
-  deleted_at             DateTime?           @db.Timestamptz(6)
-
   comidas                Comida[]
   glucosa                Glucosa[]
   habitos                Habito[]

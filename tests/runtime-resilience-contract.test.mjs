@@ -82,12 +82,19 @@ test('auth actions use supabase auth for sign in, sign up and recovery', () => {
 });
 
 test('register page does not auto-redirect when registration requires email verification', () => {
-  assert.match(register, /state\?\.success && !state\?\.message/);
+  assert.doesNotMatch(register, /router\.push\('\//);
   assert.match(register, /name="fechaNacimiento"/);
   assert.match(register, /name="diagnostico"/);
   assert.match(register, /name="productoPermitido"/);
   assert.match(register, /name="doctorAsignado"/);
   assert.match(register, /diagnosisOptions\.map/);
+});
+
+test('auth success navigation happens in server actions instead of client router pushes', () => {
+  assert.match(auth, /redirectTo = '\/'/);
+  assert.match(auth, /if \(redirectTo\) \{\s*redirect\(redirectTo\);/);
+  assert.doesNotMatch(login, /router\.push\('\//);
+  assert.doesNotMatch(register, /router\.push\('\//);
 });
 
 test('session signing supports auth secret fallback chain', () => {

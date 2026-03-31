@@ -75,9 +75,11 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
 - En medicación, la IA completa automáticamente nombre/dosis al subir foto; además, cuando identifica un medicamento del catálogo, muestra debajo de la imagen una descripción breve de para qué se utiliza.
 - La dosis en el formulario de medicación es opcional; si no se captura, se guarda como "No especificada" para mantener consistencia del registro.
 - El widget de chat incluye iconos de historial y limpieza de conversación para recuperar sesiones previas o iniciar una nueva conversación rápidamente.
+- El widget de chat ahora consume el contexto completo del paciente: perfil clínico, datos de Ajustes y el historial completo de comidas, glucosa, hábitos, medicación y laboratorios para responder con más contexto.
 - En login, el logo de marca se adapta para ocupar casi todo el ancho de su fila con padding vertical para mantener proporción visual en logos alargados.
 - En comidas, al subir foto la IA autocompleta automáticamente el campo del plato principal y se eliminó el campo de "cómo te sientes" del formulario para simplificar el guardado.
 - Tanto en comidas como en medicación, los nombres autocompletados por IA siguen siendo editables para corrección manual del usuario.
+- El guardado de comidas debe mantener alineado el payload de `src/actions/comida.ts` con los nombres exactos del modelo `Comida` en Prisma, especialmente `clasificacion_carbohidrato`, para evitar errores de persistencia en PostgreSQL.
 - En la página de inicio autenticada se removió el indicador circular junto al título del header para un diseño más limpio.
 - Retención automática de archivos:
   - Imágenes de comidas: se eliminan automáticamente a los **365 días**.
@@ -95,6 +97,8 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
 - Auth: header `Authorization: Bearer <MAINTENANCE_JOB_TOKEN>`
 - Configura `MAINTENANCE_JOB_TOKEN` en `.env`.
 
+
+- El widget de chat ahora responde en el idioma configurado dentro de la app y cambia en caliente cuando el usuario actualiza su preferencia en Ajustes.
 
 ## Escaneo anti-malware en subida de archivos
 

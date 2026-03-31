@@ -117,7 +117,7 @@ export default function NuevaComida() {
           setAiPersonalized(true);
         }
         if (meal_description) {
-          setValue("nota", meal_description, { shouldValidate: true });
+          setValue("nota", meal_description);
         }
         // Guardar info de salud del alimento
         if (es_saludable !== undefined && es_saludable !== null) {
@@ -403,18 +403,6 @@ export default function NuevaComida() {
               )}
             </div>
 
-
-            <div className="relative">
-              <label className="mb-2 block text-label-sm font-bold uppercase tracking-widest text-slate-500">
-                {foodMessages.notesLabel}
-              </label>
-              <textarea
-                {...register("nota")}
-                rows={3}
-                className="w-full bg-surface-container-highest/50 border-none rounded-2xl py-4 px-5 text-on-surface placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 transition-all"
-                placeholder={foodMessages.notesPlaceholder}
-              />
-            </div>
 
             {analyzingPhoto && (
               <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl animate-pulse">

@@ -73,6 +73,7 @@ export type PacienteContexto = {
 const suggestionsSchema = z.object({
   summary: z.string(),
   suggestions: z.array(z.string()).max(6),
+  importantAlert: z.string().optional(),
   centralProblems: z.array(z.string()).max(5).optional(),
   priorityPlan: z.array(z.string()).max(8).optional(),
   nutritionFocus: z.array(z.string()).max(8).optional(),

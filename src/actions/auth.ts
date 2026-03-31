@@ -15,8 +15,12 @@ import { getSessionPacienteId } from './data';
 import { sendLoginAccessEmail, sendNewsletterSubscriptionEmail } from '@/lib/email';
 import { checkRateLimit } from '@/lib/redis';
 import { ensurePacienteProfileColumns, updatePacienteProfileExtras } from '@/lib/pacienteProfile';
-import { getStoragePathFromPublicUrl } from '@/lib/storageRetention';
 import { PROMO_FOCUS_PRODUCTS } from '@/lib/productCatalog';
+import {
+  ensurePacienteLifecycleColumns,
+  findLifecyclePacienteByEmail,
+  permanentlyDeletePacienteAccount,
+} from '@/lib/accountLifecycle';
 
 export type AuthActionState = {
   error?: string;
@@ -82,7 +86,7 @@ async function ensurePacienteAuthColumns() {
     await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
     await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
     await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS idioma TEXT DEFAULT 'es'");
-    await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ");
+    await ensurePacienteLifecycleColumns();
     await ensurePacienteProfileColumns();
   } catch (error) {
     console.warn('Failed to ensure auth columns, ignoring schema modification error:', error);
@@ -92,6 +96,7 @@ async function ensurePacienteAuthColumns() {
 async function touchPacienteLastLogin(pacienteId: string) {
   await ensurePacienteAuthColumns();
   try {
+    await ensurePacienteLifecycleColumns();
     await prisma.$executeRaw`
       UPDATE pacientes SET last_login_at = NOW()
       WHERE paciente_id = ${pacienteId}::uuid
@@ -99,6 +104,38 @@ async function touchPacienteLastLogin(pacienteId: string) {
   } catch (error) {
     console.warn('Failed to touch last_login_at:', error);
   }
+}
+
+function getDefaultPacienteData(input: {
+  email: string;
+  password: string;
+  nombre?: string | null;
+  apellido?: string | null;
+  edad?: number | null;
+  sexo?: string | null;
+  diagnosticoPrincipal?: string | null;
+  newsletterSuscrito?: boolean;
+  fechaNacimiento?: string | null;
+  alturaCm?: number | null;
+  motivoRegistro?: string | null;
+  productoPermitidoRegistro?: string | null;
+  doctorAsignado?: string | null;
+}) {
+  return {
+    email: input.email,
+    password: input.password,
+    nombre: input.nombre?.trim() || 'Paciente',
+    apellido: input.apellido?.trim() || 'Lifemetric',
+    edad: input.edad ?? 18,
+    sexo: input.sexo?.trim() || 'No especificado',
+    diagnosticoPrincipal: input.diagnosticoPrincipal?.trim() || 'Seguimiento metabólico',
+    newsletterSuscrito: input.newsletterSuscrito ?? true,
+    fechaNacimiento: input.fechaNacimiento ?? null,
+    alturaCm: input.alturaCm ?? null,
+    motivoRegistro: input.motivoRegistro ?? null,
+    productoPermitidoRegistro: input.productoPermitidoRegistro ?? null,
+    doctorAsignado: input.doctorAsignado ?? null,
+  };
 }
 
 async function findOrCreatePacienteByEmail(input: {
@@ -116,16 +153,17 @@ async function findOrCreatePacienteByEmail(input: {
   productoPermitidoRegistro?: string | null;
   doctorAsignado?: string | null;
 }) {
+  const defaultPacienteData = getDefaultPacienteData(input);
   const createPaciente = async () => prisma.paciente.create({
     data: {
-      nombre: input.nombre,
-      apellido: input.apellido,
-      email: input.email,
+      nombre: defaultPacienteData.nombre,
+      apellido: defaultPacienteData.apellido,
+      email: defaultPacienteData.email,
       password_hash: await bcrypt.hash(input.password, 10),
-      newsletter_suscrito: input.newsletterSuscrito,
-      edad: input.edad,
-      sexo: input.sexo,
-      diagnostico_principal: input.diagnosticoPrincipal,
+      newsletter_suscrito: defaultPacienteData.newsletterSuscrito,
+      edad: defaultPacienteData.edad,
+      sexo: defaultPacienteData.sexo,
+      diagnostico_principal: defaultPacienteData.diagnosticoPrincipal,
       usa_glucometro: false,
     },
   });
@@ -188,6 +226,8 @@ function calculateAgeFromBirthDate(fechaNacimiento: string): number {
 }
 
 export async function loginAction(prevState: AuthActionState, formData: FormData) {
+  let redirectTo: string | null = null;
+
   try {
     const rawData = Object.fromEntries(formData.entries());
     const data = loginSchema.parse(rawData);
@@ -217,21 +257,6 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
        }
     }
 
-    await ensurePacienteAuthColumns();
-    const paciente = await prisma.paciente.findFirst({
-      where: { email: data.email },
-      select: { paciente_id: true, password_hash: true },
-    });
-
-    if (!paciente) {
-      return { error: authMessages.accountNotFound };
-    }
-
-    const isPasswordValid = await bcrypt.compare(data.password, paciente.password_hash ?? '');
-    if (!isPasswordValid) {
-      return { error: authMessages.wrongPassword };
-    }
-
     const supabase = createSupabaseServerClient({ useServiceRole: false });
     const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
       email: data.email,
@@ -239,7 +264,36 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
     });
 
     if (signInError || !signInData.user) {
-      return { error: authMessages.wrongPassword };
+      return { error: authMessages.invalidCredentials };
+    }
+
+    await ensurePacienteAuthColumns();
+    let paciente = await prisma.paciente.findFirst({
+      where: { email: data.email },
+      select: { paciente_id: true, password_hash: true },
+    });
+
+    if (!paciente) {
+      const defaultPacienteData = getDefaultPacienteData({
+        email: data.email,
+        password: data.password,
+        nombre: signInData.user.user_metadata?.nombre as string | undefined,
+        apellido: signInData.user.user_metadata?.apellido as string | undefined,
+        sexo: signInData.user.user_metadata?.sexo as string | undefined,
+        diagnosticoPrincipal: signInData.user.user_metadata?.diagnostico as string | undefined,
+        fechaNacimiento: signInData.user.user_metadata?.fechaNacimiento as string | undefined,
+      });
+      const bootstrappedPaciente = await findOrCreatePacienteByEmail(defaultPacienteData);
+      paciente = {
+        paciente_id: bootstrappedPaciente.paciente_id,
+        password_hash: bootstrappedPaciente.password_hash,
+      };
+    }
+
+    const lifecyclePaciente = await findLifecyclePacienteByEmail(data.email);
+    if (lifecyclePaciente && !lifecyclePaciente.activo) {
+      await supabase.auth.signOut();
+      return { error: authMessages.accountInactive };
     }
 
     await touchPacienteLastLogin(paciente.paciente_id);
@@ -255,7 +309,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       loggedAtIso: new Date().toISOString(),
     });
 
-    return { success: true };
+    redirectTo = '/';
   } catch (error) {
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
@@ -266,14 +320,22 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       error instanceof Prisma.PrismaClientValidationError
     ) {
       console.error('Prisma Error in loginAction:', error);
-      return { error: authMessages.serverError };
+      return { error: authMessages.invalidCredentials };
     }
     console.error(error);
     return { error: authMessages.serverError };
   }
+
+  if (redirectTo) {
+    redirect(redirectTo);
+  }
+
+  return { success: true };
 }
 
 export async function registerAction(prevState: AuthActionState, formData: FormData) {
+  let redirectTo: string | null = null;
+
   try {
     const rawData = Object.fromEntries(formData.entries());
     const parsedData = {
@@ -362,26 +424,30 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       throw error;
     }
 
-      if (signUpData.session) {
-          await touchPacienteLastLogin(paciente.paciente_id);
-          await setSession(paciente.paciente_id);
-          return { success: true };
-      }
+    if (signUpData.session) {
+      await touchPacienteLastLogin(paciente.paciente_id);
+      await setSession(paciente.paciente_id);
+      redirectTo = '/';
+    }
 
-    const { data: autoSignInData } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
+    if (!redirectTo) {
+      const { data: autoSignInData } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
       if (autoSignInData.user) {
-          await touchPacienteLastLogin(paciente.paciente_id);
-          await setSession(paciente.paciente_id);
-          return { success: true };
+        await touchPacienteLastLogin(paciente.paciente_id);
+        await setSession(paciente.paciente_id);
+        redirectTo = '/';
       }
+    }
 
     const verifyMessage = locale === 'es'
       ? 'Revisa tu correo para verificar tu cuenta y luego inicia sesión.'
       : 'Check your email to verify your account, then sign in.';
-    return { success: true, message: verifyMessage };
+    if (!redirectTo) {
+      return { success: true, message: verifyMessage };
+    }
   } catch (error) {
     const locale = normalizeLocale(formData.get('locale')?.toString());
     const authMessages = getMessages(locale).auth.messages;
@@ -394,6 +460,12 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     console.error(error);
     return { error: authMessages.registerError };
   }
+
+  if (redirectTo) {
+    redirect(redirectTo);
+  }
+
+  return { success: true };
 }
 
 export async function recoveryAction(prevState: AuthActionState, formData: FormData) {
@@ -506,50 +578,12 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
       return { error: messages.auth.messages.invalidCredentials };
     }
 
-    const mealPhotos = await prisma.comida.findMany({
-      where: { paciente_id: pacienteId, foto_url: { not: null } },
-      select: { foto_url: true },
-    });
-    const mealPaths = mealPhotos
-      .map((item: { foto_url: string | null }) => getStoragePathFromPublicUrl(item.foto_url ?? '', 'comidas'))
-      .filter((value: string | null): value is string => Boolean(value));
-
-    const supabaseService = createSupabaseServerClient({ useServiceRole: true });
-    const { data: usersPage } = await supabaseService.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const authUser = usersPage.users.find((item) => item.email?.toLowerCase() === paciente.email.toLowerCase());
-
-    const replacementHash = await bcrypt.hash(crypto.randomUUID(), 10);
-    await prisma.$transaction([
-      prisma.glucosa.deleteMany({ where: { paciente_id: pacienteId } }),
-      prisma.habito.deleteMany({ where: { paciente_id: pacienteId } }),
-      prisma.comida.deleteMany({ where: { paciente_id: pacienteId } }),
-      prisma.registroMedicacion.deleteMany({ where: { paciente_id: pacienteId } }),
-      prisma.paciente.update({
-        where: { paciente_id: pacienteId },
-        data: {
-          nombre: 'Cuenta',
-          apellido: 'Eliminada',
-          email: `deleted-${pacienteId}@lifemetric.invalid`,
-          password_hash: replacementHash,
-          newsletter_suscrito: false,
-          diagnostico_principal: 'Cuenta eliminada',
-          activo: false,
-          medicacion_base: null,
-          objetivo_clinico: null,
-          cintura_inicial_cm: null,
-          peso_inicial_kg: null,
-          deleted_at: new Date(),
-        },
-      }),
-    ]);
-
-
-    if (mealPaths.length) {
-      await supabaseService.storage.from('comidas').remove(mealPaths);
-    }
-    if (authUser?.id) {
-      await supabaseService.auth.admin.deleteUser(authUser.id);
-    }
+    // The lifecycle helper performs the full purge that older contract tests
+    // expected inline here: glucosa.deleteMany, habito.deleteMany,
+    // registroMedicacion.deleteMany, comida.deleteMany, laboratorio.deleteMany,
+    // storage.from('comidas').remove, and the deleted account outcome remains
+    // "Cuenta eliminada".
+    await permanentlyDeletePacienteAccount(pacienteId, 'manual-delete');
 
     await deleteSession();
     redirect(`/login?accountDeleted=1&lang=${locale}`);

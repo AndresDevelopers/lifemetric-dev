@@ -19,7 +19,10 @@ const medicacionInputSchema = z.object({
 });
 
 const medicationPhotoSchema = z.object({
-  imageUrl: z.string().url(),
+  imageUrl: z
+    .string()
+    .min(1)
+    .refine((value) => value.startsWith("data:image/") || /^https?:\/\//.test(value), "invalid_image"),
   locale: z.enum(["es", "en"]),
 });
 
