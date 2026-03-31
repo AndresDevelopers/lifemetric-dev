@@ -538,9 +538,11 @@ export async function deleteAccountAction(prevState: AuthActionState, formData: 
           objetivo_clinico: null,
           cintura_inicial_cm: null,
           peso_inicial_kg: null,
+          deleted_at: new Date(),
         },
       }),
     ]);
+
 
     if (mealPaths.length) {
       await supabaseService.storage.from('comidas').remove(mealPaths);
