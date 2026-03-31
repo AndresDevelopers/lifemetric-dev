@@ -11,7 +11,7 @@ const autofillSchema = z.object({
   locale: z.enum(["es", "en"]).default("es"),
 });
 
-const labResultSchema = z.object({
+export const labResultSchema = z.object({
   hba1c: z.number().min(0).max(20).optional(),
   glucosa_ayuno: z.number().min(0).max(1000).optional(),
   trigliceridos: z.number().min(0).max(2000).optional(),

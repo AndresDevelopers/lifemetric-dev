@@ -10,8 +10,6 @@ import { getSessionPacienteId } from "@/actions/data";
 import { guardarRegistroMedicacion } from "@/actions/medicacion";
 import { useLocale } from "@/components/providers/LocaleProvider";
 
-import { supabase } from "@/lib/supabase";
-
 const medicacionSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
   fecha: z.string(),

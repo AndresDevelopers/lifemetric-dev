@@ -317,7 +317,6 @@ export default function NuevaComida() {
                     <span className="material-symbols-outlined text-sm">close</span>
                   </button>
                 )}
-                {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus */}
                 <div
                   role="button"
                   tabIndex={0}

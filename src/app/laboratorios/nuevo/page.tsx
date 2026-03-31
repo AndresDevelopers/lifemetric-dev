@@ -42,7 +42,7 @@ export default function SubirLaboratorios() {
   const labsMessages = messages.labsForm;
   const now = new Date();
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue } = useForm<FormValues>({
     resolver: zodResolver(labSchema),
     defaultValues: {
       fecha_estudio: now.toISOString().slice(0, 10),

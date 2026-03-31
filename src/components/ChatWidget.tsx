@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { chatWithAIAction } from "@/actions/chat";
+import Image from "next/image";
 
 const CHAT_STORAGE_KEY = "lifemetric_chat_conversations_v1";
 const MAX_SAVED_CONVERSATIONS = 8;
@@ -326,9 +327,12 @@ export default function ChatWidget() {
                 {msg.role === "assistant" ? renderAssistantMarkdown(msg.content) : (
                 <div className="flex flex-col gap-2">
                   {msg.imageUrl && (
-                    <img 
+                    <Image
                       src={msg.imageUrl} 
                       alt="Imagen adjunta" 
+                      width={400}
+                      height={300}
+                      unoptimized={true}
                       className="max-w-full h-auto rounded-lg object-cover border border-slate-200 dark:border-white/10"
                     />
                   )}
@@ -355,9 +359,12 @@ export default function ChatWidget() {
         <div className="p-5 bg-white/20 dark:bg-white/5">
           {selectedImage && (
             <div className="mb-3 relative inline-block">
-              <img 
+              <Image
                 src={selectedImage} 
                 alt="Imagen seleccionada" 
+                width={80}
+                height={80}
+                unoptimized={true}
                 className="h-20 w-auto rounded-lg object-cover border-2 border-blue-500"
               />
               <button

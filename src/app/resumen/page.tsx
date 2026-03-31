@@ -197,11 +197,6 @@ export default async function ResumenSemanal({
     take: 10
   });
   
-  // Encontrar el laboratorio con más datos (valores numéricos)
-  const laboratorioConDatos = allLaboratorios.find((l: { hba1c: unknown; glucosa_ayuno: unknown; trigliceridos: unknown; hdl: unknown; ldl: unknown }) => 
-    l.hba1c != null || l.glucosa_ayuno != null || l.trigliceridos != null || l.hdl != null || l.ldl != null
-  );
-
   // Run AI vision extraction sequentially (to avoid concurrent 429s) 
   // and only for labs that don't have extracted values yet
   const labVisionResults: Array<Record<string, number | null> | null> = [];
