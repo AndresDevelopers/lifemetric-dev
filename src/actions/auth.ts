@@ -77,20 +77,28 @@ function isNextRedirectError(error: unknown): error is { digest: string } {
 }
 
 async function ensurePacienteAuthColumns() {
-  await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email TEXT');
-  await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
-  await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
-  await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS idioma TEXT DEFAULT 'es'");
-  await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ");
-  await ensurePacienteProfileColumns();
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS email TEXT');
+    await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS password_hash TEXT');
+    await prisma.$executeRawUnsafe('ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS newsletter_suscrito BOOLEAN DEFAULT TRUE');
+    await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS idioma TEXT DEFAULT 'es'");
+    await prisma.$executeRawUnsafe("ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ");
+    await ensurePacienteProfileColumns();
+  } catch (error) {
+    console.warn('Failed to ensure auth columns, ignoring schema modification error:', error);
+  }
 }
 
 async function touchPacienteLastLogin(pacienteId: string) {
   await ensurePacienteAuthColumns();
-  await prisma.$executeRaw`
-    UPDATE pacientes SET last_login_at = NOW()
-    WHERE paciente_id = ${pacienteId}::uuid
-  `;
+  try {
+    await prisma.$executeRaw`
+      UPDATE pacientes SET last_login_at = NOW()
+      WHERE paciente_id = ${pacienteId}::uuid
+    `;
+  } catch (error) {
+    console.warn('Failed to touch last_login_at:', error);
+  }
 }
 
 async function findOrCreatePacienteByEmail(input: {
@@ -257,7 +265,8 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       error instanceof Prisma.PrismaClientKnownRequestError ||
       error instanceof Prisma.PrismaClientValidationError
     ) {
-      return { error: authMessages.invalidCredentials };
+      console.error('Prisma Error in loginAction:', error);
+      return { error: authMessages.serverError };
     }
     console.error(error);
     return { error: authMessages.serverError };
