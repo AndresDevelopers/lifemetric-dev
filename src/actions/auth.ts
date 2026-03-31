@@ -257,7 +257,8 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
       error instanceof Prisma.PrismaClientKnownRequestError ||
       error instanceof Prisma.PrismaClientValidationError
     ) {
-      return { error: authMessages.invalidCredentials };
+      console.error('Prisma Error in loginAction:', error);
+      return { error: authMessages.serverError };
     }
     console.error(error);
     return { error: authMessages.serverError };
