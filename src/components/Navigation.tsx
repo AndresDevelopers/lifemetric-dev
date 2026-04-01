@@ -68,6 +68,7 @@ export default function Navigation({ userName }: NavigationProps) {
   const avatarStyle = {
     background: `hsl(${hue} 65% 50%)`,
   };
+  const isPathPending = (path: string) => pendingPath === path && pathname !== path;
 
   return (
     <>
@@ -192,7 +193,7 @@ export default function Navigation({ userName }: NavigationProps) {
                   transition-all duration-300 active:scale-90 group-hover:scale-110
                 `}>
                   <span className="material-symbols-outlined text-white text-[32px] font-bold">
-                    {pendingPath === item.path ? "progress_activity" : "add"}
+                    {isPathPending(item.path) ? "progress_activity" : "add"}
                   </span>
                 </div>
                 <span className={`text-[10px] font-black uppercase tracking-widest mt-2 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
@@ -218,10 +219,10 @@ export default function Navigation({ userName }: NavigationProps) {
                 ${isActive ? 'scale-110' : ''}
               `}>
                 <span
-                  className={`material-symbols-outlined text-[26px] ${pendingPath === item.path ? "animate-spin" : ""}`}
+                  className={`material-symbols-outlined text-[26px] ${isPathPending(item.path) ? "animate-spin" : ""}`}
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >
-                  {pendingPath === item.path ? "progress_activity" : item.icon}
+                  {isPathPending(item.path) ? "progress_activity" : item.icon}
                 </span>
                 <span className={`text-[9.5px] font-bold uppercase tracking-tight mt-1.5 ${isActive ? 'opacity-100' : 'opacity-60'}`}>
                   {item.name}
@@ -292,10 +293,10 @@ export default function Navigation({ userName }: NavigationProps) {
                 }`}
               >
                 <span
-                  className={`material-symbols-outlined ${pendingPath === item.path ? "animate-spin" : ""}`}
+                  className={`material-symbols-outlined ${isPathPending(item.path) ? "animate-spin" : ""}`}
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >
-                  {pendingPath === item.path ? "progress_activity" : item.icon}
+                  {isPathPending(item.path) ? "progress_activity" : item.icon}
                 </span>
                 <span className="text-sm font-semibold">{item.name}</span>
               </Link>

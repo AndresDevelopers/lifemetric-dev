@@ -107,7 +107,6 @@ const getCachedLabVision = unstable_cache(
   { revalidate: 86400 }
 );
 
-const AI_SUGGESTIONS_TIMEOUT_MS = 4000;
 const LAB_VISION_TIMEOUT_MS = 2500;
 
 export default async function ResumenSemanal({
@@ -359,13 +358,10 @@ export default async function ResumenSemanal({
 
   let aiSuggestions = null;
   try {
-    aiSuggestions = await Promise.race([
-      getCachedAISuggestions(
-        locale,
-        aiSuggestionPayload
-      ),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), AI_SUGGESTIONS_TIMEOUT_MS)),
-    ]);
+    aiSuggestions = await getCachedAISuggestions(
+      locale,
+      aiSuggestionPayload
+    );
   } catch {
     aiSuggestions = null;
   }
