@@ -147,7 +147,7 @@ export default async function ResumenSemanal({
   const treintaDiasAtras = new Date();
   treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
 
-  const [paciente, profileExtras] = await Promise.all([
+  const [paciente, profileExtras, latestGlucose] = await Promise.all([
     prisma.paciente.findUnique({
       where: { paciente_id: pacienteId },
       include: {
@@ -174,11 +174,16 @@ export default async function ResumenSemanal({
       }
     }),
     getPacienteProfileExtras(pacienteId),
+    prisma.glucosa.findFirst({
+      where: { paciente_id: pacienteId },
+      orderBy: [{ fecha: "desc" }, { hora: "desc" }],
+    }),
   ]);
 
   if (!paciente) {
     redirect('/login');
   }
+
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
   const ultimoLaboratorio = paciente.laboratorios[0] ?? null;
   const latestLabOverall = paciente.laboratorios[0] ?? null;
@@ -248,6 +253,27 @@ export default async function ResumenSemanal({
     })),
   );
   const promedioGlucosaConFallback = promedioGlucosa > 0 ? promedioGlucosa : (glucosaEstimadaPorComida ?? 0);
+  const latestGlucoseValue = latestGlucose?.valor_glucosa ?? null;
+  const latestGlucoseStatus =
+    latestGlucoseValue == null
+      ? null
+      : latestGlucoseValue < 70
+        ? messages.summary.latestGlucoseStatusLow
+        : latestGlucoseValue > 250
+          ? messages.summary.latestGlucoseStatusVeryHigh
+          : latestGlucoseValue > 180
+            ? messages.summary.latestGlucoseStatusHigh
+            : messages.summary.latestGlucoseStatusInRange;
+  const latestGlucoseCriticalMessage =
+    latestGlucoseValue == null
+      ? messages.summary.waitingForAlertData
+      : latestGlucoseValue < 70
+        ? messages.summary.latestGlucoseCriticalLow
+        : latestGlucoseValue > 250
+          ? messages.summary.latestGlucoseCriticalVeryHigh
+          : latestGlucoseValue > 180
+            ? messages.summary.latestGlucoseCriticalHigh
+            : messages.summary.latestGlucoseCriticalInRange;
 
   const diasEjercicio = paciente.habitos.filter((h: (typeof paciente.habitos)[number]) => (h.ejercicio_min || 0) > 0).length;
   const promedioSueno = paciente.habitos.length 
@@ -409,11 +435,14 @@ export default async function ResumenSemanal({
             <h2 className="text-4xl font-extrabold mb-1">{data.paciente}</h2>
             <div className="flex gap-4 mt-6">
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1">
-                <p className="text-blue-200 text-xs font-semibold">{messages.summary.averageGlucose}</p>
+                <p className="text-blue-200 text-xs font-semibold">{messages.summary.latestGlucose}</p>
                 <div className="flex items-end gap-1 mt-1">
-                  <span className="text-3xl font-black">{data.promedio_glucosa}</span>
+                  <span className="text-3xl font-black">{latestGlucoseValue ?? messages.summary.latestGlucoseFallback}</span>
                   <span className="text-sm pb-1">mg/dL</span>
                 </div>
+                {latestGlucoseStatus && (
+                  <p className="mt-2 text-xs font-semibold text-blue-100">{latestGlucoseStatus}</p>
+                )}
               </div>
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1">
                 <p className="text-blue-200 text-xs font-semibold">{messages.summary.lastHbA1c}</p>
@@ -422,6 +451,12 @@ export default async function ResumenSemanal({
                   <span className="text-sm pb-1">%</span>
                 </div>
               </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-amber-300/50 bg-amber-300/10 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-100">
+                {messages.summary.latestGlucoseCriticalLabel}
+              </p>
+              <p className="mt-1 text-sm text-amber-50">{latestGlucoseCriticalMessage}</p>
             </div>
             {(data.altura_cm || data.motivo_registro) && (
               <div className="mt-5 rounded-2xl bg-white/10 p-4 backdrop-blur-md">
