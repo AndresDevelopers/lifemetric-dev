@@ -10,6 +10,7 @@ import {
 } from '@/lib/i18n';
 import { prisma } from '@/lib/prisma';
 import { getSessionPacienteId } from '@/actions/data';
+import { estimateGlucoseFromMeals } from '@/lib/glucoseInference';
 
 
 function formatAverageMedicationTime(entries: { hora: Date }[]): string {
@@ -61,8 +62,18 @@ export default async function Home() {
             lt: endOfToday,
           },
         },
-        orderBy: { fecha: 'desc' },
-        take: 1,
+        orderBy: [{ fecha: 'desc' }, { hora: 'desc' }],
+        take: 10,
+      },
+      comidas: {
+        where: {
+          fecha: {
+            gte: startOfToday,
+            lt: endOfToday,
+          },
+        },
+        orderBy: [{ fecha: 'desc' }, { hora: 'desc' }],
+        take: 5,
       },
       habitos: {
         where: {
@@ -90,8 +101,30 @@ export default async function Home() {
   }
 
   // Calculate metrics
-  const lastGlucoseVal = paciente.glucosa?.[0]?.valor_glucosa;
-  const lastGlucose = lastGlucoseVal !== null && lastGlucoseVal !== undefined ? String(lastGlucoseVal) : '--';
+  const fastingGlucose = paciente.glucosa.find((entry: (typeof paciente.glucosa)[number]) => entry.tipo_glucosa?.toLowerCase() === 'ayuno');
+  const latestGlucoseOfDay = paciente.glucosa?.[0] ?? null;
+  const preferredGlucose = fastingGlucose ?? latestGlucoseOfDay;
+  const lastGlucoseVal = preferredGlucose?.valor_glucosa;
+  const estimatedGlucoseFromMeals = estimateGlucoseFromMeals(
+    paciente.comidas.map((meal: (typeof paciente.comidas)[number]) => ({
+      carbohidratos_g: meal.carbohidratos_g != null ? Number(meal.carbohidratos_g) : null,
+      fibra_g: meal.fibra_g != null ? Number(meal.fibra_g) : null,
+      proteina_g: meal.proteina_g != null ? Number(meal.proteina_g) : null,
+      clasificacion_final: meal.clasificacion_final,
+    })),
+  );
+  const glucoseCardValue =
+    lastGlucoseVal !== null && lastGlucoseVal !== undefined
+      ? String(lastGlucoseVal)
+      : estimatedGlucoseFromMeals != null
+        ? String(estimatedGlucoseFromMeals)
+        : '--';
+  const glucoseDataLabel =
+    lastGlucoseVal !== null && lastGlucoseVal !== undefined
+      ? messages.home.todayData
+      : estimatedGlucoseFromMeals != null
+        ? messages.home.glucoseEstimatedFromMeals
+        : messages.home.todayData;
   
   const exerciseToday = paciente.habitos?.[0]?.ejercicio_min ?? 0;
   const sleepToday = paciente.habitos?.[0]?.sueno_horas ?? 0;
@@ -158,8 +191,8 @@ export default async function Home() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               label={messages.summary.fastingGlucose}
-              dataLabel={messages.home.todayData}
-              value={lastGlucose}
+              dataLabel={glucoseDataLabel}
+              value={glucoseCardValue}
               unit="mg/dL"
               icon="glucose"
               color="text-blue-500"
