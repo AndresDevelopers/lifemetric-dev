@@ -170,7 +170,7 @@ const messages = {
       exerciseDays: 'Ejercicio',
       sleepAverage: 'Prom. sueño',
       waterPerDay: 'Vasos / día',
-      medicationAdherence: 'Adherencia meds',
+      medicationAdherence: 'Medicación tomada',
       medicationsSectionTitle: 'Medicamentos reportados',
       medicationsSectionSubtitle: 'Resumen de lo que tomaste en el rango seleccionado.',
       medicationsTakenLabel: 'Registros',
