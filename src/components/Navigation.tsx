@@ -37,7 +37,7 @@ export default function Navigation({ userName }: NavigationProps) {
   const { messages } = useLocale();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [isNavigating, startTransition] = useTransition();
 
   const handleNavClick = (path: string) => (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -68,7 +68,7 @@ export default function Navigation({ userName }: NavigationProps) {
   const avatarStyle = {
     background: `hsl(${hue} 65% 50%)`,
   };
-  const isPathPending = (path: string) => pendingPath === path && pathname !== path;
+  const isPathPending = (path: string) => isNavigating && pendingPath === path && pathname !== path;
 
   return (
     <>

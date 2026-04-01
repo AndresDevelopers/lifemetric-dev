@@ -44,7 +44,6 @@ export const PROMO_FOCUS_PRODUCTS = [
 
 export const REGISTER_DIAGNOSIS_OPTIONS = {
   es: [
-    'Control',
     'Control metabólico',
     'Problemas de sueño',
     'Estrés o ansiedad',
@@ -58,7 +57,6 @@ export const REGISTER_DIAGNOSIS_OPTIONS = {
     'Artritis',
   ],
   en: [
-    'Control',
     'Metabolic control',
     'Sleep issues',
     'Stress or anxiety',
