@@ -117,3 +117,27 @@ export async function getComidasDeHoy() {
 
   return comidas;
 }
+
+export async function getComidasPorFecha(fechaIso: string) {
+  const pacienteId = await getSessionPacienteId();
+  if (!pacienteId) return [];
+
+  const startDate = new Date(`${fechaIso}T00:00:00`);
+  if (Number.isNaN(startDate.getTime())) return [];
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 1);
+
+  return prisma.comida.findMany({
+    where: {
+      paciente_id: pacienteId,
+      fecha: {
+        gte: startDate,
+        lt: endDate,
+      }
+    },
+    orderBy: [
+      { fecha: 'desc' },
+      { hora: 'desc' },
+    ]
+  });
+}

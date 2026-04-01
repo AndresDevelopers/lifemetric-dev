@@ -83,6 +83,7 @@ model Habito {
   habito_id      String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   paciente_id    String    @db.Uuid
   fecha          DateTime  @db.Date
+  hora           DateTime? @db.Time(6)
   sueno_horas    Decimal?  @db.Decimal(4, 2)
   agua_vasos     Int?
   ejercicio_min  Int?
