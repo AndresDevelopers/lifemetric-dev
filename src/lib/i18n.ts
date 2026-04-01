@@ -139,6 +139,7 @@ const messages = {
       quickActions: 'Acciones Rápidas',
       healthOverview: 'Resumen de Salud',
       medicationAverageTime: 'Hora promedio de medicación',
+      glucoseEstimatedFromMeals: 'Estimado por IA según comidas registradas',
     },
     summary: {
       title: 'Resumen semanal',
@@ -150,6 +151,7 @@ const messages = {
       averageGlucose: 'Promedio glucosa (7d)',
       latestGlucose: 'Glucosa más reciente',
       latestGlucoseFallback: 'Sin registro',
+      latestGlucoseEstimatedTag: 'Estimado por IA',
       latestGlucoseCriticalLabel: 'Mensaje clave',
       latestGlucoseStatusHigh: 'Glucosa alta',
       latestGlucoseStatusVeryHigh: 'Glucosa muy alta',
@@ -609,6 +611,7 @@ const messages = {
       quickActions: 'Quick Actions',
       healthOverview: 'Health Overview',
       medicationAverageTime: 'Average medication time',
+      glucoseEstimatedFromMeals: 'AI estimate from logged meals',
     },
     summary: {
       title: 'Weekly summary',
@@ -620,6 +623,7 @@ const messages = {
       averageGlucose: 'Average glucose (7d)',
       latestGlucose: 'Latest glucose',
       latestGlucoseFallback: 'No reading',
+      latestGlucoseEstimatedTag: 'AI estimate',
       latestGlucoseCriticalLabel: 'Key message',
       latestGlucoseStatusHigh: 'High glucose',
       latestGlucoseStatusVeryHigh: 'Very high glucose',

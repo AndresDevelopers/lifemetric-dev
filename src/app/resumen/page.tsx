@@ -254,24 +254,26 @@ export default async function ResumenSemanal({
   );
   const promedioGlucosaConFallback = promedioGlucosa > 0 ? promedioGlucosa : (glucosaEstimadaPorComida ?? 0);
   const latestGlucoseValue = latestGlucose?.valor_glucosa ?? null;
+  const latestGlucoseDisplayValue = latestGlucoseValue ?? glucosaEstimadaPorComida ?? null;
+  const isLatestGlucoseEstimated = latestGlucoseValue == null && glucosaEstimadaPorComida != null;
   const latestGlucoseStatus =
-    latestGlucoseValue == null
+    latestGlucoseDisplayValue == null
       ? null
-      : latestGlucoseValue < 70
+      : latestGlucoseDisplayValue < 70
         ? messages.summary.latestGlucoseStatusLow
-        : latestGlucoseValue > 250
+        : latestGlucoseDisplayValue > 250
           ? messages.summary.latestGlucoseStatusVeryHigh
-          : latestGlucoseValue > 180
+          : latestGlucoseDisplayValue > 180
             ? messages.summary.latestGlucoseStatusHigh
             : messages.summary.latestGlucoseStatusInRange;
   const latestGlucoseCriticalMessage =
-    latestGlucoseValue == null
+    latestGlucoseDisplayValue == null
       ? messages.summary.waitingForAlertData
-      : latestGlucoseValue < 70
+      : latestGlucoseDisplayValue < 70
         ? messages.summary.latestGlucoseCriticalLow
-        : latestGlucoseValue > 250
+        : latestGlucoseDisplayValue > 250
           ? messages.summary.latestGlucoseCriticalVeryHigh
-          : latestGlucoseValue > 180
+          : latestGlucoseDisplayValue > 180
             ? messages.summary.latestGlucoseCriticalHigh
             : messages.summary.latestGlucoseCriticalInRange;
 
@@ -437,19 +439,15 @@ export default async function ResumenSemanal({
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1">
                 <p className="text-blue-200 text-xs font-semibold">{messages.summary.latestGlucose}</p>
                 <div className="flex items-end gap-1 mt-1">
-                  <span className="text-3xl font-black">{latestGlucoseValue ?? messages.summary.latestGlucoseFallback}</span>
+                  <span className="text-3xl font-black">{latestGlucoseDisplayValue ?? messages.summary.latestGlucoseFallback}</span>
                   <span className="text-sm pb-1">mg/dL</span>
                 </div>
                 {latestGlucoseStatus && (
                   <p className="mt-2 text-xs font-semibold text-blue-100">{latestGlucoseStatus}</p>
                 )}
-              </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex-1">
-                <p className="text-blue-200 text-xs font-semibold">{messages.summary.lastHbA1c}</p>
-                <div className="flex items-end gap-1 mt-1">
-                  <span className="text-3xl font-black">{data.ultima_hba1c}</span>
-                  <span className="text-sm pb-1">%</span>
-                </div>
+                {isLatestGlucoseEstimated && (
+                  <p className="mt-1 text-[11px] font-semibold text-blue-200">{messages.summary.latestGlucoseEstimatedTag}</p>
+                )}
               </div>
             </div>
             <div className="mt-4 rounded-2xl border border-amber-300/50 bg-amber-300/10 p-4">
