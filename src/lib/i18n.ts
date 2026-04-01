@@ -125,6 +125,7 @@ const messages = {
     home: {
       greeting: 'Hola, {name} 👋',
       subtitle: 'Recomendaciones clínicas activas para ti hoy.',
+      todayData: 'Datos del día',
       foodTitle: 'Registrar comida',
       foodSubtitle: 'Lleva el control de tu alimentación',
       glucoseTitle: 'Registrar glucosa',
@@ -290,6 +291,8 @@ const messages = {
       title: 'Mis hábitos',
       heading: '¿Cómo te fue hoy?',
       subtitle: 'Registra tus métricas para encontrar patrones de bienestar.',
+      date: 'Fecha',
+      time: 'Hora',
       water: 'Agua (vasos)',
       waterHint: '250 ml aprox por vaso',
       sleep: 'Sueño (horas)',
@@ -304,7 +307,8 @@ const messages = {
       weight: 'Peso (kg)',
       submit: 'Guardar hábitos',
       submitting: 'Guardando...',
-      success: 'Hábitos registrados (simulación)',
+      success: 'Hábitos registrados exitosamente',
+      saveError: 'No se pudo guardar el registro de hábitos.',
     },
     labsForm: {
       title: 'Laboratorios',
@@ -580,6 +584,7 @@ const messages = {
     home: {
       greeting: 'Hi, {name} 👋',
       subtitle: 'Active clinical recommendations for you today.',
+      todayData: "Today's data",
       foodTitle: 'Log meal',
       foodSubtitle: 'Track your daily nutrition',
       glucoseTitle: 'Log glucose',
@@ -745,6 +750,8 @@ const messages = {
       title: 'My habits',
       heading: 'How did it go today?',
       subtitle: 'Log your metrics to find wellness patterns.',
+      date: 'Date',
+      time: 'Time',
       water: 'Water (glasses)',
       waterHint: 'About 250 ml per glass',
       sleep: 'Sleep (hours)',
@@ -759,7 +766,8 @@ const messages = {
       weight: 'Weight (kg)',
       submit: 'Save habits',
       submitting: 'Saving...',
-      success: 'Habits logged (simulation)',
+      success: 'Habits logged successfully',
+      saveError: 'Could not save the habits record.',
     },
     labsForm: {
       title: 'Labs',

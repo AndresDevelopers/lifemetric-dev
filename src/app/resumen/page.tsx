@@ -107,6 +107,8 @@ const getCachedLabVision = unstable_cache(
   { revalidate: 86400 }
 );
 
+const LAB_VISION_TIMEOUT_MS = 2500;
+
 export default async function ResumenSemanal({
   searchParams,
 }: Readonly<{
@@ -145,105 +147,85 @@ export default async function ResumenSemanal({
   const treintaDiasAtras = new Date();
   treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
 
-  const paciente = await prisma.paciente.findUnique({
-    where: { paciente_id: pacienteId },
-    include: {
-      comidas: {
-        where: { fecha: { gte: treintaDiasAtras } },
-        orderBy: [
-          { fecha: 'desc' },
-          { hora: 'desc' }
-        ]
-      },
-      habitos: {
-        where: { fecha: { gte: startDate, lte: endDate } }
-      },
-      laboratorios: {
-        // Obtener todos los laboratorios para sugerencias AI (sin filtro de fecha)
-        orderBy: { fecha_estudio: 'desc' },
-        take: 10
-      },
-      medicacion: {
-        where: { fecha: { gte: startDate, lte: endDate } }
-      },
-      glucosa: {
-        where: { fecha: { gte: startDate, lte: endDate } }
+  const [paciente, profileExtras] = await Promise.all([
+    prisma.paciente.findUnique({
+      where: { paciente_id: pacienteId },
+      include: {
+        comidas: {
+          where: { fecha: { gte: treintaDiasAtras } },
+          orderBy: [
+            { fecha: 'desc' },
+            { hora: 'desc' }
+          ]
+        },
+        habitos: {
+          where: { fecha: { gte: startDate, lte: endDate } }
+        },
+        laboratorios: {
+          orderBy: { fecha_estudio: 'desc' },
+          take: 10
+        },
+        medicacion: {
+          where: { fecha: { gte: startDate, lte: endDate } }
+        },
+        glucosa: {
+          where: { fecha: { gte: startDate, lte: endDate } }
+        }
       }
-    }
-  });
+    }),
+    getPacienteProfileExtras(pacienteId),
+  ]);
 
   if (!paciente) {
     redirect('/login');
   }
-  const profileExtras = await getPacienteProfileExtras(pacienteId);
-
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
   const ultimoLaboratorio = paciente.laboratorios[0] ?? null;
-  const latestLabOverall = await prisma.laboratorio.findFirst({
-    where: { paciente_id: pacienteId },
-    orderBy: { fecha_estudio: 'desc' },
-    select: { fecha_estudio: true },
-  });
+  const latestLabOverall = paciente.laboratorios[0] ?? null;
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   const isLabDataOlderThanThreeMonths = latestLabOverall
     ? new Date(latestLabOverall.fecha_estudio) < ninetyDaysAgo
     : false;
 
-  // Obtener laboratorios más antiguos para contexto de IA (último año)
-  const allLaboratorios = await prisma.laboratorio.findMany({
-    where: { paciente_id: pacienteId },
-    orderBy: { fecha_estudio: 'desc' },
-    take: 10
-  });
+  const allLaboratorios = paciente.laboratorios;
   
-  // Run AI vision extraction sequentially (to avoid concurrent 429s) 
-  // and only for labs that don't have extracted values yet
-  const labVisionResults: Array<Record<string, number | null> | null> = [];
-  let visionErrorEncountered = false;
+  // Intentar extracción IA solo para el laboratorio más reciente faltante
+  // y con timeout para no bloquear el render de la página.
+  const labVisionResults = new Map<number, Record<string, number | null>>();
+  const latestPendingLab = paciente.laboratorios.find(
+    (lab: (typeof paciente.laboratorios)[number]) =>
+      lab.archivo_url && lab.hba1c == null && lab.glucosa_ayuno == null,
+  );
 
-  for (const lab of paciente.laboratorios) {
-    if (lab.archivo_url && !visionErrorEncountered && lab.hba1c == null && lab.glucosa_ayuno == null) {
-      try {
-        // Add a small delay between requests to stay under RPM limits (15 RPM for free tier)
-        if (labVisionResults.length > 0) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
-        const result = await getCachedLabVision(lab.archivo_url, locale);
-        labVisionResults.push(result);
+  if (latestPendingLab?.archivo_url) {
+    try {
+      const result = await Promise.race([
+        getCachedLabVision(latestPendingLab.archivo_url, locale),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), LAB_VISION_TIMEOUT_MS)),
+      ]);
 
-        // SAVE BACK TO DB IF FOUND - Efficiency DRY: don't repeat vision next time
-        if (result) {
-          await prisma.laboratorio.update({
-            where: { laboratorio_id: lab.laboratorio_id },
-            data: {
-              hba1c: result.hba1c,
-              glucosa_ayuno: result.glucosa_ayuno,
-              trigliceridos: result.trigliceridos,
-              hdl: result.hdl,
-              ldl: result.ldl,
-              insulina: result.insulina,
-              alt: result.alt,
-              ast: result.ast,
-              tsh: result.tsh,
-              creatinina: result.creatinina,
-              acido_urico: result.acido_urico,
-              pcr_us: result.pcr_us,
-            }
-          });
-        }
-      } catch (err) {
-        console.error("Lab vision error:", err);
-        labVisionResults.push(null);
-        // If it's a 429, don't try other labs in this request
-        if (String(err).includes("429")) {
-          visionErrorEncountered = true;
-        }
+      if (result) {
+        labVisionResults.set(latestPendingLab.laboratorio_id, result);
+        await prisma.laboratorio.update({
+          where: { laboratorio_id: latestPendingLab.laboratorio_id },
+          data: {
+            hba1c: result.hba1c,
+            glucosa_ayuno: result.glucosa_ayuno,
+            trigliceridos: result.trigliceridos,
+            hdl: result.hdl,
+            ldl: result.ldl,
+            insulina: result.insulina,
+            alt: result.alt,
+            ast: result.ast,
+            tsh: result.tsh,
+            creatinina: result.creatinina,
+            acido_urico: result.acido_urico,
+            pcr_us: result.pcr_us,
+          }
+        });
       }
-    } else {
-      labVisionResults.push(null);
-    }
+    } catch {}
   }
   
   const promedioGlucosa = paciente.glucosa.length 
@@ -380,8 +362,8 @@ export default async function ResumenSemanal({
       locale,
       aiSuggestionPayload
     );
-  } catch (err) {
-    console.error("AI Suggestions error:", err);
+  } catch {
+    aiSuggestions = null;
   }
 
   const csvContent = buildSummaryCsv({
@@ -718,9 +700,9 @@ export default async function ResumenSemanal({
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  {paciente.laboratorios.map((laboratorio: (typeof paciente.laboratorios)[number], idx: number) => {
+                  {paciente.laboratorios.map((laboratorio: (typeof paciente.laboratorios)[number]) => {
                     // Combine vision result from current call with DB data if vision is null
-                    const visionRes = labVisionResults[idx];
+                    const visionRes = labVisionResults.get(laboratorio.laboratorio_id);
                     const effectiveData = visionRes || {
                       hba1c: laboratorio.hba1c ? Number(laboratorio.hba1c) : null,
                       glucosa_ayuno: laboratorio.glucosa_ayuno ? Number(laboratorio.glucosa_ayuno) : null,

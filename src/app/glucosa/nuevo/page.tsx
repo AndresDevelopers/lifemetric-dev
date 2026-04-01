@@ -5,7 +5,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
-import { getComidasDeHoy, getSessionPacienteId } from "@/actions/data";
+import { getComidasPorFecha, getSessionPacienteId } from "@/actions/data";
 import { useLocale } from "@/components/providers/LocaleProvider";
 
 const glucosaSchema = z.object({
@@ -41,13 +41,23 @@ export default function NuevaGlucosa() {
     async function loadData() {
       const pId = await getSessionPacienteId();
       if (pId) setValue("paciente_id", pId);
-      const comidas = await getComidasDeHoy();
+      const comidas = await getComidasPorFecha(new Date().toISOString().slice(0, 10));
       setComidasHoy(comidas as {comida_id: string, alimento_principal: string | null, tipo_comida: string, hora: Date}[]);
     }
     loadData();
   }, [setValue]);
 
   const tipo_glucosa = useWatch({ control, name: "tipo_glucosa" });
+  const fechaSeleccionada = useWatch({ control, name: "fecha" });
+
+  useEffect(() => {
+    async function loadMealsByDate() {
+      if (!fechaSeleccionada) return;
+      const comidas = await getComidasPorFecha(fechaSeleccionada);
+      setComidasHoy(comidas as {comida_id: string, alimento_principal: string | null, tipo_comida: string, hora: Date}[]);
+    }
+    loadMealsByDate();
+  }, [fechaSeleccionada]);
 
   const onSubmit = async () => {
     setLoading(true);

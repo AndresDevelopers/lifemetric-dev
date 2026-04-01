@@ -42,6 +42,35 @@ export const PROMO_FOCUS_PRODUCTS = [
   'Self Regulador',
 ] as const;
 
+export const REGISTER_DIAGNOSIS_OPTIONS = {
+  es: [
+    'Control metabólico',
+    'Problemas de sueño',
+    'Estrés o ansiedad',
+    'Dolor o inflamación',
+    'Salud digestiva',
+    'Salud hormonal',
+    'Salud inmune y respiratoria',
+    'Salud circulatoria',
+    'Salud renal y detox',
+    'Migraña',
+    'Artritis',
+  ],
+  en: [
+    'Metabolic control',
+    'Sleep issues',
+    'Stress or anxiety',
+    'Pain or inflammation',
+    'Digestive health',
+    'Hormonal health',
+    'Immune and respiratory health',
+    'Circulatory health',
+    'Kidney and detox health',
+    'Migraine',
+    'Arthritis',
+  ],
+} as const;
+
 const normalize = (value: string) =>
   value
     .normalize('NFD')

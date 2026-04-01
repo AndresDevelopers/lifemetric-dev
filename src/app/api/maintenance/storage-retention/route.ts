@@ -13,6 +13,7 @@ import {
 import {
   LAB_IMAGE_RETENTION_DAYS,
   MEAL_IMAGE_RETENTION_DAYS,
+  MEDICATION_IMAGE_RETENTION_DAYS,
   getStoragePathFromPublicUrl,
 } from "@/lib/storageRetention";
 
@@ -42,16 +43,21 @@ export async function POST(request: Request) {
   const supabase = createSupabaseServerClient({ useServiceRole: true });
   const now = Date.now();
   const mealCutoff = new Date(now - MEAL_IMAGE_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const medicationCutoff = new Date(now - MEDICATION_IMAGE_RETENTION_DAYS * 24 * 60 * 60 * 1000);
   const labCutoff = new Date(now - LAB_IMAGE_RETENTION_DAYS * 24 * 60 * 60 * 1000);
   const deactivationCutoff = new Date(now - ACCOUNT_INACTIVITY_DEACTIVATION_DAYS * 24 * 60 * 60 * 1000);
   const deletionCutoff = new Date(now - ACCOUNT_INACTIVITY_DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000);
 
   await ensurePacienteLifecycleColumns();
 
-  const [oldMeals, oldLabs, pacientes] = await Promise.all([
+  const [oldMeals, oldMedicationPhotos, oldLabs, pacientes] = await Promise.all([
     prisma.comida.findMany({
       where: { created_at: { lt: mealCutoff }, foto_url: { not: null } },
       select: { comida_id: true, foto_url: true },
+    }),
+    prisma.registroMedicacion.findMany({
+      where: { created_at: { lt: medicationCutoff }, foto_url: { not: null } },
+      select: { registro_medicacion_id: true, foto_url: true },
     }),
     prisma.laboratorio.findMany({
       where: { created_at: { lt: labCutoff }, archivo_url: { not: null } },
@@ -78,12 +84,18 @@ export async function POST(request: Request) {
   const labPaths = oldLabs
     .map((item: { archivo_url: string | null }) => getStoragePathFromPublicUrl(item.archivo_url ?? "", "laboratorios"))
     .filter((value: string | null): value is string => Boolean(value));
+  const medicationPaths = oldMedicationPhotos
+    .map((item: { foto_url: string | null }) => getStoragePathFromPublicUrl(item.foto_url ?? "", "medicina"))
+    .filter((value: string | null): value is string => Boolean(value));
 
   if (mealPaths.length) {
     await supabase.storage.from("comidas").remove(mealPaths);
   }
   if (labPaths.length) {
     await supabase.storage.from("laboratorios").remove(labPaths);
+  }
+  if (medicationPaths.length) {
+    await supabase.storage.from("medicina").remove(medicationPaths);
   }
 
   if (oldMeals.length) {
@@ -96,6 +108,12 @@ export async function POST(request: Request) {
     await prisma.laboratorio.updateMany({
       where: { laboratorio_id: { in: oldLabs.map((item: { laboratorio_id: string }) => item.laboratorio_id) } },
       data: { archivo_url: null },
+    });
+  }
+  if (oldMedicationPhotos.length) {
+    await prisma.registroMedicacion.updateMany({
+      where: { registro_medicacion_id: { in: oldMedicationPhotos.map((item: { registro_medicacion_id: string }) => item.registro_medicacion_id) } },
+      data: { foto_url: null },
     });
   }
 
@@ -131,6 +149,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     deletedMealImages: mealPaths.length,
+    deletedMedicationImages: medicationPaths.length,
     deletedLabImages: labPaths.length,
     deactivatedInactiveAccounts,
     deletedInactiveAccounts,

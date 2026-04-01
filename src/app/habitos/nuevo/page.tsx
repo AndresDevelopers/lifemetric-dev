@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
 import { getSessionPacienteId } from "@/actions/data";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { guardarHabitoAction } from "@/actions/habitos";
 
 const habitosSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
   fecha: z.string(),
+  hora: z.string(),
   sueno_horas: z.number().min(0).max(24),
   agua_vasos: z.number().min(0),
   ejercicio_min: z.number().min(0),
@@ -23,6 +26,7 @@ const habitosSchema = z.object({
 type FormValues = z.infer<typeof habitosSchema>;
 
 export default function NuevoHabito() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const { messages } = useLocale();
   const habitsMessages = messages.habitsForm;
@@ -30,6 +34,7 @@ export default function NuevoHabito() {
     resolver: zodResolver(habitosSchema),
     defaultValues: {
       fecha: new Date().toISOString().slice(0, 10),
+      hora: new Date().toTimeString().slice(0, 5),
       paciente_id: "",
     }
   });
@@ -44,11 +49,14 @@ export default function NuevoHabito() {
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
-    console.log("Submit", data);
-    setTimeout(() => {
-      setLoading(false);
+    const response = await guardarHabitoAction(data);
+    if (response.success) {
       alert(habitsMessages.success);
-    }, 1000);
+      router.push("/");
+    } else {
+      alert(response.error || habitsMessages.saveError);
+    }
+    setLoading(false);
   };
 
   return (
@@ -74,6 +82,25 @@ export default function NuevoHabito() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-slate-600">{habitsMessages.date}</label>
+              <input
+                type="date"
+                {...register("fecha")}
+                className="w-full bg-surface border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-slate-600">{habitsMessages.time}</label>
+              <input
+                type="time"
+                {...register("hora")}
+                className="w-full bg-surface border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+              />
+            </div>
+          </div>
+
           <div className="bg-surface-container-lowest/95 backdrop-blur-2xl rounded-3xl p-6 shadow-xl border border-white/50">
             <div className="flex items-center gap-4 mb-4">
               <span className="material-symbols-outlined text-4xl text-blue-400 bg-blue-50 p-3 rounded-full">water_drop</span>
