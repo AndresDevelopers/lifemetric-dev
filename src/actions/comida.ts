@@ -1,7 +1,10 @@
-"use server";
+﻿"use server";
 
+import { revalidatePath } from "next/cache";
+import { getSessionPacienteId } from "@/actions/data";
 import { prisma } from "@/lib/prisma";
 import { estimateMealFromImage, type PacienteContexto } from "@/lib/ai/gemini";
+import { getSummaryMealHistory } from "@/lib/mealHistoryData";
 import { checkRateLimit } from "@/lib/redis";
 import { z } from "zod";
 
@@ -55,15 +58,15 @@ function getClasificacionFinal(
   esSaludable: boolean = true,
   razonInadecuada?: string
 ): string {
-  // Si la imagen no es una comida válida
-  if (!esComidaValida) return "Inválido (No es comida)";
+  // Si la imagen no es una comida vÃ¡lida
+  if (!esComidaValida) return "InvÃ¡lido (No es comida)";
   
-  // Si la comida no es saludable según la IA
+  // Si la comida no es saludable segÃºn la IA
   if (!esSaludable) return "Inadecuada: " + (razonInadecuada || "No recomendada");
   
-  // Clasificación original basada en nutrientes
+  // ClasificaciÃ³n original basada en nutrientes
   if (carbs === "alto" && fibra === "baja") return "Inadecuada (Pico de Glucosa)";
-  if (carbs === "bajo" && proteina === "adecuada") return "Saludable (Bajo índice)";
+  if (carbs === "bajo" && proteina === "adecuada") return "Saludable (Bajo Ã­ndice)";
   return "Regular";
 }
 
@@ -144,7 +147,7 @@ export async function inferMealFromPhoto(input: z.infer<typeof mealPhotoSchema>)
       pacienteContexto,
     });
     if (!estimate) {
-      console.error("[inferMealFromPhoto] ai_unavailable — estimateMealFromImage returned null. Check AI_GATEWAY_API_KEY and model config.");
+      console.error("[inferMealFromPhoto] ai_unavailable â€” estimateMealFromImage returned null. Check AI_GATEWAY_API_KEY and model config.");
       return { success: false as const, error: "ai_unavailable" };
     }
 
@@ -164,6 +167,15 @@ export async function inferMealFromPhoto(input: z.infer<typeof mealPhotoSchema>)
     console.error("inferMealFromPhoto error:", error);
     return { success: false as const, error: "ai_failed" };
   }
+}
+
+export async function getResumenMealHistory() {
+  const pacienteId = await getSessionPacienteId();
+  if (!pacienteId) {
+    return [];
+  }
+
+  return getSummaryMealHistory(pacienteId);
 }
 
 export async function clasificarYGuardarComida(data: ComidaInput) {
@@ -244,9 +256,11 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
       }
     });
 
+    revalidatePath("/resumen");
     return { success: true, comida: nuevaComida, clasificacion: class_final };
   } catch (error) {
     console.error("Error guardando comida:", error);
     return { success: false, error: "Fallo al guardar" };
   }
 }
+

@@ -649,6 +649,14 @@ const profileSchema = z.object({
   ),
   motivo_registro: z.string().max(400).optional(),
   producto_permitido_registro: z.enum(PROMO_FOCUS_PRODUCTS).optional(),
+  peso_inicial_kg: z.preprocess(
+    (value) => (value === '' || value == null ? undefined : Number(value)),
+    z.number().positive().max(500).optional()
+  ),
+  cintura_inicial_cm: z.preprocess(
+    (value) => (value === '' || value == null ? undefined : Number(value)),
+    z.number().positive().max(300).optional()
+  ),
 });
 
 export async function updateProfileAction(prevState: AuthActionState, formData: FormData) {
@@ -686,7 +694,11 @@ export async function updateProfileAction(prevState: AuthActionState, formData: 
         apellido: data.apellido,
         email: data.email,
         sexo: data.sexo,
+        diagnostico_principal: data.motivo_registro?.trim() || undefined,
+        objetivo_clinico: data.motivo_registro?.trim() || undefined,
         edad: data.fecha_nacimiento ? calculateAgeFromBirthDate(data.fecha_nacimiento) : undefined,
+        peso_inicial_kg: data.peso_inicial_kg,
+        cintura_inicial_cm: data.cintura_inicial_cm,
       },
     });
 

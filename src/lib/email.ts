@@ -12,6 +12,15 @@ export type EmailPayload = {
   replyTo?: string;
 };
 
+function hasSmtpConfiguration(): boolean {
+  return Boolean(process.env.SMTP_URL || process.env.SMTP_HOST);
+}
+
+function isResendSmtpConfiguration(): boolean {
+  const smtpHost = process.env.SMTP_HOST?.toLowerCase();
+  return smtpHost === 'smtp.resend.com' || process.env.SMTP_URL?.toLowerCase().includes('smtp.resend.com') === true;
+}
+
 
 function getResendKey(): string | null {
   const key = process.env.RESEND_API_KEY;
@@ -62,7 +71,7 @@ async function sendEmailWithNodemailer(payload: EmailPayload): Promise<boolean> 
         ? nodemailer.createTransport({
             host: smtpHost,
             port: smtpPort,
-            secure: smtpPort === 465,
+            secure: smtpPort === 465 || smtpPort === 2465,
             auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
           })
         : null;
@@ -106,6 +115,18 @@ async function sendEmailWithNodemailer(payload: EmailPayload): Promise<boolean> 
 
     return true;
   } catch (error) {
+    const smtpError = error as { code?: string; responseCode?: number };
+    if (hasSmtpConfiguration()) {
+      if (smtpError.code === 'EAUTH' && smtpError.responseCode === 535 && isResendSmtpConfiguration()) {
+        console.warn(
+          'Resend SMTP rechazó la autenticación. Verifica que SMTP_USER sea "resend" y que SMTP_PASS sea una API key válida de Resend (normalmente empieza con "re_").',
+        );
+      }
+
+      console.warn('SMTP configurado, pero nodemailer no pudo inicializarse para el fallback.', error);
+      return false;
+    }
+
     console.warn('Fallo al enviar correo con nodemailer fallback:', error);
     return false;
   }
@@ -121,6 +142,11 @@ async function sendEmailWithFallback(payload: EmailPayload): Promise<void> {
 }
 
 async function sendEmailWithSendmail(payload: EmailPayload): Promise<boolean> {
+  if (process.platform === 'win32') {
+    console.warn('Se omite fallback a sendmail en Windows porque el binario no suele existir.');
+    return false;
+  }
+
   try {
     const from = payload.from ?? process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
     const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
@@ -161,7 +187,7 @@ export async function sendEmailWithResend(payload: EmailPayload): Promise<void> 
   const apiKey = getResendKey();
   
   if (!apiKey) {
-    console.warn('RESEND_API_KEY no configurada. Intentando fallback con nodemailer/sendmail.');
+    console.warn('RESEND_API_KEY no configurada. Intentando fallback con SMTP nodemailer o sendmail.');
     await sendEmailWithFallback(payload);
     return;
   }

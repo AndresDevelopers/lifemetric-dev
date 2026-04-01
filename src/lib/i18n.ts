@@ -85,7 +85,7 @@ const messages = {
         female: 'Femenino',
         diagnosis: 'Diagnóstico principal (inicial)',
         diagnosisPlaceholder: 'Ej. Prediabetes, control metabólico...',
-        allowedProduct: 'Producto (Permitido)',
+        allowedProduct: 'Producto',
         attendingDoctor: 'Doctor que te atendió',
         registrationReason: '¿Por qué te registraste?',
         registrationReasonPlaceholder: 'Ej. Mejorar glucosa, bajar triglicéridos y llevar control con mi tratamiento.',
@@ -187,6 +187,8 @@ const messages = {
       recommendedLabs: 'Laboratorios sugeridos',
       productsGuidance: 'Guía de productos y suplementos',
       expectedProgress: 'Progresión esperada',
+      showMore: 'Ver más',
+      showLess: 'Ver menos',
       aiSuggestionsFallback: 'No hay suficiente información para generar sugerencias clínicas precisas por ahora.',
       aiSuggestionsDisclaimer: 'Estas sugerencias son orientativas y no reemplazan la evaluación médica profesional.',
       glucosePeaks: 'Se detectaron picos de glucosa recientes.',
@@ -198,7 +200,7 @@ const messages = {
       studyDate: 'Fecha del estudio',
       glycemicProfile: 'Perfil glucémico',
       lipidProfile: 'Perfil lipídico',
-      fastingGlucose: 'Glucosa ayuno',
+      fastingGlucose: 'Glucosa',
       triglycerides: 'Triglicéridos',
       hdl: 'HDL',
       ldl: 'LDL',
@@ -216,23 +218,34 @@ const messages = {
       uploadLabs: 'Registrar laboratorios',
       exportToSheets: 'Descargar resumen para Google Sheets',
       aiRead: 'Leído por IA',
+      scannedResults: 'Resultados escaneados',
       noValuesAvailable: 'Sin valores disponibles',
       evolution: {
-        title: 'Evolución y Estado Inicial',
-        subtitle: 'Comparativa de cómo empezaste vs. tu progreso actual.',
+        title: 'Logros y Impacto del Producto',
+        subtitle: 'Tu progreso comparativo gracias a Lifemetric.',
         initialDiagnosis: 'Diagnóstico Inicial',
         initialProduct: 'Producto',
         initialStatus: 'Estado al Ingreso',
-        currentStatus: 'Estado Actual',
-        evolutionPositive: 'Tu evolución muestra una respuesta positiva al tratamiento.',
-        evolutionStatic: 'Mantén la constancia para ver mayores cambios.',
+        currentStatus: 'Logros Logrados',
+        evolutionPositive: 'Excelente progreso. El producto está ayudando a normalizar tus indicadores.',
+        evolutionStatic: 'Mantén la constancia para ver mayores cambios en tus indicadores.',
         weightChange: 'Variación de peso',
-        glucoseChange: 'Variación de glucosa',
-        sinceStart: 'Desde el inicio',
+        hba1cImprovement: 'Mejora HbA1c',
+        fastingGlucose: 'Glucosa Ayunas',
+        waistChange: 'Variación de cintura',
+        sleepImprovement: 'Mejora del sueño',
+        initialWaist: 'Cintura',
+        hba1cActual: 'HbA1c',
+        initialMeasure: 'Al ingreso',
+        currentMeasure: 'Actualmente',
+        stabilizedSleep: 'Estabilizaste tus horas de sueño',
+        reducedWeight: 'Lograste reducir tu peso',
+        reducedWaist: 'Redujiste tu cintura',
+        improvedGlucose: 'Nivelaste tu glucosa',
       },
       labValues: {
         hba1c: 'HbA1c',
-        fastingGlucose: 'Glucosa ayuno',
+        fastingGlucose: 'Glucosa',
         triglycerides: 'Triglicéridos',
         hdl: 'HDL',
         ldl: 'LDL',
@@ -306,7 +319,6 @@ const messages = {
       beforeMeal: 'Antes de comer',
       beforeDinner: 'Previo a la cena',
       oneHourAfterMeal: '1h post-comida',
-      twoHoursAfterMeal: '2h post-comida',
       linkMeal: 'Relacionar con comida',
       noMealLink: '(No relacionar / opcional)',
       todayAt: 'Hoy',
@@ -333,6 +345,7 @@ const messages = {
       diastolic: 'PA diastólica',
       pulse: 'Pulso (bpm)',
       weight: 'Peso (kg)',
+      waist: 'Cintura (cm)',
       submit: 'Guardar hábitos',
       submitting: 'Guardando...',
       success: 'Hábitos registrados exitosamente',
@@ -344,7 +357,7 @@ const messages = {
       subtitle: 'Sube tus análisis y registra los principales biomarcadores metabólicos.',
       studyDate: 'Fecha del estudio',
       glycemicProfile: 'Perfil glucémico',
-      fastingGlucose: 'Glucosa ayuno (mg/dL)',
+      fastingGlucose: 'Glucosa (mg/dL)',
       lipidProfile: 'Perfil lipídico',
       triglycerides: 'Triglicéridos',
       hdl: 'HDL (bueno)',
@@ -355,10 +368,11 @@ const messages = {
       submit: 'Guardar laboratorios',
       submitting: 'Procesando análisis...',
       success: 'Laboratorios registrados exitosamente',
-      autoCompleting: 'Analizando archivo con IA...',
-      autoCompleted: 'Campos de laboratorio autocompletados con IA.',
-      autoCompleteError: 'No fue posible autocompletar los resultados con IA.',
-      virusScanning: 'Verificando seguridad del archivo antes de subirlo...',
+        autoCompleting: 'Analizando archivo con IA...',
+        autoCompleted: 'Campos de laboratorio autocompletados con IA.',
+        autoCompleteError: 'No fue posible autocompletar los resultados con IA.',
+        detectedFields: 'Campos detectados por IA',
+        virusScanning: 'Verificando seguridad del archivo antes de subirlo...',
       virusPassed: 'Verificación completada. Archivo seguro, iniciando subida.',
       virusBlocked: 'Subida bloqueada.',
       virusFallback: 'No pudimos completar la validación en este momento. Continuaremos con la subida.',
@@ -433,6 +447,7 @@ const messages = {
       accountDeleted: 'Cuenta eliminada. Lamentamos verte partir.',
       profileUpdated: 'Perfil actualizado con éxito',
       profileInfo: 'Información del perfil',
+      baselineInfo: 'Inicio',
       changeAvatar: 'Cambiar imagen',
       emailSubscriptionTitle: 'Suscripción por correo',
       emailSubscriptionDescription: 'Administra si quieres recibir novedades por email.',
@@ -454,6 +469,9 @@ const messages = {
         genderFemale: 'Femenino',
         registrationReason: 'Motivo de registro y objetivo',
         registrationReasonFallback: 'Sin motivo registrado.',
+        initialWeight: 'Peso inicial (kg)',
+        initialWaist: 'Cintura inicial (cm)',
+        initialSleep: 'Sueño inicial (horas)',
       },
       languageTitle: 'Configuración de idioma',
       languageDescription: 'Escoge tu idioma preferido para la interfaz.',
@@ -572,7 +590,7 @@ const messages = {
         female: 'Female',
         diagnosis: 'Primary diagnosis (initial)',
         diagnosisPlaceholder: 'E.g. Prediabetes, metabolic control...',
-        allowedProduct: 'Allowed product',
+        allowedProduct: 'Product',
         attendingDoctor: 'Attending doctor',
         registrationReason: 'Why are you registering?',
         registrationReasonPlaceholder: 'E.g. Improve glucose, reduce triglycerides, and track progress with treatment.',
@@ -674,6 +692,8 @@ const messages = {
       recommendedLabs: 'Suggested labs',
       productsGuidance: 'Products and supplements guidance',
       expectedProgress: 'Expected progress',
+      showMore: 'Show more',
+      showLess: 'Show less',
       aiSuggestionsFallback: 'There is not enough information yet to generate precise clinical suggestions.',
       aiSuggestionsDisclaimer: 'These suggestions are educational and do not replace professional medical evaluation.',
       glucosePeaks: 'Recent glucose peaks were detected.',
@@ -703,6 +723,7 @@ const messages = {
       uploadLabs: 'Log labs',
       exportToSheets: 'Download summary for Google Sheets',
       aiRead: 'AI-read',
+      scannedResults: 'Scanned results',
       noValuesAvailable: 'No values available',
       evolution: {
         title: 'Evolution and Initial State',
@@ -714,8 +735,18 @@ const messages = {
         evolutionPositive: 'Your evolution shows a positive response to treatment.',
         evolutionStatic: 'Maintain consistency to see greater changes.',
         weightChange: 'Weight change',
-        glucoseChange: 'Glucose change',
-        sinceStart: 'Since start',
+        hba1cImprovement: 'HbA1c Improvement',
+        fastingGlucose: 'Fasting Glucose',
+        waistChange: 'Waist variation',
+        sleepImprovement: 'Sleep improvement',
+        initialWaist: 'Initial Waist',
+        hba1cActual: 'Current HbA1c',
+        initialMeasure: 'Initial measurement',
+        currentMeasure: 'Current measurement',
+        stabilizedSleep: 'You stabilized your sleep hours',
+        reducedWeight: 'You reduced your weight',
+        reducedWaist: 'You reduced your waistline',
+        improvedGlucose: 'You improved your glucose',
       },
       labValues: {
         hba1c: 'HbA1c',
@@ -793,7 +824,6 @@ const messages = {
       beforeMeal: 'Before meal',
       beforeDinner: 'Before dinner',
       oneHourAfterMeal: '1h post-meal',
-      twoHoursAfterMeal: '2h post-meal',
       linkMeal: 'Link to meal',
       noMealLink: '(Do not link / optional)',
       todayAt: 'Today',
@@ -820,6 +850,7 @@ const messages = {
       diastolic: 'Diastolic BP',
       pulse: 'Pulse (bpm)',
       weight: 'Weight (kg)',
+      waist: 'Waist (cm)',
       submit: 'Save habits',
       submitting: 'Saving...',
       success: 'Habits logged successfully',
@@ -842,10 +873,11 @@ const messages = {
       submit: 'Save labs',
       submitting: 'Processing analysis...',
       success: 'Labs saved successfully',
-      autoCompleting: 'Analyzing file with AI...',
-      autoCompleted: 'Lab fields were auto-filled with AI.',
-      autoCompleteError: 'Unable to auto-fill results with AI.',
-      virusScanning: 'Checking file security before upload...',
+        autoCompleting: 'Analyzing file with AI...',
+        autoCompleted: 'Lab fields were auto-filled with AI.',
+        autoCompleteError: 'Unable to auto-fill results with AI.',
+        detectedFields: 'Fields detected by AI',
+        virusScanning: 'Checking file security before upload...',
       virusPassed: 'Verification completed. File is safe, starting upload.',
       virusBlocked: 'Upload blocked.',
       virusFallback: "We couldn't complete validation right now. Upload will continue.",
@@ -920,6 +952,7 @@ const messages = {
       accountDeleted: 'Account deleted. We are sorry to see you go.',
       profileUpdated: 'Profile updated successfully',
       profileInfo: 'Profile Information',
+      baselineInfo: 'Start',
       changeAvatar: 'Change Profile Picture',
       emailSubscriptionTitle: 'Email subscription',
       emailSubscriptionDescription: 'Manage whether you want to receive email updates.',
@@ -941,6 +974,9 @@ const messages = {
         genderFemale: 'Female',
         registrationReason: 'Registration reason and goal',
         registrationReasonFallback: 'No registration reason saved.',
+        initialWeight: 'Initial weight (kg)',
+        initialWaist: 'Initial waist (cm)',
+        initialSleep: 'Initial sleep (hours)',
       },
       languageTitle: 'Language Settings',
       languageDescription: 'Choose your preferred language for the interface.',
@@ -1102,12 +1138,8 @@ export function translateFoodClassification(value: string | null | undefined, lo
     return messages[locale].foodHistory.normal;
   }
 
-  if (normalized === 'pobre' || normalized === 'poor') {
-    return messages[locale].foodHistory.poor;
-  }
-
-  if (normalized === 'malo' || normalized === 'bad') {
-    return messages[locale].foodHistory.bad;
+  if (isFoodClassificationInadequate(normalized)) {
+    return locale === 'es' ? 'Inadecuada' : 'Inadequate';
   }
 
   if (normalized === 'regular') {
@@ -1123,6 +1155,22 @@ export function translateFoodClassification(value: string | null | undefined, lo
   }
 
   return value ?? messages[locale].foodHistory.normal;
+}
+
+export function isFoodClassificationInadequate(value: string | null | undefined): boolean {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized === 'pobre' ||
+    normalized === 'poor' ||
+    normalized === 'malo' ||
+    normalized === 'bad' ||
+    normalized.startsWith('inadecuada') ||
+    normalized.startsWith('inadequate')
+  );
 }
 
 function readCookie(name: string): string | null {

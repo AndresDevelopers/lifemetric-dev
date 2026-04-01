@@ -9,27 +9,18 @@ import { getSessionPacienteId } from "@/actions/data";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { autofillLaboratorioFromDocumentAction, guardarLaboratorioAction } from "@/actions/laboratorio";
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
+import { optionalLabMeasurementShape, optionalLabUploadShape } from "@/lib/laboratorioSchema";
 import { supabase } from "@/lib/supabase";
 
 const labSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
   fecha_estudio: z.string(),
-  hba1c: z.number().min(0).max(20).optional(),
-  glucosa_ayuno: z.number().min(0).max(1000).optional(),
-  trigliceridos: z.number().min(0).max(2000).optional(),
-  hdl: z.number().min(0).max(300).optional(),
-  ldl: z.number().min(0).max(1000).optional(),
-  insulina: z.number().min(0).max(500).optional(),
-  alt: z.number().min(0).max(500).optional(),
-  ast: z.number().min(0).max(500).optional(),
-  tsh: z.number().min(0).max(20).optional(),
-  creatinina: z.number().min(0).max(20).optional(),
-  acido_urico: z.number().min(0).max(20).optional(),
-  pcr_us: z.number().min(0).max(100).optional(),
-  archivo_url: z.string().optional(),
+  ...optionalLabMeasurementShape,
+  ...optionalLabUploadShape,
 });
 
 type FormValues = z.infer<typeof labSchema>;
+type FormInputValues = z.input<typeof labSchema>;
 
 export default function SubirLaboratorios() {
   const [loading, setLoading] = useState(false);
@@ -42,13 +33,15 @@ export default function SubirLaboratorios() {
   const labsMessages = messages.labsForm;
   const now = new Date();
 
-  const { register, handleSubmit, setValue } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, watch } = useForm<FormInputValues, unknown, FormValues>({
     resolver: zodResolver(labSchema),
     defaultValues: {
       fecha_estudio: now.toISOString().slice(0, 10),
       paciente_id: "",
+      resultados_detectados: [],
     }
   });
+  const detectedResults = (watch("resultados_detectados") as FormValues["resultados_detectados"]) ?? [];
 
   useEffect(() => {
     async function loadData() {
@@ -158,9 +151,27 @@ export default function SubirLaboratorios() {
       if (hasData) {
         // AI successfully extracted values - fill the form
         const typedData = ai.data as Partial<FormValues>;
-        Object.entries(typedData).forEach(([key, value]) => {
+        if (typedData.resultados_detectados) {
+          setValue("resultados_detectados", typedData.resultados_detectados);
+        }
+
+        ([
+          "hba1c",
+          "glucosa_ayuno",
+          "trigliceridos",
+          "hdl",
+          "ldl",
+          "insulina",
+          "alt",
+          "ast",
+          "tsh",
+          "creatinina",
+          "acido_urico",
+          "pcr_us",
+        ] as const).forEach((key) => {
+          const value = typedData[key];
           if (value !== undefined) {
-            setValue(key as keyof FormValues, value);
+            setValue(key, value);
           }
         });
         setUploadProgress('done');
@@ -180,6 +191,7 @@ export default function SubirLaboratorios() {
 
   useEffect(() => {
     register("archivo_url");
+    register("resultados_detectados");
   }, [register]);
 
   const getUploadStatusText = () => {
@@ -306,6 +318,26 @@ export default function SubirLaboratorios() {
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined">error</span>
                   <p className="text-sm">{aiError}</p>
+                </div>
+              </div>
+            )}
+
+            {detectedResults.length > 0 && (
+              <div className="rounded-3xl border border-teal-100 bg-teal-50/70 p-5">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-teal-700">lab_profile</span>
+                  <h3 className="font-bold text-teal-900">{labsMessages.detectedFields}</h3>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {detectedResults.map((item) => (
+                    <span
+                      key={`${item.key}-${String(item.value)}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+                    >
+                      <span className="font-bold text-slate-500">{item.label}</span>
+                      <span>{item.value}{item.unit ? ` ${item.unit}` : ""}</span>
+                    </span>
+                  ))}
                 </div>
               </div>
             )}

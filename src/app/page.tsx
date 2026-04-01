@@ -54,7 +54,8 @@ export default async function Home() {
 
   const paciente = await prisma.paciente.findUnique({
     where: { paciente_id: pacienteId },
-    include: {
+    select: {
+      nombre: true,
       glucosa: {
         where: {
           fecha: {
@@ -234,7 +235,7 @@ export default async function Home() {
             {messages.home.quickActions}
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
             <QuickActionCard
               href="/comidas/nuevo"
               title={messages.home.foodTitle}

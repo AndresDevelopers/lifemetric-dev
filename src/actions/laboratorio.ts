@@ -4,7 +4,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSessionPacienteId } from "@/actions/data";
 import { extractLabValuesFromImage } from "@/lib/ai/gemini";
+import {
+  optionalLabMeasurementShape,
+  optionalLabUploadShape,
+} from "@/lib/laboratorioSchema";
 import { checkRateLimit } from "@/lib/redis";
+import {
+  detectedLabResultsSchema,
+  inferStandardLabValuesFromDetectedResults,
+} from "@/lib/labResults";
 
 const autofillSchema = z.object({
   imageUrl: z.string().url("Debe ser una URL válida"),
@@ -12,40 +20,25 @@ const autofillSchema = z.object({
 });
 
 const labResultSchema = z.object({
-  hba1c: z.number().min(0).max(20).optional(),
-  glucosa_ayuno: z.number().min(0).max(1000).optional(),
-  trigliceridos: z.number().min(0).max(2000).optional(),
-  hdl: z.number().min(0).max(300).optional(),
-  ldl: z.number().min(0).max(1000).optional(),
-  insulina: z.number().min(0).max(500).optional(),
-  alt: z.number().min(0).max(500).optional(),
-  ast: z.number().min(0).max(500).optional(),
-  tsh: z.number().min(0).max(20).optional(),
-  creatinina: z.number().min(0).max(20).optional(),
-  acido_urico: z.number().min(0).max(20).optional(),
-  pcr_us: z.number().min(0).max(100).optional(),
+  ...optionalLabMeasurementShape,
+  resultados_detectados: detectedLabResultsSchema.optional(),
 });
+
+type LabResult = z.infer<typeof labResultSchema>;
 
 const saveLabSchema = z.object({
   paciente_id: z.string().uuid(),
   fecha_estudio: z.string().min(10),
-  hba1c: z.number().min(0).max(20).optional(),
-  glucosa_ayuno: z.number().min(0).max(1000).optional(),
-  trigliceridos: z.number().min(0).max(2000).optional(),
-  hdl: z.number().min(0).max(300).optional(),
-  ldl: z.number().min(0).max(1000).optional(),
-  insulina: z.number().min(0).max(500).optional(),
-  alt: z.number().min(0).max(500).optional(),
-  ast: z.number().min(0).max(500).optional(),
-  tsh: z.number().min(0).max(20).optional(),
-  creatinina: z.number().min(0).max(20).optional(),
-  acido_urico: z.number().min(0).max(20).optional(),
-  pcr_us: z.number().min(0).max(100).optional(),
-  archivo_url: z.string().optional(),
+  ...optionalLabMeasurementShape,
+  ...optionalLabUploadShape,
 });
 
 export async function autofillLaboratorioFromDocumentAction(rawData: unknown) {
-  const input = autofillSchema.parse(rawData);
+  const inputParsed = autofillSchema.safeParse(rawData);
+  if (!inputParsed.success) {
+    return { success: false, error: "Documento inválido para autocompletar." } as const;
+  }
+  const input = inputParsed.data;
 
   if (!process.env.AI_GATEWAY_API_KEY && !process.env.GEMINI_API_KEY) {
     return { success: false, error: "AI Gateway no está configurado." } as const;
@@ -62,34 +55,90 @@ export async function autofillLaboratorioFromDocumentAction(rawData: unknown) {
   }
 
   try {
-    // Use the existing extractLabValuesFromImage function from gemini.ts
-    // This function already handles the URL fetching and image processing correctly
-    const result = await extractLabValuesFromImage({
-      imageUrl: input.imageUrl,
-      locale: input.locale,
-    });
+    let result: Awaited<ReturnType<typeof extractLabValuesFromImage>> = null;
+    try {
+      result = await extractLabValuesFromImage({
+        imageUrl: input.imageUrl,
+        locale: input.locale,
+      });
+    } catch (error) {
+      console.error("[autofillLaboratorioFromDocumentAction] extractLabValuesFromImage threw:", error);
+      result = null;
+    }
 
     if (!result) {
       return { success: false, error: "No se pudieron extraer datos del laboratorio. Verifique que el documento sea legible." } as const;
     }
 
-    // Filter to only include fields that are defined (not null/undefined)
-    const validatedResult: z.infer<typeof labResultSchema> = {};
-    
-    if (result.hba1c != null) validatedResult.hba1c = result.hba1c;
-    if (result.glucosa_ayuno != null) validatedResult.glucosa_ayuno = result.glucosa_ayuno;
-    if (result.trigliceridos != null) validatedResult.trigliceridos = result.trigliceridos;
-    if (result.hdl != null) validatedResult.hdl = result.hdl;
-    if (result.ldl != null) validatedResult.ldl = result.ldl;
-    if (result.insulina != null) validatedResult.insulina = result.insulina;
-    if (result.alt != null) validatedResult.alt = result.alt;
-    if (result.ast != null) validatedResult.ast = result.ast;
-    if (result.tsh != null) validatedResult.tsh = result.tsh;
-    if (result.creatinina != null) validatedResult.creatinina = result.creatinina;
-    if (result.acido_urico != null) validatedResult.acido_urico = result.acido_urico;
-    if (result.pcr_us != null) validatedResult.pcr_us = result.pcr_us;
+    const inferredValues = inferStandardLabValuesFromDetectedResults(result.resultados_detectados);
 
-    return { success: true, data: validatedResult } as const;
+    // Filter to only include fields that are defined (not null/undefined)
+    const validatedResult: LabResult = {};
+    
+    const mergedStandardValues = {
+      hba1c: result.hba1c ?? inferredValues.hba1c,
+      glucosa_ayuno: result.glucosa_ayuno ?? inferredValues.glucosa_ayuno,
+      trigliceridos: result.trigliceridos ?? inferredValues.trigliceridos,
+      hdl: result.hdl ?? inferredValues.hdl,
+      ldl: result.ldl ?? inferredValues.ldl,
+      insulina: result.insulina ?? inferredValues.insulina,
+      alt: result.alt ?? inferredValues.alt,
+      ast: result.ast ?? inferredValues.ast,
+      tsh: result.tsh ?? inferredValues.tsh,
+      creatinina: result.creatinina ?? inferredValues.creatinina,
+      acido_urico: result.acido_urico ?? inferredValues.acido_urico,
+      pcr_us: result.pcr_us ?? inferredValues.pcr_us,
+    } satisfies Record<string, number | null | undefined>;
+
+    if (mergedStandardValues.hba1c != null) validatedResult.hba1c = mergedStandardValues.hba1c;
+    if (mergedStandardValues.glucosa_ayuno != null) validatedResult.glucosa_ayuno = mergedStandardValues.glucosa_ayuno;
+    if (mergedStandardValues.trigliceridos != null) validatedResult.trigliceridos = mergedStandardValues.trigliceridos;
+    if (mergedStandardValues.hdl != null) validatedResult.hdl = mergedStandardValues.hdl;
+    if (mergedStandardValues.ldl != null) validatedResult.ldl = mergedStandardValues.ldl;
+    if (mergedStandardValues.insulina != null) validatedResult.insulina = mergedStandardValues.insulina;
+    if (mergedStandardValues.alt != null) validatedResult.alt = mergedStandardValues.alt;
+    if (mergedStandardValues.ast != null) validatedResult.ast = mergedStandardValues.ast;
+    if (mergedStandardValues.tsh != null) validatedResult.tsh = mergedStandardValues.tsh;
+    if (mergedStandardValues.creatinina != null) validatedResult.creatinina = mergedStandardValues.creatinina;
+    if (mergedStandardValues.acido_urico != null) validatedResult.acido_urico = mergedStandardValues.acido_urico;
+    if (mergedStandardValues.pcr_us != null) validatedResult.pcr_us = mergedStandardValues.pcr_us;
+    if (result.resultados_detectados?.length) {
+      const safeDetectedResults = detectedLabResultsSchema.safeParse(result.resultados_detectados);
+      if (safeDetectedResults.success) {
+        validatedResult.resultados_detectados = safeDetectedResults.data;
+      } else {
+        console.warn("[autofillLaboratorioFromDocumentAction] Discarding invalid detected lab results");
+      }
+    }
+
+    const safeValidatedResult = labResultSchema.safeParse(validatedResult);
+    if (safeValidatedResult.success) {
+      return { success: true, data: safeValidatedResult.data } as const;
+    }
+
+    console.warn("[autofillLaboratorioFromDocumentAction] Falling back to standard lab fields only", safeValidatedResult.error.flatten());
+
+    const standardOnlyResult: LabResult = {};
+    if (mergedStandardValues.hba1c != null) standardOnlyResult.hba1c = mergedStandardValues.hba1c;
+    if (mergedStandardValues.glucosa_ayuno != null) standardOnlyResult.glucosa_ayuno = mergedStandardValues.glucosa_ayuno;
+    if (mergedStandardValues.trigliceridos != null) standardOnlyResult.trigliceridos = mergedStandardValues.trigliceridos;
+    if (mergedStandardValues.hdl != null) standardOnlyResult.hdl = mergedStandardValues.hdl;
+    if (mergedStandardValues.ldl != null) standardOnlyResult.ldl = mergedStandardValues.ldl;
+    if (mergedStandardValues.insulina != null) standardOnlyResult.insulina = mergedStandardValues.insulina;
+    if (mergedStandardValues.alt != null) standardOnlyResult.alt = mergedStandardValues.alt;
+    if (mergedStandardValues.ast != null) standardOnlyResult.ast = mergedStandardValues.ast;
+    if (mergedStandardValues.tsh != null) standardOnlyResult.tsh = mergedStandardValues.tsh;
+    if (mergedStandardValues.creatinina != null) standardOnlyResult.creatinina = mergedStandardValues.creatinina;
+    if (mergedStandardValues.acido_urico != null) standardOnlyResult.acido_urico = mergedStandardValues.acido_urico;
+    if (mergedStandardValues.pcr_us != null) standardOnlyResult.pcr_us = mergedStandardValues.pcr_us;
+
+    const standardOnlyParsed = labResultSchema.safeParse(standardOnlyResult);
+    if (standardOnlyParsed.success) {
+      return { success: true, data: standardOnlyParsed.data } as const;
+    }
+
+    console.error("[autofillLaboratorioFromDocumentAction] Standard-only fallback also failed", standardOnlyParsed.error.flatten());
+    return { success: false, error: "No se pudieron extraer datos del laboratorio. Verifique que el documento sea legible." } as const;
   } catch (error) {
     console.error("[autofillLaboratorioFromDocumentAction] Error:", error);
     return { success: false, error: "Error al procesar el documento. Intente de nuevo." } as const;
@@ -124,6 +173,7 @@ export async function guardarLaboratorioAction(rawData: unknown) {
       acido_urico: data.acido_urico,
       pcr_us: data.pcr_us,
       archivo_url: data.archivo_url,
+      resultados_detectados: data.resultados_detectados,
     },
   });
 

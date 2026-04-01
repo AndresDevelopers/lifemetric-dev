@@ -24,6 +24,7 @@ const eslintConfig = [
     ignores: [
       ".next/**",
       "tests/**",
+      "tmp/**",
       "eslint.config.mjs",
       "prisma/**",
       "postcss.config.mjs",

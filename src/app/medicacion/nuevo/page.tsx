@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect, useRef } from "react";
 import { getSessionPacienteId } from "@/actions/data";
-import { guardarRegistroMedicacion, inferMedicationFromPhoto } from "@/actions/medicacion";
+import { guardarRegistroMedicacion } from "@/actions/medicacion";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
 import { getMedicationCatalogDescription } from "@/lib/medicationCatalog";
+import { supabase } from "@/lib/supabase";
 
 const medicacionSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -19,17 +21,19 @@ const medicacionSchema = z.object({
   dosis: z.string().optional(),
   estado_toma: z.enum(["tomada", "olvidada", "omitida_por_efecto", "retrasada"]),
   comentarios: z.string().optional(),
-  ai_detected_medicamento: z.string().optional(),
+  foto_url: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof medicacionSchema>;
 
 export default function NuevaMedicacion() {
   const [loading, setLoading] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [detectedMedicationDescription, setDetectedMedicationDescription] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { locale, messages } = useLocale();
   const medicationMessages = messages.medicationForm;
@@ -42,26 +46,28 @@ export default function NuevaMedicacion() {
       hora: now.toTimeString().slice(0, 5),
       estado_toma: "tomada",
       paciente_id: "",
-      ai_detected_medicamento: "",
-    }
+      foto_url: "",
+    },
   });
 
   useEffect(() => {
     async function loadData() {
       const pId = await getSessionPacienteId();
-      if (pId) setValue("paciente_id", pId);
+      if (pId) {
+        setValue("paciente_id", pId);
+      }
     }
-    loadData();
+
+    void loadData();
   }, [setValue]);
 
   const estado = useWatch({ control, name: "estado_toma" });
   const medicamento = useWatch({ control, name: "medicamento" });
 
   useEffect(() => {
-    const detectedMedicationDescription = medicamento
-      ? getMedicationCatalogDescription(medicamento, locale)
-      : null;
-    setDetectedMedicationDescription(detectedMedicationDescription);
+    setDetectedMedicationDescription(
+      medicamento ? getMedicationCatalogDescription(medicamento, locale) : null,
+    );
   }, [locale, medicamento]);
 
   const getEstadoStyle = (tipo: string) => {
@@ -84,16 +90,32 @@ export default function NuevaMedicacion() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files?.[0]) {
-      void handleFile(e.dataTransfer.files[0]);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      void handleFile(file);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
-    if (e.target.files?.[0]) {
-      void handleFile(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (file) {
+      void handleFile(file);
     }
+  };
+
+  const uploadImage = async (file: File) => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const filePath = `medicacion/${fileName}`;
+
+    const { error } = await supabase.storage.from("medicina").upload(filePath, file);
+    if (error) {
+      throw error;
+    }
+
+    const { data } = supabase.storage.from("medicina").getPublicUrl(filePath);
+    return data.publicUrl;
   };
 
   const handleFile = async (file: File) => {
@@ -102,61 +124,63 @@ export default function NuevaMedicacion() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const imageUrl = event.target?.result as string;
-      setImagePreview(imageUrl);
-      setAnalyzingPhoto(true);
-      try {
-        const result = await inferMedicationFromPhoto({ imageUrl, locale });
-        if (result.success) {
-          const aiMedication = result.data.medicamento?.trim() ?? "";
-          const aiDose = result.data.dosis?.trim() ?? "";
-          setValue("ai_detected_medicamento", aiMedication);
-          if (!medicamento && aiMedication) {
-            setValue("medicamento", aiMedication, { shouldValidate: true });
-          }
-          if (aiDose) {
-            setValue("dosis", aiDose, { shouldValidate: true });
-          }
+    setIsUploading(true);
+    const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
+      scanning: medicationMessages.virusScanning,
+      blockedPrefix: medicationMessages.virusBlocked,
+      fallbackPrefix: medicationMessages.virusFallback,
+      successPrefix: medicationMessages.virusPassed,
+    });
 
-          const description =
-            getMedicationCatalogDescription(aiMedication || medicamento || "", locale) ??
-            result.data.descripcion_para_que_sirve ??
-            null;
-          setDetectedMedicationDescription(description);
-        }
-      } finally {
-        setAnalyzingPhoto(false);
-      }
+    if (!canProceed) {
+      setIsUploading(false);
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result as string);
     };
     reader.readAsDataURL(file);
+
+    try {
+      const photoUrl = await uploadImage(file);
+      setUploadedPhotoUrl(photoUrl);
+      setValue("foto_url", photoUrl);
+    } catch {
+      alert(medicationMessages.saveError);
+      setImageFile(null);
+      setImagePreview(null);
+      setUploadedPhotoUrl(null);
+      setValue("foto_url", "");
+    } finally {
+      setIsUploading(false);
+    }
   };
-
-
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
+      let foto_url = data.foto_url;
+      if (uploadedPhotoUrl) {
+        foto_url = uploadedPhotoUrl;
+      } else if (imageFile) {
+        foto_url = await uploadImage(imageFile);
+      }
+
       const response = await guardarRegistroMedicacion({
         ...data,
         comentarios: data.comentarios || undefined,
-        ai_detected_medicamento: data.ai_detected_medicamento || undefined,
+        foto_url: foto_url || undefined,
       });
 
       if (!response.success) {
         if (response.error === "restricted_product") {
-          alert("Este producto está restringido y no puede registrarse.");
+          alert("Este producto esta restringido y no puede registrarse.");
           return;
         }
-        if (response.error === "photo_validation_required") {
-          alert("Para este producto debes subir una foto válida del medicamento antes de guardarlo.");
-          return;
-        }
-        if (response.error === "product_name_photo_mismatch") {
-          alert("El nombre ingresado no coincide con el producto detectado en la foto. Verifica por seguridad.");
-          return;
-        }
+
         alert(medicationMessages.saveError);
         return;
       }
@@ -165,9 +189,11 @@ export default function NuevaMedicacion() {
       setValue("medicamento", "");
       setValue("dosis", "");
       setValue("comentarios", "");
-      setValue("ai_detected_medicamento", "");
-      setImagePreview(null);
+      setValue("foto_url", "");
       setDetectedMedicationDescription(null);
+      setImageFile(null);
+      setImagePreview(null);
+      setUploadedPhotoUrl(null);
     } catch {
       alert(medicationMessages.saveError);
     } finally {
@@ -177,21 +203,23 @@ export default function NuevaMedicacion() {
 
   return (
     <div className="min-h-screen bg-surface-container-low">
-      <header className="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-xl shadow-sm px-6 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between bg-surface/90 px-6 shadow-sm backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <Link href="/" className="hidden md:flex text-on-surface p-2 rounded-full hover:bg-slate-200">
+          <Link href="/" className="hidden rounded-full p-2 text-on-surface hover:bg-slate-200 md:flex">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
           <h1 className="text-xl font-bold tracking-tighter text-blue-800">{medicationMessages.title}</h1>
         </div>
       </header>
 
-      <div className="p-6 md:p-10 max-w-2xl mx-auto pb-32 md:pb-12">
-        <div className="bg-surface-container-lowest/95 backdrop-blur-2xl rounded-[2rem] p-6 shadow-2xl border border-white/50">
+      <div className="mx-auto max-w-2xl p-6 pb-32 md:p-10 md:pb-12">
+        <div className="rounded-[2rem] border border-white/50 bg-surface-container-lowest/95 p-6 shadow-2xl backdrop-blur-2xl">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-
-            <div className="flex items-center gap-4 py-4 mb-2">
-              <span className="material-symbols-outlined text-5xl text-blue-500 bg-blue-50 p-4 rounded-full" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <div className="mb-2 flex items-center gap-4 py-4">
+              <span
+                className="material-symbols-outlined rounded-full bg-blue-50 p-4 text-5xl text-blue-500"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
                 medication
               </span>
               <div>
@@ -200,84 +228,104 @@ export default function NuevaMedicacion() {
               </div>
             </div>
 
-            <div className="mt-2 flex flex-col gap-2">
-              <span className="text-sm font-semibold text-slate-600">{medicationMessages.photoLabel}</span>
-              <div
-                className={`relative border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 transition-all ${dragActive ? "border-primary bg-primary/10" : "border-slate-300 bg-surface-container-highest/50"} ${imagePreview ? "p-2" : "h-40"}`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    fileInputRef.current?.click();
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={medicationMessages.photoLabel}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleChange}
-                />
-
-                {imagePreview ? (
-                  <div className="relative w-full h-48 rounded-xl overflow-hidden">
-                    <Image src={imagePreview} alt={medicationMessages.photoLabel} fill className="object-cover" />
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImagePreview(null);
-                      }}
-                    >
-                      <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center text-slate-500 pointer-events-none">
-                    <span className="material-symbols-outlined text-4xl mb-2 opacity-50">add_a_photo</span>
-                    <p className="text-sm font-medium text-center">{medicationMessages.dragAndDrop}<br />{medicationMessages.clickToSelect}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label htmlFor="medicamento" className="text-sm font-semibold text-slate-600">{medicationMessages.medication}</label>
+                <label htmlFor="medicamento" className="text-sm font-semibold text-slate-600">
+                  {medicationMessages.medication}
+                </label>
                 <input
                   id="medicamento"
                   {...register("medicamento")}
-                  className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  className="w-full rounded-xl border-none bg-surface-container-highest/50 px-4 py-3 font-medium text-on-surface transition-all focus:ring-2 focus:ring-primary/20"
                   placeholder={locale === "es" ? "Ej. Metformina" : "E.g. Metformin"}
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label htmlFor="dosis" className="text-sm font-semibold text-slate-600">{medicationMessages.dose}</label>
+                <label htmlFor="dosis" className="text-sm font-semibold text-slate-600">
+                  {medicationMessages.dose}
+                </label>
                 <input
                   id="dosis"
                   {...register("dosis")}
-                  className="w-full bg-surface-container-highest/50 border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  className="w-full rounded-xl border-none bg-surface-container-highest/50 px-4 py-3 font-medium text-on-surface transition-all focus:ring-2 focus:ring-primary/20"
                   placeholder={locale === "es" ? "Ej. 850 mg" : "E.g. 850 mg"}
                 />
               </div>
             </div>
 
-            <input type="hidden" {...register("ai_detected_medicamento")} />
+            <input type="hidden" {...register("foto_url")} />
 
-            {analyzingPhoto && (
-              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                {medicationMessages.aiAnalyzing}
+            <div className="mt-2 flex flex-col gap-2">
+              <span className="text-sm font-semibold text-slate-600">
+                {medicationMessages.photoLabel} ({messages.common.optional})
+              </span>
+              <div className="relative">
+                {imagePreview && (
+                  <button
+                    type="button"
+                    className="absolute right-3 top-3 z-10 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview(null);
+                      setUploadedPhotoUrl(null);
+                      setValue("foto_url", "");
+                    }}
+                  >
+                    <span className="material-symbols-outlined text-sm">close</span>
+                  </button>
+                )}
+
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={medicationMessages.photoLabel}
+                  className={`relative flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 transition-all ${
+                    dragActive ? "border-primary bg-primary/10" : "border-slate-300 bg-surface-container-highest/50"
+                  } ${imagePreview ? "h-48 p-2" : "h-40"}`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleChange}
+                  />
+
+                  {imagePreview ? (
+                    <div className="relative h-full w-full overflow-hidden rounded-xl">
+                      <Image src={imagePreview} alt={medicationMessages.photoLabel} fill className="object-cover" />
+                    </div>
+                  ) : isUploading ? (
+                    <div className="pointer-events-none flex flex-col items-center text-slate-500">
+                      <span className="material-symbols-outlined mb-2 animate-spin text-4xl opacity-50">sync</span>
+                      <p className="text-center text-sm font-medium">
+                        {locale === "es" ? "Subiendo imagen..." : "Uploading image..."}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="pointer-events-none flex flex-col items-center text-slate-500">
+                      <span className="material-symbols-outlined mb-2 text-4xl opacity-50">add_a_photo</span>
+                      <p className="text-center text-sm font-medium">
+                        {medicationMessages.dragAndDrop}
+                        <br />
+                        {medicationMessages.clickToSelect}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
 
             {detectedMedicationDescription && (
               <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-4">
@@ -288,13 +336,13 @@ export default function NuevaMedicacion() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 mt-2">
+            <div className="mt-2 grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-slate-600">{medicationMessages.date}</label>
                 <input
                   type="date"
                   {...register("fecha")}
-                  className="w-full bg-surface border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  className="w-full rounded-xl border-none bg-surface px-4 py-3 font-medium text-on-surface transition-all focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -302,7 +350,7 @@ export default function NuevaMedicacion() {
                 <input
                   type="time"
                   {...register("hora")}
-                  className="w-full bg-surface border-none rounded-xl py-3 px-4 text-on-surface focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  className="w-full rounded-xl border-none bg-surface px-4 py-3 font-medium text-on-surface transition-all focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
@@ -310,17 +358,37 @@ export default function NuevaMedicacion() {
             <div className="space-y-3 pt-4">
               <label className="text-sm font-semibold text-slate-600">{medicationMessages.intakeStatus}</label>
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => setValue("estado_toma", "tomada")} className={`py-3 px-2 rounded-xl text-sm transition-all flex justify-center items-center gap-2 ${getEstadoStyle("tomada")}`}>
-                  <span className="material-symbols-outlined text-[18px]">check_circle</span> {medicationMessages.taken}
+                <button
+                  type="button"
+                  onClick={() => setValue("estado_toma", "tomada")}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-2 py-3 text-sm transition-all ${getEstadoStyle("tomada")}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                  {medicationMessages.taken}
                 </button>
-                <button type="button" onClick={() => setValue("estado_toma", "retrasada")} className={`py-3 px-2 rounded-xl text-sm transition-all flex justify-center items-center gap-2 ${getEstadoStyle("retrasada")}`}>
-                  <span className="material-symbols-outlined text-[18px]">schedule</span> {medicationMessages.delayed}
+                <button
+                  type="button"
+                  onClick={() => setValue("estado_toma", "retrasada")}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-2 py-3 text-sm transition-all ${getEstadoStyle("retrasada")}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">schedule</span>
+                  {medicationMessages.delayed}
                 </button>
-                <button type="button" onClick={() => setValue("estado_toma", "olvidada")} className={`py-3 px-2 rounded-xl text-sm transition-all flex justify-center items-center gap-2 ${getEstadoStyle("olvidada")}`}>
-                  <span className="material-symbols-outlined text-[18px]">cancel</span> {medicationMessages.forgotten}
+                <button
+                  type="button"
+                  onClick={() => setValue("estado_toma", "olvidada")}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-2 py-3 text-sm transition-all ${getEstadoStyle("olvidada")}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">cancel</span>
+                  {medicationMessages.forgotten}
                 </button>
-                <button type="button" onClick={() => setValue("estado_toma", "omitida_por_efecto")} className={`py-3 px-2 rounded-xl text-sm transition-all flex justify-center items-center gap-2 ${getEstadoStyle("omitida_por_efecto")}`}>
-                  <span className="material-symbols-outlined text-[18px]">sick</span> {medicationMessages.omittedEffects}
+                <button
+                  type="button"
+                  onClick={() => setValue("estado_toma", "omitida_por_efecto")}
+                  className={`flex items-center justify-center gap-2 rounded-xl px-2 py-3 text-sm transition-all ${getEstadoStyle("omitida_por_efecto")}`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">sick</span>
+                  {medicationMessages.omittedEffects}
                 </button>
               </div>
             </div>
@@ -329,7 +397,7 @@ export default function NuevaMedicacion() {
               <div className="relative pt-2">
                 <input
                   {...register("comentarios")}
-                  className="w-full bg-rose-50 border-none rounded-xl py-4 px-5 text-on-surface placeholder:text-rose-400 focus:ring-2 focus:ring-rose-500/30 transition-all"
+                  className="w-full rounded-xl bg-rose-50 px-5 py-4 text-on-surface transition-all placeholder:text-rose-400 focus:ring-2 focus:ring-rose-500/30"
                   placeholder={medicationMessages.commentPlaceholder}
                 />
               </div>
@@ -338,7 +406,7 @@ export default function NuevaMedicacion() {
             <button
               disabled={loading}
               type="submit"
-              className="w-full mt-8 bg-slate-800 text-white font-bold py-5 rounded-2xl shadow-xl hover:bg-slate-900 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+              className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-slate-800 py-5 font-bold text-white shadow-xl transition-all hover:bg-slate-900 active:scale-[0.98]"
             >
               <span className="material-symbols-outlined">{loading ? "hourglass_empty" : "save"}</span>
               <span className="text-lg">{loading ? medicationMessages.submitting : medicationMessages.submit}</span>

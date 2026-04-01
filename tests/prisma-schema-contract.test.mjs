@@ -17,7 +17,10 @@ test('schema maps Paciente to pacientes table', () => {
 test('schema includes summary relations used by the dashboard', () => {
   assert.match(schema, /laboratorios\s+Laboratorio\[\]/);
   assert.match(schema, /medicacion\s+RegistroMedicacion\[\]/);
+  assert.match(schema, /sueno_horas\s+Decimal\?/);
+  assert.doesNotMatch(schema, /sueno_inicial_h/);
   assert.match(schema, /model\s+Laboratorio\s+\{[\s\S]*?@@map\("laboratorios"\)/m);
+  assert.match(schema, /resultados_detectados\s+Json\?/);
   assert.match(schema, /model\s+RegistroMedicacion\s+\{[\s\S]*?@@map\("medicacion"\)/m);
 });
 

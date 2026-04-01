@@ -6,6 +6,22 @@ import { prisma } from "@/lib/prisma";
 import { intelligentCache } from "@/lib/redis";
 import { getPacienteProfileExtras } from "@/lib/pacienteProfile";
 
+type DecimalLike = {
+  toNumber?: () => number;
+};
+
+function toPlainNumber(value: DecimalLike | number | string | null | undefined) {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value === "object" && "toNumber" in value && typeof value.toNumber === "function") {
+    return value.toNumber();
+  }
+
+  return Number(value);
+}
+
 export async function getSessionPacienteId() {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('lifemetric_session')?.value;
@@ -64,6 +80,8 @@ export async function getSessionPaciente() {
             sexo: true,
             newsletter_suscrito: true,
             idioma: true,
+            peso_inicial_kg: true,
+            cintura_inicial_cm: true,
           },
         });
       },
@@ -74,14 +92,7 @@ export async function getSessionPaciente() {
     const profileExtras = await getPacienteProfileExtras(pacienteId);
     // Convert Prisma Decimal fields to plain numbers so they can be passed
     // to Client Components across the Server → Client boundary.
-    const alturaCmRaw = profileExtras.altura_cm;
-    let alturaCm: number | null = null;
-    if (alturaCmRaw != null) {
-      const withToNumber = alturaCmRaw as unknown as { toNumber?: () => number };
-      alturaCm = typeof withToNumber.toNumber === 'function'
-        ? withToNumber.toNumber()
-        : Number(alturaCmRaw);
-    }
+    const alturaCm = toPlainNumber(profileExtras.altura_cm as DecimalLike | number | string | null | undefined);
     return {
       ...paciente,
       fecha_nacimiento: profileExtras.fecha_nacimiento,
@@ -89,6 +100,8 @@ export async function getSessionPaciente() {
       altura_cm: alturaCm,
       motivo_registro: profileExtras.motivo_registro,
       producto_permitido_registro: profileExtras.producto_permitido_registro,
+      peso_inicial_kg: toPlainNumber(paciente.peso_inicial_kg as DecimalLike | number | string | null | undefined),
+      cintura_inicial_cm: toPlainNumber(paciente.cintura_inicial_cm as DecimalLike | number | string | null | undefined),
     };
   } catch (error) {
     console.error("Error fetching patient session:", error);

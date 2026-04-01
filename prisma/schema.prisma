@@ -91,6 +91,7 @@ model Habito {
   pa_diastolica  Int?
   pulso          Int?
   peso_kg        Decimal?  @db.Decimal(5, 2)
+  cintura_cm     Decimal?  @db.Decimal(5, 2)
   created_at     DateTime  @default(now()) @db.Timestamptz(6)
   paciente       Paciente  @relation(fields: [paciente_id], references: [paciente_id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -114,6 +115,7 @@ model Laboratorio {
   creatinina     Decimal?  @db.Decimal(5, 2)
   acido_urico    Decimal?  @db.Decimal(5, 2)
   archivo_url    String?
+  resultados_detectados Json?
   created_at     DateTime  @default(now()) @db.Timestamptz(6)
   paciente       Paciente  @relation(fields: [paciente_id], references: [paciente_id], onDelete: NoAction, onUpdate: NoAction)
 

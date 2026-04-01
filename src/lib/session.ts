@@ -115,7 +115,7 @@ export async function deleteSession() {
         const { pacienteId } = JSON.parse(payloadStr);
         await redisClient.del(`active_session:${pacienteId}`);
       }
-    } catch (e) {
+    } catch {
       // Ignore errors during logout
     }
   }

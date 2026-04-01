@@ -21,6 +21,7 @@ test('chat context includes settings profile fields and complete history section
   assert.match(chatContext, /Doctor asignado/);
   assert.match(chatContext, /Producto permitido seleccionado/);
   assert.match(chatContext, /Avatar URL/);
+  assert.match(chatContext, /otros resultados detectados/);
   assert.match(chatContext, /HISTORIAL COMPLETO DE GLUCOSA/);
   assert.match(chatContext, /HISTORIAL COMPLETO DE HABITOS/);
   assert.match(chatContext, /HISTORIAL COMPLETO DE MEDICACION/);

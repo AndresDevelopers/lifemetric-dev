@@ -5,14 +5,16 @@ import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getComidasPorFecha, getSessionPacienteId } from "@/actions/data";
+import { createGlucosaAction } from "@/actions/glucosa";
 import { useLocale } from "@/components/providers/LocaleProvider";
 
 const glucosaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
   fecha: z.string(),
   hora: z.string(),
-  tipo_glucosa: z.enum(["ayuno", "antes_comer", "antes_cena", "1h_post", "2h_post"]),
+  tipo_glucosa: z.enum(["ayuno", "antes_comer", "antes_cena", "1h_post"]),
   valor_glucosa: z.number().min(20).max(600),
   comida_relacionada_id: z.string().optional(),
 });
@@ -59,13 +61,29 @@ export default function NuevaGlucosa() {
     loadMealsByDate();
   }, [fechaSeleccionada]);
 
-  const onSubmit = async () => {
+  const router = useRouter();
+
+  const onSubmit = async (data: FormValues) => {
     setLoading(true);
-    
-    setTimeout(() => {
+    try {
+      const result = await createGlucosaAction({
+        ...data,
+        comida_relacionada_id: data.comida_relacionada_id || null,
+      });
+
+      if (result.success) {
+        setLoading(false);
+        alert(glucoseMessages.success);
+        router.push("/");
+      } else {
+        setLoading(false);
+        alert("Error: " + result.error);
+      }
+    } catch (error) {
       setLoading(false);
-      alert(glucoseMessages.success);
-    }, 1000);
+      console.error("Error submitting glucose:", error);
+      alert("Error al procesar la solicitud");
+    }
   };
 
   const getTipoStyle = (tipo: string) => {
@@ -137,9 +155,6 @@ export default function NuevaGlucosa() {
                 </button>
                 <button type="button" onClick={() => setValue("tipo_glucosa", "1h_post")} className={`py-4 rounded-2xl font-bold transition-all ${getTipoStyle("1h_post")}`}>
                   {glucoseMessages.oneHourAfterMeal}
-                </button>
-                <button type="button" onClick={() => setValue("tipo_glucosa", "2h_post")} className={`py-4 rounded-2xl font-bold transition-all ${getTipoStyle("2h_post")}`}>
-                  {glucoseMessages.twoHoursAfterMeal}
                 </button>
               </div>
             </div>

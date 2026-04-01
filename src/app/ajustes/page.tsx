@@ -13,15 +13,15 @@ import { getSessionPaciente } from '@/actions/data';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
 import { type Locale } from '@/lib/i18n';
-import { PROMO_FOCUS_PRODUCTS } from '@/lib/productCatalog';
+import { PROMO_FOCUS_PRODUCTS, REGISTER_DIAGNOSIS_OPTIONS } from '@/lib/productCatalog';
 
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
 
 export default function AjustesPage() {
   const { locale, setLocale: setAppLocale, messages } = useLocale();
-  const diagnosisOptions = locale === 'es'
-    ? ['Control', 'Diabetes tipo 1', 'Diabetes tipo 2', 'Hipertensión', 'Otra']
-    : ['Routine check', 'Type 1 diabetes', 'Type 2 diabetes', 'Hypertension', 'Other'];
+  const diagnosisOptions = REGISTER_DIAGNOSIS_OPTIONS[locale] ?? REGISTER_DIAGNOSIS_OPTIONS.en;
+
+
   
   const [passwordState, passwordFormAction, isPasswordPending] = useActionState(changePasswordAction, undefined);
   const [deleteState, deleteFormAction, isDeletePending] = useActionState(deleteAccountAction, undefined);
@@ -249,43 +249,49 @@ export default function AjustesPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                  {messages.settings.fields.registrationReason}
-                </label>
-                <select
-                  name="motivo_registro"
-                  value={motivoRegistro}
-                  onChange={(event) => setMotivoRegistro(event.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
-                >
-                  <option value="">{messages.settings.fields.registrationReasonFallback}</option>
-                  {diagnosisOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                  {messages.auth.register.allowedProduct}
-                </label>
-                <select
-                  name="producto_permitido_registro"
-                  value={productoPermitidoRegistro}
-                  onChange={(event) => setProductoPermitidoRegistro(event.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
-                >
-                  <option value="">{messages.common.select}</option>
-                  {PROMO_FOCUS_PRODUCTS.map((product) => (
-                    <option key={product} value={product}>
-                      {product}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <section className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-white">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">
+                  {messages.settings.baselineInfo}
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                      {messages.settings.fields.registrationReason}
+                    </label>
+                    <select
+                      name="motivo_registro"
+                      value={motivoRegistro}
+                      onChange={(event) => setMotivoRegistro(event.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
+                    >
+                      <option value="">{messages.settings.fields.registrationReasonFallback}</option>
+                      {diagnosisOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                      {messages.auth.register.allowedProduct}
+                    </label>
+                    <select
+                      name="producto_permitido_registro"
+                      value={productoPermitidoRegistro}
+                      onChange={(event) => setProductoPermitidoRegistro(event.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all appearance-none"
+                    >
+                      <option value="">{messages.common.select}</option>
+                      {PROMO_FOCUS_PRODUCTS.map((product) => (
+                        <option key={product} value={product}>
+                          {product}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </section>
 
               {profileState?.error && (
                 <p className="text-sm text-red-500 font-medium">{profileState.error}</p>
@@ -302,7 +308,6 @@ export default function AjustesPage() {
               </button>
             </form>
           </section>
-
 
           <section className="bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-white">
             <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">

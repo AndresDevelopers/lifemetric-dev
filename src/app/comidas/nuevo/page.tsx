@@ -24,11 +24,24 @@ const comidaSchema = z.object({
 
 type FormValues = z.infer<typeof comidaSchema>;
 
+type MealAiSnapshot = {
+  kcal_estimadas?: number;
+  proteina_g?: number;
+  carbohidratos_g?: number;
+  grasa_g?: number;
+  fibra_g?: number;
+  es_comida_valida?: boolean;
+  es_saludable?: boolean;
+  razon_inadecuada?: string;
+  alternativa_saludable?: string;
+};
+
 export default function NuevaComida() {
   const [loading, setLoading] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [aiReason, setAiReason] = useState<string | null>(null);
   const [aiPersonalized, setAiPersonalized] = useState(false);
+  const [aiMealSnapshot, setAiMealSnapshot] = useState<MealAiSnapshot>({});
   const [pacienteId, setPacienteId] = useState<string>("");
   const [esSaludable, setEsSaludable] = useState<boolean | undefined>(undefined);
   const [razonInadecuada, setRazonInadecuada] = useState<string | null>(null);
@@ -70,6 +83,15 @@ export default function NuevaComida() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const resetAiMealAnalysis = () => {
+    setAiMealSnapshot({});
+    setAiReason(null);
+    setAiPersonalized(false);
+    setEsSaludable(undefined);
+    setRazonInadecuada(null);
+    setAlternativaSaludable(null);
+  };
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -96,6 +118,7 @@ export default function NuevaComida() {
 
   const runAiPhotoAnalysis = async (photoUrl: string) => {
     setAnalyzingPhoto(true);
+    resetAiMealAnalysis();
     try {
       // Read directly to avoid race condition with useEffect/setState
       const pid = pacienteId || await getSessionPacienteId();
@@ -108,7 +131,33 @@ export default function NuevaComida() {
       });
 
       if (aiResult.success && aiResult.data) {
-        const { alimento_principal, alimento_principal_razon, meal_description, es_saludable, razon_inadecuada, alternativa_saludable } = aiResult.data;
+        const {
+          alimento_principal,
+          alimento_principal_razon,
+          meal_description,
+          kcal_estimadas,
+          proteina_g,
+          carbohidratos_g,
+          grasa_g,
+          fibra_g,
+          es_comida_valida,
+          es_saludable,
+          razon_inadecuada,
+          alternativa_saludable,
+        } = aiResult.data;
+
+        setAiMealSnapshot({
+          kcal_estimadas: kcal_estimadas ?? undefined,
+          proteina_g: proteina_g ?? undefined,
+          carbohidratos_g: carbohidratos_g ?? undefined,
+          grasa_g: grasa_g ?? undefined,
+          fibra_g: fibra_g ?? undefined,
+          es_comida_valida: es_comida_valida ?? undefined,
+          es_saludable: es_saludable ?? undefined,
+          razon_inadecuada: razon_inadecuada ?? undefined,
+          alternativa_saludable: alternativa_saludable ?? undefined,
+        });
+
         if (alimento_principal) {
           setValue("alimento_principal", alimento_principal, { shouldValidate: true });
         }
@@ -131,10 +180,12 @@ export default function NuevaComida() {
         }
       } else {
         console.error("[AI] inferMealFromPhoto failed — error code:", (aiResult as { success: false; error: string }).error);
+        resetAiMealAnalysis();
         alert(foodMessages.aiFailed);
       }
     } catch (error) {
       console.error("Error with meal AI autofill:", error);
+      resetAiMealAnalysis();
     } finally {
       setAnalyzingPhoto(false);
     }
@@ -205,7 +256,7 @@ export default function NuevaComida() {
         foto_url = await uploadImage(imageFile);
       }
 
-      const submissionData = { ...data, foto_url };
+      const submissionData = { ...data, foto_url, ...aiMealSnapshot };
       const response = await clasificarYGuardarComida(submissionData);
 
       if (response.success) {
@@ -216,8 +267,7 @@ export default function NuevaComida() {
         setValue("alimento_principal", "");
         setValue("nota", "");
         setValue("foto_url", "");
-        setAiReason(null);
-        setAiPersonalized(false);
+        resetAiMealAnalysis();
       } else {
         alert(response.error || foodMessages.saveError);
       }
@@ -310,8 +360,7 @@ export default function NuevaComida() {
                       setValue("foto_url", "");
                       setValue("alimento_principal", "");
                       setValue("nota", "");
-                      setAiReason(null);
-                      setAiPersonalized(false);
+                      resetAiMealAnalysis();
                     }}
                   >
                     <span className="material-symbols-outlined text-sm">close</span>

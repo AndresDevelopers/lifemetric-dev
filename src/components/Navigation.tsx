@@ -36,6 +36,7 @@ export default function Navigation({ userName }: NavigationProps) {
   const appIconUrl = process.env.NEXT_PUBLIC_APP_ICON_URL?.trim() ?? "";
   const { messages } = useLocale();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [isNavigating, startTransition] = useTransition();
 
@@ -61,6 +62,11 @@ export default function Navigation({ userName }: NavigationProps) {
     { name: messages.navigation.food, path: "/comidas/nuevo", icon: "add_circle" },
     { name: messages.navigation.medication, path: "/medicacion/nuevo", icon: "medication" },
     { name: messages.navigation.summary, path: "/resumen", icon: "insights" },
+  ];
+
+  const SIDEBAR_ONLY_ITEMS = [
+    { name: messages.navigation.glucose, path: "/glucosa/nuevo", icon: "water_drop" },
+    { name: messages.navigation.labs, path: "/laboratorios/nuevo", icon: "science" },
   ];
 
   const initials = userName ? getInitials(userName) : null;
@@ -234,13 +240,23 @@ export default function Navigation({ userName }: NavigationProps) {
       </nav>
 
       {/* ── Desktop: sidebar ── */}
-      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-72 border-r border-slate-200/50 dark:border-slate-800 bg-surface-container-low dark:bg-slate-900 flex-col py-4 z-50">
+      <aside className={`hidden md:flex fixed left-0 top-0 h-screen ${isSidebarCollapsed ? 'w-40' : 'w-72'} border-r border-slate-200/50 dark:border-slate-800 bg-surface-container-low dark:bg-slate-900 flex-col py-4 z-50 transition-all duration-300`}>
+        <button
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center hover:scale-110 transition-transform z-10"
+          aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <span className={`material-symbols-outlined text-sm text-slate-500 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`}>
+            chevron_right
+          </span>
+        </button>
+        
         {/* Profile card */}
         {userName ? (
-          <div className="px-3 pt-4 mb-4">
+          <div className={`px-3 pt-4 mb-4 ${isSidebarCollapsed ? 'flex justify-center' : ''}`}>
             <Link
               href="/ajustes"
-              className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all group"
+              className={`flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all group ${isSidebarCollapsed ? 'justify-center' : ''}`}
             >
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md select-none flex-shrink-0 group-hover:scale-105 transition-transform overflow-hidden"
@@ -252,27 +268,29 @@ export default function Navigation({ userName }: NavigationProps) {
                   initials
                 )}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                  {userName.nombre} {userName.apellido}
-                </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="material-symbols-outlined text-[14px] text-slate-400">settings</span>
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{messages.settings.title}</span>
+              {!isSidebarCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {userName.nombre} {userName.apellido}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="material-symbols-outlined text-[14px] text-slate-400">settings</span>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{messages.settings.title}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </Link>
           </div>
         ) : (
-          <div className="px-6 py-8">
+          <div className={`px-6 py-8 ${isSidebarCollapsed ? 'px-2 flex justify-center' : ''}`}>
             {appBrandLogoUrl ? (
-              <img src={appBrandLogoUrl} alt={appName} className="h-10 w-auto max-w-[180px] object-contain" />
+              <img src={appBrandLogoUrl} alt={appName} className={`${isSidebarCollapsed ? 'h-9 w-9' : 'h-10 w-auto max-w-[180px]'} object-contain`} />
             ) : (
-              <div className="flex items-center gap-3 text-2xl font-black text-blue-900 dark:text-blue-100">
+              <div className={`flex items-center gap-3 text-2xl font-black text-blue-900 dark:text-blue-100 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
                 {appIconUrl ? (
-                  <img src={appIconUrl} alt={appName} className="w-9 h-9 rounded-xl object-cover" />
+                  <img src={appIconUrl} alt={appName} className={`${isSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'} rounded-xl object-cover`} />
                 ) : null}
-                <span>{appName}</span>
+                {!isSidebarCollapsed && <span>{appName}</span>}
               </div>
             )}
           </div>
@@ -286,54 +304,78 @@ export default function Navigation({ userName }: NavigationProps) {
                 href={item.path}
                 key={item.path}
                 onClick={handleNavClick(item.path)}
-                className={`flex items-center gap-4 mx-3 px-4 py-3.5 rounded-2xl transition-all hover:translate-x-1 cursor-pointer font-bold ${
+                className={`flex items-center gap-4 mx-3 px-4 py-3.5 rounded-2xl transition-all hover:translate-x-1 cursor-pointer font-bold ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
                   isActive
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
                     : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800/50"
                 }`}
               >
                 <span
-                  className={`material-symbols-outlined ${isPathPending(item.path) ? "animate-spin" : ""}`}
+                  className={`material-symbols-outlined ${isPathPending(item.path) ? "animate-spin" : ""} ${isSidebarCollapsed ? 'text-xl' : ''}`}
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >
                   {isPathPending(item.path) ? "progress_activity" : item.icon}
                 </span>
-                <span className="text-sm font-semibold">{item.name}</span>
+                {!isSidebarCollapsed && <span className="text-sm font-semibold">{item.name}</span>}
+              </Link>
+            );
+          })}
+          <div className={`mx-3 my-4 border-t border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'mx-3' : ''}`} />
+          {SIDEBAR_ONLY_ITEMS.map((item) => {
+            const isActive = pathname === item.path;
+            return (
+              <Link
+                href={item.path}
+                key={item.path}
+                onClick={handleNavClick(item.path)}
+                className={`flex items-center gap-4 mx-3 px-4 py-3.5 rounded-2xl transition-all hover:translate-x-1 cursor-pointer font-bold ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800/50"
+                }`}
+              >
+                <span
+                  className={`material-symbols-outlined ${isPathPending(item.path) ? "animate-spin" : ""} ${isSidebarCollapsed ? 'text-xl' : ''}`}
+                  style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+                >
+                  {isPathPending(item.path) ? "progress_activity" : item.icon}
+                </span>
+                {!isSidebarCollapsed && <span className="text-sm font-semibold">{item.name}</span>}
               </Link>
             );
           })}
         </div>
-        <div className="px-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-          <LanguageSwitcher className="justify-between rounded-2xl bg-white/70 px-4 py-3 dark:bg-slate-800/70" />
+        <div className={`px-3 pt-3 border-t border-slate-200 dark:border-slate-800 ${isSidebarCollapsed ? 'px-1' : ''}`}>
+          <LanguageSwitcher collapsed={isSidebarCollapsed} className={`justify-between rounded-2xl bg-white/70 px-4 py-3 dark:bg-slate-800/70 ${isSidebarCollapsed ? 'justify-center px-2' : ''}`} />
         </div>
-        <div className="px-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className={`px-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 ${isSidebarCollapsed ? 'px-1' : ''}`}>
           <Link
             href="/feedback"
-            className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-all"
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg text-left text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-all ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
           >
             <span className="material-symbols-outlined">feedback</span>
-            <span className="text-sm font-semibold">{messages.navigation.feedback}</span>
+            {!isSidebarCollapsed && <span className="text-sm font-semibold">{messages.navigation.feedback}</span>}
           </Link>
           <Link
             href="/changelog"
-            className="w-full flex items-center gap-4 px-4 py-3 mt-2 rounded-lg text-left text-cyan-700 dark:text-cyan-300 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition-all"
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg text-left text-cyan-700 dark:text-cyan-300 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 transition-all ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
           >
             <span className="material-symbols-outlined">history_toggle_off</span>
-            <span className="text-sm font-semibold">{messages.navigation.changelog}</span>
+            {!isSidebarCollapsed && <span className="text-sm font-semibold">{messages.navigation.changelog}</span>}
           </Link>
         </div>
-        <form action={logoutAction} className="px-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+        <form action={logoutAction} className={`px-3 pt-3 border-t border-slate-200 dark:border-slate-800 ${isSidebarCollapsed ? 'px-1' : ''}`}>
           <button
             type="submit"
-            className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all"
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-all ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
           >
             <span className="material-symbols-outlined">logout</span>
-            <span className="text-sm font-semibold">{messages.navigation.logout}</span>
+            {!isSidebarCollapsed && <span className="text-sm font-semibold">{messages.navigation.logout}</span>}
           </button>
         </form>
       </aside>
       
-      <div className="hidden md:block w-72 flex-shrink-0" />
+      <div className={`hidden md:block flex-shrink-0 ${isSidebarCollapsed ? 'w-40' : 'w-72'} transition-all duration-300`} />
     </>
   );
 }

@@ -237,8 +237,35 @@ Mapa funcional disponible:
 ${routeLines}`;
 }
 
+function normalizeIntentText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
 function includesKeyword(haystack: string, keywords: string[]): boolean {
-  return keywords.some((keyword) => haystack.includes(keyword));
+  return keywords.some((keyword) => haystack.includes(normalizeIntentText(keyword)));
+}
+
+const NAVIGATION_INTENT_PATTERNS = [
+  /\b(?:como|how)\s+(?:uso|usar|registro|registrar|cargo|cargar|subo|subir|guardo|guardar|entro|abrir|abro|voy|llego|hago|navego|do|open|go|reach|use|find)\b/,
+  /\b(?:donde|where)\s+(?:registro|registrar|cargo|cargar|subo|subir|entro|abrir|abro|voy|encuentro|open|go|find)\b/,
+  /\b(?:guia|guide|tutorial|paso a paso|step by step)\b/,
+  /\b(?:guiame|indicame|dirigeme|llevame|show me|take me|walk me through)\b/,
+  /\b(?:ruta|pantalla|screen|boton|button|menu|module|modulo|navigate|navegar)\b/,
+  /\b(?:quiero|necesito|i want to|i need to)\s+(?:registrar|guardar|subir|abrir|ir|ver|actualizar|log|save|upload|open|go|update)\b/,
+];
+
+export function hasNavigationIntent(userMessage?: string): boolean {
+  const normalizedMessage = normalizeIntentText(userMessage ?? "");
+
+  if (!normalizedMessage) {
+    return false;
+  }
+
+  return NAVIGATION_INTENT_PATTERNS.some((pattern) => pattern.test(normalizedMessage));
 }
 
 function dedupeActions(actions: ChatNavigationAction[]): ChatNavigationAction[] {
@@ -257,7 +284,10 @@ export function getContextualChatActions(
 ): ChatNavigationAction[] {
   const normalizedPath = normalizeAppPath(pathname);
   const currentRoute = getRouteGuide(normalizedPath);
-  const normalizedMessage = userMessage?.trim().toLowerCase() ?? "";
+  const normalizedMessage = normalizeIntentText(userMessage ?? "");
+  if (!hasNavigationIntent(normalizedMessage)) {
+    return [];
+  }
   const actions: ChatNavigationAction[] = [];
 
   if (currentRoute) {

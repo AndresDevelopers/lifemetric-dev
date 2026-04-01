@@ -1,5 +1,16 @@
 import { z } from 'zod';
 import { getPromoProductGuidance } from '@/lib/productCatalog';
+import {
+  buildStandardDetectedResults,
+  detectedLabResultsSchema,
+  extractStandardLabValuesFromText,
+  type StandardLabFieldKey,
+  type StandardLabValues,
+} from "@/lib/labResults";
+import { createSupabaseServerClient } from "@/lib/supabase";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { PDFParse } from "pdf-parse";
 
 const AI_GATEWAY_BASE_URL = 'https://ai-gateway.vercel.sh/v1';
 const GEMINI_DIRECT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
@@ -68,20 +79,29 @@ export type PacienteContexto = {
   ldl?: number | null;
   alimentos_frecuentes?: string[];
   motivo_registro?: string | null;
+  ultima_glucosa?: { valor: number; tipo: string; fecha: string; } | null;
+};
+
+const ensureArray = (val: unknown) => {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val === 'string') return [val];
+  if (Array.isArray(val)) return val;
+  return [];
 };
 
 const suggestionsSchema = z.object({
   summary: z.string(),
-  suggestions: z.array(z.string()).max(6),
+  suggestions: z.preprocess(ensureArray, z.array(z.string()).max(6)),
   importantAlert: z.string().optional(),
-  centralProblems: z.array(z.string()).max(5).optional(),
-  priorityPlan: z.array(z.string()).max(8).optional(),
-  nutritionFocus: z.array(z.string()).max(8).optional(),
-  lifestyleFocus: z.array(z.string()).max(8).optional(),
-  recommendedLabs: z.array(z.string()).max(8).optional(),
-  productsGuidance: z.array(z.string()).max(5).optional(),
-  expectedProgress: z.array(z.string()).max(5).optional(),
+  centralProblems: z.preprocess(ensureArray, z.array(z.string()).max(5).optional()),
+  priorityPlan: z.preprocess(ensureArray, z.array(z.string()).max(8).optional()),
+  nutritionFocus: z.preprocess(ensureArray, z.array(z.string()).max(8).optional()),
+  lifestyleFocus: z.preprocess(ensureArray, z.array(z.string()).max(8).optional()),
+  recommendedLabs: z.preprocess(ensureArray, z.array(z.string()).max(8).optional()),
+  productsGuidance: z.preprocess(ensureArray, z.array(z.string()).max(5).optional()),
+  expectedProgress: z.preprocess(ensureArray, z.array(z.string()).max(5).optional()),
   patientMessage: z.string().optional(),
+  evolutionMessage: z.string().optional(),
 });
 
 export const medicationVisionSchema = z.object({
@@ -103,7 +123,36 @@ export const labVisionSchema = z.object({
   pcr_us: z.number().min(0).max(500).nullable().optional(),
   creatinina: z.number().min(0).max(50).nullable().optional(),
   acido_urico: z.number().min(0).max(30).nullable().optional(),
+  resultados_detectados: detectedLabResultsSchema.optional().default([]),
 });
+
+const standardLabLabels = {
+  hba1c: "HbA1c",
+  fastingGlucose: "Glucosa en ayuno",
+  triglycerides: "Triglicéridos",
+  hdl: "HDL",
+  ldl: "LDL",
+  insulin: "Insulina",
+  alt: "ALT",
+  ast: "AST",
+  tsh: "TSH",
+  creatinine: "Creatinina",
+  uricAcid: "Ácido úrico",
+  pcr_us: "PCR-us",
+} as const;
+
+function configurePdfWorker() {
+  try {
+    const workerPath = path.join(process.cwd(), "node_modules", "pdf-parse", "dist", "worker", "pdf.worker.mjs");
+    const workerSource = readFileSync(workerPath);
+    const workerDataUrl = `data:text/javascript;base64,${workerSource.toString("base64")}`;
+    PDFParse.setWorker(workerDataUrl);
+  } catch (error) {
+    console.warn("[configurePdfWorker] Could not configure pdf worker explicitly", error);
+  }
+}
+
+configurePdfWorker();
 
 type ApiConfig = { apiKey: string; baseUrl: string; model: string };
 
@@ -144,6 +193,321 @@ function normalizeContent(content: string | Array<{ type?: string; text?: string
     .filter((value): value is string => Boolean(value))
     .join('\n')
     .trim();
+}
+
+function parsePossiblyStringifiedJson(input: string): unknown {
+  const firstPass = JSON.parse(input);
+
+  if (typeof firstPass !== "string") {
+    return firstPass;
+  }
+
+  const unwrapped = firstPass.trim();
+  if (!(unwrapped.startsWith("{") || unwrapped.startsWith("["))) {
+    return firstPass;
+  }
+
+  return JSON.parse(unwrapped);
+}
+
+function isPdfUrl(url: string): boolean {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.pathname.toLowerCase().endsWith(".pdf");
+  } catch {
+    return url.toLowerCase().includes(".pdf");
+  }
+}
+
+async function extractPdfTextFromUrl(url: string): Promise<string | null> {
+  const parsePdfBuffer = async (buffer: Buffer, contentType?: string) => {
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    await parser.destroy();
+
+    const text = result.text?.trim();
+    console.log("[extractPdfTextFromUrl] PDF text extracted", {
+      url,
+      contentType: contentType ?? "unknown",
+      textLength: text?.length ?? 0,
+    });
+
+    return text && text.length > 0 ? text : null;
+  };
+
+  const tryDownloadFromSupabase = async () => {
+    try {
+      const parsedUrl = new URL(url);
+      const storageMarker = "/storage/v1/object/public/";
+      const markerIndex = parsedUrl.pathname.indexOf(storageMarker);
+      if (markerIndex < 0) {
+        return null;
+      }
+
+      const storagePath = parsedUrl.pathname.slice(markerIndex + storageMarker.length);
+      const [bucket, ...objectParts] = storagePath.split("/").filter(Boolean);
+      const objectPath = objectParts.join("/");
+      if (!bucket || !objectPath) {
+        return null;
+      }
+
+      const supabase = createSupabaseServerClient({ useServiceRole: true });
+      const { data, error } = await supabase.storage.from(bucket).download(objectPath);
+      if (error || !data) {
+        console.warn("[extractPdfTextFromUrl] Supabase download failed", {
+          url,
+          bucket,
+          objectPath,
+          error: error?.message,
+        });
+        return null;
+      }
+
+      const buffer = Buffer.from(await data.arrayBuffer());
+      return parsePdfBuffer(buffer, data.type);
+    } catch (error) {
+      console.warn("[extractPdfTextFromUrl] Supabase fallback failed", error);
+      return null;
+    }
+  };
+
+  try {
+    if (!isPdfUrl(url)) {
+      return null;
+    }
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const response = await fetch(url, { signal: AbortSignal.timeout(20000) });
+      if (response.ok) {
+        const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+        const isPdf = contentType.includes("application/pdf") || isPdfUrl(url);
+        if (!isPdf) {
+          console.warn("[extractPdfTextFromUrl] Response is not a PDF", {
+            url,
+            contentType,
+          });
+          break;
+        }
+
+        const buffer = Buffer.from(await response.arrayBuffer());
+        const parsed = await parsePdfBuffer(buffer, contentType);
+        if (parsed) {
+          return parsed;
+        }
+      } else {
+        console.warn("[extractPdfTextFromUrl] PDF fetch failed", {
+          url,
+          attempt,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      }
+
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 800 * attempt));
+      }
+    }
+
+    return tryDownloadFromSupabase();
+  } catch (error) {
+    console.warn("[extractPdfTextFromUrl] Could not extract PDF text", error);
+    return tryDownloadFromSupabase();
+  }
+}
+
+function hasAnyStandardLabValue(values: StandardLabValues): boolean {
+  return Object.values(values).some((value) => value != null);
+}
+
+const standardLabFieldKeys = [
+  "hba1c",
+  "glucosa_ayuno",
+  "insulina",
+  "trigliceridos",
+  "hdl",
+  "ldl",
+  "alt",
+  "ast",
+  "tsh",
+  "pcr_us",
+  "creatinina",
+  "acido_urico",
+] as const satisfies readonly StandardLabFieldKey[];
+
+function sanitizeStandardLabValues(values: StandardLabValues): StandardLabValues {
+  const sanitized: StandardLabValues = {};
+
+  for (const key of standardLabFieldKeys) {
+    const value = values[key];
+    if (value == null) {
+      continue;
+    }
+
+    const parsedValue = labVisionSchema.shape[key].safeParse(value);
+    if (parsedValue.success) {
+      sanitized[key] = parsedValue.data;
+      continue;
+    }
+
+    console.warn("[sanitizeStandardLabValues] Discarding out-of-range standard lab value", {
+      key,
+      value,
+    });
+  }
+
+  return sanitized;
+}
+
+function mergeStandardLabValues(
+  aiValues: StandardLabValues,
+  extractedPdfValues: StandardLabValues,
+): StandardLabValues {
+  const merged: StandardLabValues = {};
+
+  for (const key of standardLabFieldKeys) {
+    merged[key] = aiValues[key] ?? extractedPdfValues[key];
+  }
+
+  return sanitizeStandardLabValues(merged);
+}
+
+function buildLabFallbackResult(values: StandardLabValues) {
+  const sanitizedValues = sanitizeStandardLabValues(values);
+
+  return labVisionSchema.parse({
+    ...sanitizedValues,
+    resultados_detectados: buildStandardDetectedResults(sanitizedValues, standardLabLabels),
+  });
+}
+
+function buildStandardLabPrompt(locale: 'es' | 'en', sourceText?: string) {
+  if (locale === 'es') {
+    return `Eres un asistente médico experto en interpretación de resultados de laboratorio. Extrae SOLO estos campos estándar del documento: hba1c, glucosa_ayuno, insulina, trigliceridos, hdl, ldl, alt, ast, tsh, pcr_us, creatinina, acido_urico.
+
+Reglas:
+1. Devuelve únicamente JSON válido.
+2. Usa número cuando encuentres el resultado exacto.
+3. Usa null si el examen no contiene ese campo.
+4. No incluyas "resultados_detectados".
+5. No agregues explicaciones ni markdown.
+
+Formato exacto:
+{"hba1c":number|null,"glucosa_ayuno":number|null,"insulina":number|null,"trigliceridos":number|null,"hdl":number|null,"ldl":number|null,"alt":number|null,"ast":number|null,"tsh":number|null,"pcr_us":number|null,"creatinina":number|null,"acido_urico":number|null}
+${sourceText ? `\n\nTEXTO EXTRAIDO DEL PDF:\n${sourceText}` : ""}`;
+  }
+
+  return `You are a medical assistant expert in laboratory interpretation. Extract ONLY these standard fields from the document: hba1c, glucosa_ayuno, insulina, trigliceridos, hdl, ldl, alt, ast, tsh, pcr_us, creatinina, acido_urico.
+
+Rules:
+1. Return only valid JSON.
+2. Use a number when the exact result is present.
+3. Use null when the test is not present.
+4. Do not include "resultados_detectados".
+5. Do not add explanations or markdown.
+
+Exact format:
+{"hba1c":number|null,"glucosa_ayuno":number|null,"insulina":number|null,"trigliceridos":number|null,"hdl":number|null,"ldl":number|null,"alt":number|null,"ast":number|null,"tsh":number|null,"pcr_us":number|null,"creatinina":number|null,"acido_urico":number|null}
+${sourceText ? `\n\nTEXT EXTRACTED FROM PDF:\n${sourceText}` : ""}`;
+}
+
+function buildDetectedLabPrompt(locale: 'es' | 'en', sourceText: string, knownValues: StandardLabValues) {
+  if (locale === 'es') {
+    return `Analiza el texto del examen y devuelve SOLO JSON con "resultados_detectados".
+
+Objetivo:
+- Prioriza resultados adicionales que no están en los 12 campos principales.
+- Máximo 30 resultados para no truncar la respuesta.
+
+Valores estándar ya detectados:
+${JSON.stringify(knownValues)}
+
+Formato exacto:
+{"resultados_detectados":[{"key":"ferritina","label":"Ferritina","value":58,"unit":"ng/mL"}]}
+
+Reglas:
+1. Cada item debe tener key, label, value y unit opcional.
+2. key debe ir en snake_case.
+3. value puede ser número o texto corto.
+4. No agregues explicaciones ni markdown.
+
+TEXTO EXTRAIDO DEL PDF:
+${sourceText}`;
+  }
+
+  return `Analyze the lab text and return ONLY JSON with "resultados_detectados".
+
+Goal:
+- Prioritize additional results that are not part of the 12 main fields.
+- Maximum 30 results to avoid truncation.
+
+Standard values already detected:
+${JSON.stringify(knownValues)}
+
+Exact format:
+{"resultados_detectados":[{"key":"ferritin","label":"Ferritin","value":58,"unit":"ng/mL"}]}
+
+Rules:
+1. Each item must include key, label, value and optional unit.
+2. key must be snake_case.
+3. value may be numeric or short text.
+4. Do not add explanations or markdown.
+
+TEXT EXTRACTED FROM PDF:
+${sourceText}`;
+}
+
+function recoverJsonObject(clean: string): Record<string, unknown> | null {
+  try {
+    return parsePossiblyStringifiedJson(clean) as Record<string, unknown>;
+  } catch (parseError) {
+    console.warn('[extractLabValuesFromImage] JSON parse failed, attempting recovery:', parseError);
+
+    let bestIndex = -1;
+    let braceCount = 0;
+    let bracketCount = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < clean.length; i++) {
+      const char = clean[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (char === '{') braceCount++;
+      else if (char === '}') braceCount--;
+      else if (char === '[') bracketCount++;
+      else if (char === ']') bracketCount--;
+
+      if ((char === '}' || char === ']') && braceCount === 0 && bracketCount === 0) {
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex <= 0) {
+      return null;
+    }
+
+    try {
+      return parsePossiblyStringifiedJson(clean.substring(0, bestIndex + 1)) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export async function generateGeminiText(input: GeminiPromptInput, retryCount = 0): Promise<string> {
@@ -296,6 +660,12 @@ function buildContextBlock(ctx: PacienteContexto, locale: 'es' | 'en'): string {
   if (ctx.trigliceridos != null) labs.push(`Triglicéridos ${ctx.trigliceridos} mg/dL`);
   if (ctx.hdl != null) labs.push(`HDL ${ctx.hdl} mg/dL`);
   if (ctx.ldl != null) labs.push(`LDL ${ctx.ldl} mg/dL`);
+  if (ctx.ultima_glucosa) {
+    labs.push(t(
+      `Última glucosa registrada: ${ctx.ultima_glucosa.valor} mg/dL (${ctx.ultima_glucosa.tipo}) el ${ctx.ultima_glucosa.fecha}`,
+      `Last recorded glucose: ${ctx.ultima_glucosa.valor} mg/dL (${ctx.ultima_glucosa.tipo}) on ${ctx.ultima_glucosa.fecha}`
+    ));
+  }
   if (labs.length > 0) parts.push(t(`Últimos laboratorios: ${labs.join(', ')}`, `Recent labs: ${labs.join(', ')}`));
 
   const foods = ctx.alimentos_frecuentes?.slice(0, 8) ?? [];
@@ -461,19 +831,56 @@ export async function buildClinicalSuggestions(params: {
   const labContextBlock = tieneLabClaro ? ` DATOS DE LABORATORIO DISPONIBLES: El paciente tiene estudios recientes. ` +
     labs.filter(l => l.hba1c != null || l.glucosa_ayuno != null || l.trigliceridos != null || l.hdl != null || l.ldl != null || l.insulina != null || l.alt != null || l.ast != null).map(l => 
       `Fecha ${l.fecha}: HbA1c ${l.hba1c ?? 'N/D'}%, Glucosa ayuno ${l.glucosa_ayuno ?? 'N/D'} mg/dL, Triglicéridos ${l.trigliceridos ?? 'N/D'} mg/dL, HDL ${l.hdl ?? 'N/D'} mg/dL, LDL ${l.ldl ?? 'N/D'} mg/dL` +
-      (l.insulina != null ? `, Insulina ${l.insulina} μU/mL` : '') +
+      (l.insulina != null ? `, Insulina ${l.insulina} µU/mL` : '') +
       (l.alt != null ? `, ALT ${l.alt} U/L` : '') +
       (l.ast != null ? `, AST ${l.ast} U/L` : '') +
-      (l.tsh != null ? `, TSH ${l.tsh} μIU/mL` : '') +
+      (l.tsh != null ? `, TSH ${l.tsh} µIU/mL` : '') +
       (l.creatinina != null ? `, Creatinina ${l.creatinina} mg/dL` : '') +
       (l.acido_urico != null ? `, Ácido úrico ${l.acido_urico} mg/dL` : '') +
       (l.pcr_us != null ? `, PCR-us ${l.pcr_us} mg/L` : '')
-    ).join('. ') + `. Prioriza recomendaciones según estos valores reales del paciente.` : '';
+    ).join('. ') + `. Prioriza recomendaciones según estos valores reales del paciente. ` : '';
 
   const prompt =
     params.locale === 'es'
-      ? `Actúa como asistente clínico educativo con enfoque metabólico. ${labContextBlock} Analiza este informe JSON de la última semana: ${JSON.stringify(params.data)}. Usa además este marco de producto para recomendaciones de productos/suplementos: ${THERMORUSH_CONTEXT.es}. ${getPromoProductGuidance('es')} Reglas: ${tieneLabClaro ? `PRIORIDAD: Tienes datos de laboratorio claros (HbA1c, glucosa ayuno, perfil lipídico). Usa estos valores como base para personalizar recomendaciones clínicas específicas según los valores reales del paciente. ` : ''}1) Si glucosa_real_registrada es false, usa glucosa_estimada_por_comidas como referencia y deja claro que es estimación por alimentos. 2) Medicación y laboratorios son opcionales: si faltan, no bloquees el análisis; enfócate en comidas, hábitos y glucosa estimada/real. 3) En comidas_recientes prioriza siempre alimento_principal y nota para personalizar el análisis nutricional. 4) Si hay comidas_inadecuadas en el JSON, el paciente debe saber cuáles fueron esas comidas y por qué no son recomendadas. En patientMessage, menciona las comidas inadecuadas específicas que el paciente registró (alimento_principal y fecha) y ofrece alternativas más saludables. 5) Si sexo biológico es femenino y hay señales de fatiga, baja energía o laboratorio sugestivo, prioriza evaluación de hierro/anemia con lenguaje prudente (sin diagnosticar). 6) Incluye recomendaciones de alimentos, hábitos y seguimiento clínico ordenadas por prioridad. 7) Si existe motivo_registro en el JSON, úsalo para conectar progreso actual con la razón inicial de uso de la app en summary y patientMessage. 8) Si recomiendas ThermoRush, explica dosis (antes del desayuno y almuerzo), objetivo metabólico esperado y que no reemplaza tratamiento médico. 9) Nunca menciones productos restringidos. 10) Tono claro, humano, no alarmista y sin sustituir consulta médica. Devuelve SOLO JSON válido con este formato: {"summary":"...","centralProblems":["..."],"priorityPlan":["..."],"nutritionFocus":["..."],"lifestyleFocus":["..."],"recommendedLabs":["..."],"productsGuidance":["..."],"expectedProgress":["..."],"patientMessage":"... opcional ...","suggestions":["...","..."]}. Máximo 6 suggestions.`
-      : `Act as an educational metabolic-care assistant. ${labContextBlock ? labContextBlock.replace('DATOS DE LABORATORIO', 'LAB DATA').replace('El paciente tiene estudios recientes', 'The patient has recent studies').replace('Prioriza recomendaciones según estos valores reales del paciente', 'Prioritize recommendations based on these actual values') : ''} Analyze this weekly JSON report: ${JSON.stringify(params.data)}. Also use this product guidance framework for supplements/products recommendations: ${THERMORUSH_CONTEXT.en}. ${getPromoProductGuidance('en')} Rules: ${tieneLabClaro ? `PRIORITY: You have clear laboratory data (HbA1c, fasting glucose, lipid profile, insulin, liver enzymes, thyroid, kidney function and inflammation markers). Use these actual values as the primary basis to personalize clinical recommendations specific to the patient's real laboratory results. ` : ''}1) If glucosa_real_registrada is false, use glucosa_estimada_por_comidas and clearly state it is a meal-based estimate. 2) Medication and labs are optional: if missing, still provide actionable analysis from meals/habits/glucose. 3) In comidas_recientes, always prioritize alimento_principal and nota to personalize nutrition guidance. 4) If there are comidas_inadecuadas in the JSON, the patient needs to know which meals were inadequate and why. In patientMessage, mention the specific inadequate meals the patient logged (alimento_principal and fecha) and offer healthier alternatives. 5) Prioritize practical recommendations by urgency. 6) If motivo_registro exists in the JSON, connect current progress to the patient's original reason for using the app in summary and patientMessage. 7) If you mention ThermoRush, include timing (before breakfast and lunch), expected metabolic rationale, and that it does not replace medical treatment. 8) Never mention restricted products. 9) Keep a clear, supportive and non-alarmist tone, and never replace medical care. Return ONLY valid JSON with this shape: {"summary":"...","centralProblems":["..."],"priorityPlan":["..."],"nutritionFocus":["..."],"lifestyleFocus":["..."],"recommendedLabs":["..."],"productsGuidance":["..."],"expectedProgress":["..."],"patientMessage":"... optional ...","suggestions":["...","..."]}. Max 6 suggestions.`;
+      ? `Actúa como asistente clínico educativo con enfoque metabólico. ${labContextBlock} Analiza este informe JSON de la última semana: ${JSON.stringify(params.data)}. Usa además este marco de producto para recomendaciones de productos/suplementos: ${THERMORUSH_CONTEXT.es}. ${getPromoProductGuidance('es')} 
+      
+REGLAS CRÍTICAS DE EVOLUCIÓN:
+1) Analiza el objeto "evolution" en el JSON. Compara "peso_inicial" vs "peso_actual", "cintura_inicial" vs "cintura_actual", "sueno_inicial" vs "sueno_actual", "hba1c_inicial" vs "hba1c_actual" y "glucosa_inicial" vs "glucosa_actual".
+2) En el campo "summary" y "patientMessage", celebra logros específicos basados en estas comparaciones. Ejemplo: "¡Increíble! Has bajado 5kg desde que iniciaste" o "Tu cintura se ha reducido en 4cm, lo cual es excelente para tu salud metabólica".
+3) Conecta estos avances con el producto seleccionado ("producto_permitido"). Atribuye las mejoras en energía, control de peso o glucosa al uso constante del producto y buenos hábitos.
+4) Si el sueño mejoró (ej. de 5 a 7 horas), menciónalo como un pilar del éxito metabólico gracias al soporte neuro-metabólico.
+5) Si la glucosa bajó respecto al inicio, destaca esta protección contra picos.
+6) Si no hay datos suficientes de mejora (ej. son iguales), anima al paciente indicando que la constancia con el producto y la alimentación traerán esos cambios pronto.
+7) Tono: motivador, profesional, humano y celebratorio de pequeños y grandes cambios.
+
+OTRAS REGLAS:
+- Si el JSON incluye laboratorios con "resultados_detectados", usa también esos analitos extra para afinar tus recomendaciones clínicas.
+- Si glucosa_real_registrada es false, usa glucosa_estimada_por_comidas y aclara que es estimación.
+- En patientMessage, menciona comidas inadecuadas específicas si existen y da alternativas.
+- Analiza el campo "glucosa_con_relacion_comida" si existe y tiene datos. Este array contiene lecturas de glucosa que fueron tomadas DESPUÉS de comer ciertos alimentos (relación glucosa-comida). Si hay glucosa elevada después de una comida con alto carbohidratos o clasificación inadecuada, menciona esta conexión específica y sugiere alternativas. Este es el mecanismo de aprendizaje para identificar qué alimentos afectan más la glucosa del paciente.
+- Genera un evolutionMessage corto (máximo 2-3 frases) comparando el inicio con lo actual de forma motivadora. Atribuye el éxito al producto especificado.
+- Si recomiendas ThermoRush, explica dosis (antes de desayuno y almuerzo) y objetivo.
+- Devuelve SOLO JSON válido: {"summary":"...","centralProblems":["..."],"priorityPlan":["..."],"nutritionFocus":["..."],"lifestyleFocus":["..."],"recommendedLabs":["..."],"productsGuidance":["..."],"expectedProgress":["..."],"patientMessage":"...","evolutionMessage":"...","suggestions":["..."]}. Máximo 6 suggestions.`
+      : `Act as an educational metabolic-care assistant. ${labContextBlock ? labContextBlock.replace('DATOS DE LABORATORIO', 'LAB DATA').replace('El paciente tiene estudios recientes', 'The patient has recent studies').replace('Prioriza recomendaciones según estos valores reales del paciente', 'Prioritize recommendations based on these actual values') : ''} Analyze this weekly JSON report: ${JSON.stringify(params.data)}. Also use this product guidance framework for supplements/products recommendations: ${THERMORUSH_CONTEXT.en}. ${getPromoProductGuidance('en')}
+
+CRITICAL EVOLUTION RULES:
+1) Analyze the "evolution" object in the JSON. Compare "peso_inicial" vs "peso_actual", "cintura_inicial" vs "cintura_actual", "sueno_inicial" vs "sueno_actual", "hba1c_inicial" vs "hba1c_actual" and "glucosa_inicial" vs "glucosa_actual".
+2) In the "summary" and "patientMessage" fields, celebrate specific achievements based on these comparisons. Example: "Amazing! You've lost 5kg since you started" or "Your waist has reduced by 4cm, which is excellent for your metabolic health."
+3) Connect these improvements to the selected product ("producto_permitido"). Attribute gains in energy, weight control, or glucose to consistent product use and good habits.
+4) If sleep improved (e.g., from 5 to 7 hours), mention it as a pillar of metabolic success thanks to neuro-metabolic support.
+5) If glucose dropped compared to the start, highlight this protection against spikes.
+6) If there is not enough data for improvement (e.g., values are equal), encourage the patient stating that consistency with the product and nutrition will bring changes soon.
+7) Tone: motivating, professional, human, and celebratory of small and large changes.
+
+OTHER RULES:
+- If the JSON includes labs with "resultados_detectados", use those extra analytes too to refine your clinical recommendations.
+- Never mention restricted products.
+- If glucosa_real_registrada is false, use glucosa_estimada_por_comidas and clarify it is an estimate.
+- In patientMessage, mention specific inadequate meals if they exist and provide alternatives.
+- Analyze the field "glucosa_con_relacion_comida" if it exists and has data. This array contains glucose readings that were taken AFTER eating certain foods (glucose-meal relationship). If there is elevated glucose after a meal with high carbohydrates or inadequate classification, mention this specific connection and suggest alternatives. This is the learning mechanism to identify which foods affect the patient's glucose the most.
+- Generate a short evolutionMessage (max 2-3 sentences) comparing start vs current in a motivating way. Attribute success to the specified product.
+- If you mention ThermoRush, include timing (before breakfast and lunch) and rationale.
+- Return ONLY valid JSON: {"summary":"...","centralProblems":["..."],"priorityPlan":["..."],"nutritionFocus":["..."],"lifestyleFocus":["..."],"recommendedLabs":["..."],"productsGuidance":["..."],"expectedProgress":["..."],"patientMessage":"...","evolutionMessage":"...","suggestions":["..."]}. Max 6 suggestions.`;
 
   try {
     const response = await generateGeminiText({ prompt, temperature: 0.2, maxOutputTokens: 1536 });
@@ -554,88 +961,74 @@ export async function extractLabValuesFromImage(params: {
   locale: 'es' | 'en';
 }): Promise<z.infer<typeof labVisionSchema> | null> {
   if (!canUseGemini()) return null;
+  const requestedPdf = isPdfUrl(params.imageUrl);
+  const pdfText = await extractPdfTextFromUrl(params.imageUrl);
+  const isPdfDocument = requestedPdf || pdfText != null;
+  const standardValuesFromPdf = pdfText ? extractStandardLabValuesFromText(pdfText) : {};
 
-  const prompt =
-    params.locale === 'es'
-      ? `Eres un asistente médico experto en interpretación de resultados de laboratorio. Analiza la imagen adjunta de resultados de laboratorio clínico. Extrae únicamente los valores numéricos que encuentres para: HbA1c (%), glucosa en ayuno (mg/dL), insulina (μU/mL), triglicéridos (mg/dL), HDL (mg/dL), LDL (mg/dL), ALT (U/L), AST (U/L), TSH (μIU/mL), PCR-us (mg/L), creatinina (mg/dL), ácido úrico (mg/dL). Si un valor no aparece en la imagen, usa null. Devuelve SOLO JSON válido con las claves: hba1c, glucosa_ayuno, insulina, trigliceridos, hdl, ldl, alt, ast, tsh, pcr_us, creatinina, acido_urico. Sin texto adicional, solo JSON.`
-      : `You are a medical assistant expert in interpreting lab results. Analyze the attached clinical laboratory results image. Extract only the numeric values found for: HbA1c (%), fasting glucose (mg/dL), insulin (μU/mL), triglycerides (mg/dL), HDL (mg/dL), LDL (mg/dL), ALT (U/L), AST (U/L), TSH (μIU/mL), hsCRP (mg/L), creatinine (mg/dL), uric acid (mg/dL). If a value does not appear in the image use null. Return ONLY valid JSON with keys: hba1c, glucosa_ayuno, insulina, trigliceridos, hdl, ldl, alt, ast, tsh, pcr_us, creatinina, acido_urico. No extra text, just JSON.`;
+  if (requestedPdf && !pdfText) {
+    console.error("[extractLabValuesFromImage] PDF detected but text extraction failed", {
+      imageUrl: params.imageUrl,
+    });
+    return null;
+  }
 
   try {
-    const response = await generateGeminiText({ prompt, temperature: 0.1, maxOutputTokens: 600 });
-    const clean = response.replaceAll('```json', '').replaceAll('```', '').trim();
-    
-    // Debug: Log the raw response
-    console.log('[extractLabValuesFromImage] Raw AI response:', clean);
-    
-    let parsedJson: Record<string, unknown>;
-    try {
-      parsedJson = JSON.parse(clean);
-    } catch (parseError) {
-      // Intentar recuperar respuestas truncadas
-      console.warn('[extractLabValuesFromImage] JSON parse failed, attempting recovery:', parseError);
-      
-      // Buscar el último cierre válido de objeto
-      let bestIndex = -1;
-      let braceCount = 0;
-      let bracketCount = 0;
-      let inString = false;
-      let escapeNext = false;
-      
-      for (let i = 0; i < clean.length; i++) {
-        const char = clean[i];
-        
-        if (escapeNext) {
-          escapeNext = false;
-          continue;
+    const standardPrompt = buildStandardLabPrompt(params.locale, pdfText ?? undefined);
+    const standardResponse = await generateGeminiText({
+      prompt: standardPrompt,
+      imageUrl: isPdfDocument ? undefined : params.imageUrl,
+      temperature: 0.1,
+      maxOutputTokens: 500,
+    });
+    const standardClean = standardResponse.replaceAll('```json', '').replaceAll('```', '').trim();
+    console.log('[extractLabValuesFromImage] Standard AI response:', standardClean);
+
+    const standardJson = recoverJsonObject(standardClean);
+    const standardParse = labVisionSchema.omit({ resultados_detectados: true }).safeParse(standardJson ?? {});
+    const aiStandardValues = sanitizeStandardLabValues(standardParse.success ? standardParse.data : {});
+    const pdfFallbackValues = sanitizeStandardLabValues(standardValuesFromPdf);
+    const mergedStandardValues = mergeStandardLabValues(aiStandardValues, pdfFallbackValues);
+
+    let detectedResults = buildStandardDetectedResults(mergedStandardValues, standardLabLabels);
+
+    if (pdfText) {
+      try {
+        const detectedPrompt = buildDetectedLabPrompt(params.locale, pdfText, mergedStandardValues);
+        const detectedResponse = await generateGeminiText({
+          prompt: detectedPrompt,
+          temperature: 0.1,
+          maxOutputTokens: 1400,
+        });
+        const detectedClean = detectedResponse.replaceAll('```json', '').replaceAll('```', '').trim();
+        console.log('[extractLabValuesFromImage] Detected-fields AI response:', detectedClean);
+        const detectedJson = recoverJsonObject(detectedClean);
+        const detectedParse = detectedLabResultsSchema.safeParse(detectedJson?.resultados_detectados);
+        if (detectedParse.success && detectedParse.data.length > 0) {
+          detectedResults = detectedParse.data;
         }
-        
-        if (char === '\\' && inString) {
-          escapeNext = true;
-          continue;
-        }
-        
-        if (char === '"') {
-          inString = !inString;
-          continue;
-        }
-        
-        if (inString) continue;
-        
-        if (char === '{') braceCount++;
-        else if (char === '}') braceCount--;
-        else if (char === '[') bracketCount++;
-        else if (char === ']') bracketCount--;
-        
-        // Si encontramos un cierre que balancea el JSON, guardamos la posición
-        if ((char === '}' || char === ']') && braceCount === 0 && bracketCount === 0) {
-          bestIndex = i;
-        }
-      }
-      
-      if (bestIndex > 0) {
-        const truncated = clean.substring(0, bestIndex + 1);
-        console.log('[extractLabValuesFromImage] Attempting recovery with:', truncated);
-        try {
-          parsedJson = JSON.parse(truncated);
-        } catch {
-          console.error('[extractLabValuesFromImage] Recovery failed, returning null');
-          return null;
-        }
-      } else {
-        console.error('[extractLabValuesFromImage] No valid JSON closure found, returning null');
-        return null;
+      } catch (detectedError) {
+        console.warn('[extractLabValuesFromImage] Optional detected-fields pass failed', detectedError);
       }
     }
-    
-    console.log('[extractLabValuesFromImage] Parsed JSON:', parsedJson);
-    
-    return labVisionSchema.parse(parsedJson);
+
+    if (!hasAnyStandardLabValue(mergedStandardValues) && detectedResults.length === 0) {
+      return null;
+    }
+
+    return labVisionSchema.parse({
+      ...mergedStandardValues,
+      resultados_detectados: detectedResults,
+    });
   } catch (error) {
+    if (hasAnyStandardLabValue(standardValuesFromPdf)) {
+      console.warn("[extractLabValuesFromImage] Using PDF text fallback after AI error", error);
+      return buildLabFallbackResult(standardValuesFromPdf);
+    }
     console.error('[extractLabValuesFromImage] Error:', error);
     return null;
   }
 }
-
 export async function estimateMedicationFromImage(params: {
   imageUrl: string;
   locale: 'es' | 'en';

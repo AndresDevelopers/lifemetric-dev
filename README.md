@@ -57,6 +57,7 @@ pnpm build
 La app ahora incluye integración server-side con:
 
 - **Resend** para correos transaccionales (recuperación de contraseña y suscripción/desuscripción por correo, incluyendo check por defecto en registro).
+- **Fallback SMTP con Nodemailer** cuando `RESEND_API_KEY` no estÃ¡ configurada o Resend falla. En Windows no se depende de `sendmail`, asÃ­ que con `SMTP_HOST` o `SMTP_URL` y credenciales el correo debe seguir saliendo por SMTP.
 - **Vercel AI Gateway** (endpoint OpenAI-compatible) para funciones de IA, con modelo configurable en `AI_GATEWAY_MODEL`.
 
 Configura las variables nuevas en `.env` usando `.env.example` como guía.
@@ -77,7 +78,9 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
 - El widget de chat incluye iconos de historial y limpieza de conversación para recuperar sesiones previas o iniciar una nueva conversación rápidamente.
 - El widget de chat ahora consume el contexto completo del paciente: perfil clínico, datos de Ajustes y el historial completo de comidas, glucosa, hábitos, medicación y laboratorios para responder con más contexto.
 - En login, el logo de marca se adapta para ocupar casi todo el ancho de su fila con padding vertical para mantener proporción visual en logos alargados.
-- En comidas, al subir foto la IA autocompleta automáticamente el campo del plato principal y se eliminó el campo de "cómo te sientes" del formulario para simplificar el guardado.
+- En comidas, al subir foto la IA autocompleta automáticamente el campo del plato principal y ahora también persiste las kcal/macros inferidas para que el historial del Resumen muestre el valor real calculado por la IA.
+- En `Resumen > Historial de comidas`, la vista abre automáticamente el día más reciente con registros, conserva fecha/hora sin corrimientos por zona horaria y resincroniza solo ese bloque cuando entra una comida nueva.
+- Cuando una comida queda clasificada como inadecuada, el badge del historial se normaliza a `Inadecuada` y esa misma clasificación alimenta el contador de comidas inadecuadas del Resumen.
 - Tanto en comidas como en medicación, los nombres autocompletados por IA siguen siendo editables para corrección manual del usuario.
 - El guardado de comidas debe mantener alineado el payload de `src/actions/comida.ts` con los nombres exactos del modelo `Comida` en Prisma, especialmente `clasificacion_carbohidrato`, para evitar errores de persistencia en PostgreSQL.
 - En la página de inicio autenticada se removió el indicador circular junto al título del header para un diseño más limpio.
@@ -99,6 +102,9 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
 
 
 - El widget de chat ahora responde en el idioma configurado dentro de la app y cambia en caliente cuando el usuario actualiza su preferencia en Ajustes.
+- En `Resumen > Laboratorios`, la app ahora muestra todos los campos detectados por IA y conserva esos resultados aunque el examen use un panel distinto al metabólico estándar.
+
+- La guia de navegacion del chat es bajo demanda: solo muestra pasos, rutas y accesos cuando el usuario pide ayuda para usar la app o solicita un tutorial.
 
 ## Escaneo anti-malware en subida de archivos
 

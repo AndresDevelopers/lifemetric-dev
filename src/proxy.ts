@@ -75,7 +75,7 @@ export async function proxy(request: NextRequest) {
           return response;
         }
       }
-    } catch (e) {
+    } catch {
       // Resilience: if JSON or Redis fails, let it pass
     }
   }

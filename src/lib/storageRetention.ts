@@ -1,6 +1,6 @@
 export const MEAL_IMAGE_RETENTION_DAYS = 365;
 export const MEDICATION_IMAGE_RETENTION_DAYS = 180;
-export const LAB_IMAGE_RETENTION_DAYS = 240;
+export const LAB_IMAGE_RETENTION_DAYS = 730;
 
 function getSupabaseStorageBaseUrl(): string | null {
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;

@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import ExpandableSuggestions from "@/components/resumen/ExpandableSuggestions";
 import HistorialComidas from "@/components/resumen/HistorialComidas";
 import SummaryHeader from "@/components/resumen/SummaryHeader";
 import { buildClinicalSuggestions, extractLabValuesFromImage } from "@/lib/ai/gemini";
@@ -10,10 +11,16 @@ import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
   getMessages,
+  isFoodClassificationInadequate,
   inferLocaleFromRequest,
 } from "@/lib/i18n";
 import { getPacienteProfileExtras } from "@/lib/pacienteProfile";
 import { getSessionPacienteId } from "@/actions/data";
+import {
+  buildDetectedResultsFromStoredLab,
+  buildLabChipsFromDetectedResults,
+} from "@/lib/labResults";
+import { getSummaryMealHistory } from "@/lib/mealHistoryData";
 
 function escapeCsvValue(value: string | number): string {
   const normalized = String(value).replaceAll('"', '""');
@@ -63,40 +70,9 @@ function formatLabValue(
   return suffix ? `${value} ${suffix}` : String(value);
 }
 
-type LabChip = { label: string; value: string };
-
-function buildLabChips(
-  aiVision: { hba1c?: number | null; glucosa_ayuno?: number | null; trigliceridos?: number | null; hdl?: number | null; ldl?: number | null; insulina?: number | null; alt?: number | null; ast?: number | null; tsh?: number | null; creatinina?: number | null; acido_urico?: number | null; pcr_us?: number | null } | null,
-  fallback: { hba1c?: { toString(): string } | null; glucosa_ayuno?: number | null; trigliceridos?: number | null; hdl?: number | null; ldl?: number | null } | null,
-  labLabels: Record<string, string>
-): LabChip[] {
-  const chips: LabChip[] = [];
-  
-  if (aiVision) {
-    if (aiVision.hba1c != null) chips.push({ label: labLabels.hba1c, value: `${aiVision.hba1c}%` });
-    if (aiVision.glucosa_ayuno != null) chips.push({ label: labLabels.fastingGlucose, value: `${aiVision.glucosa_ayuno} mg/dL` });
-    if (aiVision.trigliceridos != null) chips.push({ label: labLabels.triglycerides, value: `${aiVision.trigliceridos} mg/dL` });
-    if (aiVision.hdl != null) chips.push({ label: labLabels.hdl, value: `${aiVision.hdl} mg/dL` });
-    if (aiVision.ldl != null) chips.push({ label: labLabels.ldl, value: `${aiVision.ldl} mg/dL` });
-    if (aiVision.insulina != null) chips.push({ label: labLabels.insulin, value: `${aiVision.insulina} \u03bcU/mL` });
-    if (aiVision.alt != null) chips.push({ label: labLabels.alt, value: `${aiVision.alt} U/L` });
-    if (aiVision.ast != null) chips.push({ label: labLabels.ast, value: `${aiVision.ast} U/L` });
-    if (aiVision.tsh != null) chips.push({ label: labLabels.tsh, value: `${aiVision.tsh} \u03bcIU/mL` });
-    if (aiVision.creatinina != null) chips.push({ label: labLabels.creatinine, value: `${aiVision.creatinina} mg/dL` });
-    if (aiVision.acido_urico != null) chips.push({ label: labLabels.uricAcid, value: `${aiVision.acido_urico} mg/dL` });
-    if (aiVision.pcr_us != null) chips.push({ label: labLabels.pcr_us, value: `${aiVision.pcr_us} mg/L` });
-  } else if (fallback) {
-    if (fallback.hba1c != null) chips.push({ label: labLabels.hba1c, value: `${Number(fallback.hba1c)}%` });
-    if (fallback.glucosa_ayuno != null) chips.push({ label: labLabels.fastingGlucose, value: `${fallback.glucosa_ayuno} mg/dL` });
-    if (fallback.trigliceridos != null) chips.push({ label: labLabels.triglycerides, value: `${fallback.trigliceridos} mg/dL` });
-    if (fallback.hdl != null) chips.push({ label: labLabels.hdl, value: `${fallback.hdl} mg/dL` });
-    if (fallback.ldl != null) chips.push({ label: labLabels.ldl, value: `${fallback.ldl} mg/dL` });
-  }
-  return chips;
-}
-
 const getCachedAISuggestions = unstable_cache(
-  async (locale: "es" | "en", data: Record<string, unknown>) => buildClinicalSuggestions({ locale, data }),
+  async (...[locale, data]: ["es" | "en", Record<string, unknown>, string, string, string]) =>
+    buildClinicalSuggestions({ locale, data }),
   ["clinical-suggestions"],
   { revalidate: 3600 }
 );
@@ -144,20 +120,16 @@ export default async function ResumenSemanal({
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = endDate.toISOString().split('T')[0];
 
-  const treintaDiasAtras = new Date();
-  treintaDiasAtras.setDate(treintaDiasAtras.getDate() - 30);
-
-  const [paciente, profileExtras] = await Promise.all([
+  const [paciente, profileExtras, latestHabit, earliestHabit, recentMealHistory] = await Promise.all([
     prisma.paciente.findUnique({
       where: { paciente_id: pacienteId },
-      include: {
-        comidas: {
-          where: { fecha: { gte: treintaDiasAtras } },
-          orderBy: [
-            { fecha: 'desc' },
-            { hora: 'desc' }
-          ]
-        },
+      select: {
+        nombre: true,
+        apellido: true,
+        edad: true,
+        sexo: true,
+        peso_inicial_kg: true,
+        cintura_inicial_cm: true,
         habitos: {
           where: { fecha: { gte: startDate, lte: endDate } }
         },
@@ -169,16 +141,28 @@ export default async function ResumenSemanal({
           where: { fecha: { gte: startDate, lte: endDate } }
         },
         glucosa: {
-          where: { fecha: { gte: startDate, lte: endDate } }
+          where: { fecha: { gte: startDate, lte: endDate } },
+          include: { comida_relacionada: true }
         }
       }
     }),
     getPacienteProfileExtras(pacienteId),
+    prisma.habito.findFirst({
+      where: { paciente_id: pacienteId, peso_kg: { not: null } },
+      orderBy: { fecha: 'desc' }
+    }),
+    prisma.habito.findFirst({
+      where: { paciente_id: pacienteId },
+      orderBy: { fecha: 'asc' }
+    }),
+    getSummaryMealHistory(pacienteId),
   ]);
 
   if (!paciente) {
     redirect('/login');
   }
+
+  type LaboratorioItem = (typeof paciente.laboratorios)[number];
 
   const ultimaHba1c = paciente.laboratorios?.[0]?.hba1c ? Number(paciente.laboratorios[0].hba1c) : 0;
   const ultimoLaboratorio = paciente.laboratorios[0] ?? null;
@@ -193,10 +177,13 @@ export default async function ResumenSemanal({
   
   // Intentar extracción IA solo para el laboratorio más reciente faltante
   // y con timeout para no bloquear el render de la página.
-  const labVisionResults = new Map<number, Record<string, number | null>>();
+  const labVisionResults = new Map<string, Awaited<ReturnType<typeof extractLabValuesFromImage>>>();
   const latestPendingLab = paciente.laboratorios.find(
     (lab: (typeof paciente.laboratorios)[number]) =>
-      lab.archivo_url && lab.hba1c == null && lab.glucosa_ayuno == null,
+      lab.archivo_url &&
+      lab.hba1c == null &&
+      lab.glucosa_ayuno == null &&
+      (!lab.resultados_detectados || !Array.isArray(lab.resultados_detectados) || lab.resultados_detectados.length === 0),
   );
 
   if (latestPendingLab?.archivo_url) {
@@ -223,28 +210,54 @@ export default async function ResumenSemanal({
             creatinina: result.creatinina,
             acido_urico: result.acido_urico,
             pcr_us: result.pcr_us,
+            resultados_detectados: result.resultados_detectados,
           }
         });
       }
     } catch {}
   }
+
+  const latestVisionResult = ultimoLaboratorio
+    ? labVisionResults.get(ultimoLaboratorio.laboratorio_id)
+    : null;
+  const latestDetectedResults = ultimoLaboratorio
+    ? buildDetectedResultsFromStoredLab(
+        {
+          standardValues: {
+            hba1c: latestVisionResult?.hba1c ?? (ultimoLaboratorio.hba1c ? Number(ultimoLaboratorio.hba1c) : null),
+            glucosa_ayuno: latestVisionResult?.glucosa_ayuno ?? ultimoLaboratorio.glucosa_ayuno,
+            trigliceridos: latestVisionResult?.trigliceridos ?? ultimoLaboratorio.trigliceridos,
+            hdl: latestVisionResult?.hdl ?? ultimoLaboratorio.hdl,
+            ldl: latestVisionResult?.ldl ?? ultimoLaboratorio.ldl,
+            insulina: latestVisionResult?.insulina ?? (ultimoLaboratorio.insulina ? Number(ultimoLaboratorio.insulina) : null),
+            alt: latestVisionResult?.alt ?? ultimoLaboratorio.alt,
+            ast: latestVisionResult?.ast ?? ultimoLaboratorio.ast,
+            tsh: latestVisionResult?.tsh ?? (ultimoLaboratorio.tsh ? Number(ultimoLaboratorio.tsh) : null),
+            creatinina: latestVisionResult?.creatinina ?? (ultimoLaboratorio.creatinina ? Number(ultimoLaboratorio.creatinina) : null),
+            acido_urico: latestVisionResult?.acido_urico ?? (ultimoLaboratorio.acido_urico ? Number(ultimoLaboratorio.acido_urico) : null),
+            pcr_us: latestVisionResult?.pcr_us ?? (ultimoLaboratorio.pcr_us ? Number(ultimoLaboratorio.pcr_us) : null),
+          },
+          detectedResults: latestVisionResult?.resultados_detectados ?? ultimoLaboratorio.resultados_detectados,
+        },
+        messages.summary.labValues,
+      )
+    : [];
   
   const promedioGlucosa = paciente.glucosa.length 
     ? Math.round(paciente.glucosa.reduce((acc: number, curr: (typeof paciente.glucosa)[number]) => acc + curr.valor_glucosa, 0) / paciente.glucosa.length)
     : 0;
 
-  const filteredComidas = paciente.comidas.filter((c: (typeof paciente.comidas)[number]) => {
-    const d = new Date(c.fecha);
-    return d >= startDate && d <= endDate;
+  const filteredComidas = recentMealHistory.filter((c: (typeof recentMealHistory)[number]) => {
+    return c.fecha >= startDateStr && c.fecha <= endDateStr;
   });
   const comidasRegistradas = filteredComidas.length;
-  const comidasInadecuadasCount = filteredComidas.filter((c: (typeof filteredComidas)[number]) => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo').length;
-  const comidasInadecuadas = filteredComidas.filter((c: (typeof filteredComidas)[number]) => c.clasificacion_final?.toLowerCase() === 'pobre' || c.clasificacion_final?.toLowerCase() === 'malo'); 
+  const comidasInadecuadasCount = filteredComidas.filter((c: (typeof filteredComidas)[number]) => isFoodClassificationInadequate(c.clasificacion_final)).length;
+  const comidasInadecuadas = filteredComidas.filter((c: (typeof filteredComidas)[number]) => isFoodClassificationInadequate(c.clasificacion_final)); 
   const glucosaEstimadaPorComida = estimateGlucoseFromMeals(
     filteredComidas.map((item: (typeof filteredComidas)[number]) => ({
-      carbohidratos_g: item.carbohidratos_g != null ? Number(item.carbohidratos_g) : null,
-      fibra_g: item.fibra_g != null ? Number(item.fibra_g) : null,
-      proteina_g: item.proteina_g != null ? Number(item.proteina_g) : null,
+      carbohidratos_g: item.carbohidratos_g,
+      fibra_g: item.fibra_g,
+      proteina_g: item.proteina_g,
       clasificacion_final: item.clasificacion_final,
     })),
   );
@@ -286,18 +299,6 @@ export default async function ResumenSemanal({
     return acc;
   }, {});
 
-  const habitosConPeso = paciente.habitos
-    .filter((h: (typeof paciente.habitos)[number]) => h.peso_kg != null)
-    .sort((a: (typeof paciente.habitos)[number], b: (typeof paciente.habitos)[number]) => 
-      new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-    );
-  
-  let pesoActual: number | null = null;
-  if (habitosConPeso[0]?.peso_kg != null) {
-    pesoActual = Number(habitosConPeso[0].peso_kg);
-  } else if (paciente.peso_inicial_kg != null) {
-    pesoActual = Number(paciente.peso_inicial_kg);
-  }
 
   let alertaPrincipal: string | null = null;
   if (hasAlertData) {
@@ -305,6 +306,20 @@ export default async function ResumenSemanal({
                       (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140);
     alertaPrincipal = tienePicos ? messages.summary.glucosePeaks : messages.summary.glucoseInRange;
   }
+
+  const weightActual = latestHabit?.peso_kg ? Number(latestHabit.peso_kg) : null;
+  const cinturaActual = latestHabit?.cintura_cm ? Number(latestHabit.cintura_cm) : null;
+  const suenoActual = latestHabit?.sueno_horas ? Number(latestHabit.sueno_horas) : null;
+
+  const weightInicial = paciente.peso_inicial_kg ? Number(paciente.peso_inicial_kg) : (earliestHabit?.peso_kg ? Number(earliestHabit.peso_kg) : null);
+  const cinturaInicial = paciente.cintura_inicial_cm ? Number(paciente.cintura_inicial_cm) : (earliestHabit?.cintura_cm ? Number(earliestHabit.cintura_cm) : null);
+  const suenoInicial = earliestHabit?.sueno_horas ? Number(earliestHabit.sueno_horas) : null;
+
+  const hba1cInicial = [...paciente.laboratorios].reverse().find((laboratorio: LaboratorioItem) => laboratorio.hba1c != null)?.hba1c ?? null;
+  const hba1cActual = paciente.laboratorios.find((laboratorio: LaboratorioItem) => laboratorio.hba1c != null)?.hba1c ?? null;
+  
+  const glucosaInicial = [...paciente.laboratorios].reverse().find((laboratorio: LaboratorioItem) => laboratorio.glucosa_ayuno != null)?.glucosa_ayuno ?? null;
+  const glucosaActual = paciente.laboratorios.find((laboratorio: LaboratorioItem) => laboratorio.glucosa_ayuno != null)?.glucosa_ayuno ?? null;
 
   const data = {
     paciente: `${paciente.nombre} ${paciente.apellido}`,
@@ -330,11 +345,19 @@ export default async function ResumenSemanal({
     adherencia_medicacion_pct: adherenciaMedicacion,
     alerta_principal: alertaPrincipal,
     evolution: {
-      diagnostico_inicial: paciente.diagnostico_principal,
-      producto_permitido: profileExtras.producto_permitido_registro,
-      peso_inicial: paciente.peso_inicial_kg ? Number(paciente.peso_inicial_kg) : null,
-      peso_actual: pesoActual,
-    }
+      diagnostico_inicial: profileExtras.motivo_registro ?? null,
+      producto_permitido: profileExtras.producto_permitido_registro ?? null,
+      peso_inicial: weightInicial,
+      peso_actual: weightActual,
+      cintura_inicial: cinturaInicial,
+      cintura_actual: cinturaActual,
+      sueno_inicial: suenoInicial,
+      sueno_actual: suenoActual,
+      hba1c_inicial: hba1cInicial ? Number(hba1cInicial) : null,
+      hba1c_actual: hba1cActual ? Number(hba1cActual) : null,
+      glucosa_inicial: glucosaInicial ? Number(glucosaInicial) : null,
+      glucosa_actual: glucosaActual ? Number(glucosaActual) : null,
+    },
   };
 
   const aiSuggestionPayload = {
@@ -359,6 +382,30 @@ export default async function ResumenSemanal({
       creatinina: item.creatinina ? Number(item.creatinina) : null,
       acido_urico: item.acido_urico ? Number(item.acido_urico) : null,
       pcr_us: item.pcr_us ? Number(item.pcr_us) : null,
+      resultados_detectados: buildDetectedResultsFromStoredLab(
+        {
+          standardValues: {
+            hba1c: item.hba1c ? Number(item.hba1c) : null,
+            glucosa_ayuno: item.glucosa_ayuno,
+            trigliceridos: item.trigliceridos,
+            hdl: item.hdl,
+            ldl: item.ldl,
+            insulina: item.insulina ? Number(item.insulina) : null,
+            alt: item.alt,
+            ast: item.ast,
+            tsh: item.tsh ? Number(item.tsh) : null,
+            creatinina: item.creatinina ? Number(item.creatinina) : null,
+            acido_urico: item.acido_urico ? Number(item.acido_urico) : null,
+            pcr_us: item.pcr_us ? Number(item.pcr_us) : null,
+          },
+          detectedResults: item.resultados_detectados,
+        },
+        messages.summary.labValues,
+      ).map((result) => ({
+        nombre: result.label,
+        valor: result.value,
+        unidad: result.unit ?? null,
+      })),
     })),
     comidas_recientes: filteredComidas.slice(0, 5).map((item: (typeof filteredComidas)[number]) => ({
       alimento_principal: item.alimento_principal,
@@ -373,17 +420,36 @@ export default async function ResumenSemanal({
       alimento_principal: item.alimento_principal,
       nota: item.nota,
       clasificacion_final: item.clasificacion_final,
-      fecha: item.fecha instanceof Date ? item.fecha.toISOString().split('T')[0] : String(item.fecha).split('T')[0],
+      fecha: item.fecha,
     })),
     glucosa_real_registrada: paciente.glucosa.length > 0,
     glucosa_estimada_por_comidas: paciente.glucosa.length > 0 ? null : glucosaEstimadaPorComida,
+    glucosa_con_relacion_comida: paciente.glucosa
+      .filter((g: (typeof paciente.glucosa)[number]) => g.comida_relacionada)
+      .map((g: (typeof paciente.glucosa)[number]) => ({
+        fecha: g.fecha instanceof Date ? g.fecha.toISOString().split('T')[0] : String(g.fecha).split('T')[0],
+        hora: g.hora instanceof Date ? g.hora.toISOString().split('T')[0] + 'T' + g.hora.toISOString().split('T')[1].substring(0, 5) : null,
+        tipo: g.tipo_glucosa,
+        valor: g.valor_glucosa,
+        clasificacion: g.clasificacion_glucosa,
+        comida_alimento_principal: g.comida_relacionada?.alimento_principal,
+        comida_tipo: g.comida_relacionada?.tipo_comida,
+        comida_carbohidratos_g: g.comida_relacionada?.carbohidratos_g ? Number(g.comida_relacionada.carbohidratos_g) : null,
+        comida_proteina_g: g.comida_relacionada?.proteina_g ? Number(g.comida_relacionada.proteina_g) : null,
+        comida_grasa_g: g.comida_relacionada?.grasa_g ? Number(g.comida_relacionada.grasa_g) : null,
+        comida_kcal: g.comida_relacionada?.kcal_estimadas,
+        comida_clasificacion: g.comida_relacionada?.clasificacion_final,
+      })),
   };
 
   let aiSuggestions = null;
   try {
     aiSuggestions = await getCachedAISuggestions(
       locale,
-      aiSuggestionPayload
+      aiSuggestionPayload,
+      pacienteId,
+      startDateStr,
+      endDateStr
     );
   } catch {
     aiSuggestions = null;
@@ -459,102 +525,122 @@ export default async function ResumenSemanal({
                 )}
               </div>
             </div>
-
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-blue-200/70 text-[10px] font-bold uppercase tracking-widest mb-1">{messages.summary.lastHbA1c}</p>
-                <div className="flex items-baseline justify-end gap-1">
-                  <span className="text-5xl font-black">{data.ultima_hba1c || "--"}</span>
-                  <span className="text-xl font-bold text-blue-300">%</span>
+            <div className="flex flex-wrap gap-4 mt-4 md:mt-0 md:pr-20">
+              {data.evolution.diagnostico_inicial && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-3 py-1.5 border border-white/20">
+                  <span className="text-xs text-white font-medium">{data.evolution.diagnostico_inicial}</span>
                 </div>
-              </div>
-              <div className="w-px h-12 bg-white/10"></div>
-              <div className="text-right">
-                <p className="text-blue-200/70 text-[10px] font-bold uppercase tracking-widest mb-1">{messages.summary.averageGlucose}</p>
-                <div className="flex items-baseline justify-end gap-1">
-                  <span className="text-5xl font-black">{data.promedio_glucosa || "--"}</span>
-                  <span className="text-xs font-bold text-blue-300">mg/dL</span>
+              )}
+              {data.evolution.producto_permitido && (
+                <div className="bg-green-500/20 backdrop-blur-sm rounded-xl px-3 py-1.5 border border-green-500/30">
+                  <span className="material-symbols-outlined text-green-300 text-sm">check_circle</span>
+                  <span className="text-xs text-green-100 font-medium ml-1">{data.evolution.producto_permitido}</span>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Sección de Evolución y Estado Inicial */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col justify-between">
+          <div className="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100 md:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="bg-primary/10 p-3 rounded-2xl">
-                <span className="material-symbols-outlined text-primary text-2xl">history</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-800 leading-tight text-lg">{messages.summary.evolution.title}</h3>
-                <p className="text-slate-500 text-xs">{messages.summary.evolution.subtitle}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{messages.summary.evolution.initialDiagnosis}</p>
-                <p className="font-semibold text-slate-700">{data.evolution.diagnostico_inicial || "--"}</p>
-              </div>
-              
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{messages.summary.evolution.initialProduct}</p>
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
-                  <p className="font-semibold text-slate-700">{data.evolution.producto_permitido || "--"}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-slate-100 p-3 rounded-2xl">
-                <span className="material-symbols-outlined text-slate-600 text-2xl">trending_up</span>
+              <div className="bg-green-100 p-3 rounded-2xl">
+                <span className="material-symbols-outlined text-green-600 text-2xl">workspace_premium</span>
               </div>
               <div>
                 <h3 className="font-bold text-slate-800 leading-tight text-lg">{messages.summary.evolution.currentStatus}</h3>
-                <p className="text-slate-500 text-xs">{messages.summary.evolution.sinceStart}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col justify-center items-center text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{messages.summary.evolution.weightChange}</p>
-                {data.evolution.peso_inicial && data.evolution.peso_actual ? (
-                  <>
-                    <div className={`text-2xl font-black ${data.evolution.peso_actual < data.evolution.peso_inicial ? 'text-green-600' : 'text-slate-800'}`}>
-                      {data.evolution.peso_actual - data.evolution.peso_inicial > 0 ? '+' : ''}{Math.round((data.evolution.peso_actual - data.evolution.peso_inicial) * 10) / 10} kg
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Peso Logro */}
+                {data.evolution.peso_inicial && data.evolution.peso_actual && (
+                  <div className="bg-green-50/50 rounded-2xl p-4 border border-green-100 flex flex-col justify-center items-center text-center transition-all hover:bg-green-50">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-green-600 mb-2">{messages.summary.evolution.weightChange}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase leading-none mb-1">{messages.summary.evolution.initialMeasure}</span>
+                        <span className="text-slate-600 font-black text-xl">{data.evolution.peso_inicial}kg</span>
+                      </div>
+                      <span className="material-symbols-outlined text-slate-300 text-sm">arrow_forward</span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase leading-none mb-1">{messages.summary.evolution.currentMeasure}</span>
+                        <span className="text-green-600 font-black text-xl">{data.evolution.peso_actual}kg</span>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">{data.evolution.peso_inicial} kg → {data.evolution.peso_actual} kg</p>
-                  </>
-                ) : (
-                  <span className="text-2xl font-black text-slate-300">--</span>
+                    {data.evolution.peso_actual < data.evolution.peso_inicial && (
+                      <p className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold mt-1">
+                        {messages.summary.evolution.reducedWeight}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+
+
+                {/* Cintura Logro */}
+                {data.evolution.cintura_inicial && data.evolution.cintura_actual && (
+                  <div className="bg-orange-50/50 rounded-2xl p-4 border border-orange-100 flex flex-col justify-center items-center text-center transition-all hover:bg-orange-50">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-orange-600 mb-2">{messages.summary.evolution.waistChange}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase leading-none mb-1">{messages.summary.evolution.initialMeasure}</span>
+                        <span className="text-slate-600 font-black text-xl">{data.evolution.cintura_inicial}cm</span>
+                      </div>
+                      <span className="material-symbols-outlined text-slate-300 text-sm">arrow_forward</span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase leading-none mb-1">{messages.summary.evolution.currentMeasure}</span>
+                        <span className="text-orange-600 font-black text-xl">{data.evolution.cintura_actual}cm</span>
+                      </div>
+                    </div>
+                    {data.evolution.cintura_actual < data.evolution.cintura_inicial && (
+                      <p className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold mt-1">
+                        {messages.summary.evolution.reducedWaist}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Sueño Logro */}
+                {data.evolution.sueno_inicial && data.evolution.sueno_actual && (
+                  <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 flex flex-col justify-center items-center text-center transition-all hover:bg-blue-50">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-2">{messages.summary.evolution.sleepImprovement}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase leading-none mb-1">{messages.summary.evolution.initialMeasure}</span>
+                        <span className="text-slate-600 font-black text-xl">{data.evolution.sueno_inicial}h</span>
+                      </div>
+                      <span className="material-symbols-outlined text-slate-300 text-sm">arrow_forward</span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 uppercase leading-none mb-1">{messages.summary.evolution.currentMeasure}</span>
+                        <span className="text-blue-600 font-black text-xl">{data.evolution.sueno_actual}h</span>
+                      </div>
+                    </div>
+                    {data.evolution.sueno_actual > data.evolution.sueno_inicial && (
+                      <p className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold mt-1">
+                        {messages.summary.evolution.stabilizedSleep}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col justify-center items-center text-center">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{messages.summary.evolution.glucoseChange}</p>
-                {data.ultima_hba1c > 0 ? (
-                  <>
-                    <div className="text-2xl font-black text-slate-800">
-                      {data.ultima_hba1c}%
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">HbA1c actual</p>
-                  </>
-                ) : (
-                  <span className="text-2xl font-black text-slate-300">--</span>
-                )}
+              <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-4 transition-all hover:bg-emerald-100/50">
+                <div className="flex gap-3">
+                  <span className="material-symbols-outlined text-emerald-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                  <div className="flex flex-col">
+                    <p className="text-xs text-emerald-800 font-bold mb-1">Impacto de {data.evolution.producto_permitido || 'Lifemetric'}:</p>
+                    <p className="text-xs text-slate-700 italic leading-relaxed">
+                      {aiSuggestions?.evolutionMessage || (
+                        (data.evolution.peso_actual && data.evolution.peso_inicial && data.evolution.peso_actual < data.evolution.peso_inicial)
+                          ? `Lograste bajar ${Math.round((data.evolution.peso_inicial - data.evolution.peso_actual) * 10) / 10} kg gracias al producto y tu constancia. ${messages.summary.evolution.evolutionPositive}`
+                          : messages.summary.evolution.evolutionStatic
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-              <p className="text-xs text-emerald-800 font-medium flex items-start gap-2">
-                <span className="material-symbols-outlined text-sm mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                {data.ultima_hba1c < 7 ? messages.summary.evolution.evolutionPositive : messages.summary.evolution.evolutionStatic}
-              </p>
             </div>
           </div>
         </div>
@@ -649,6 +735,10 @@ export default async function ResumenSemanal({
             <span className="material-symbols-outlined rounded-2xl bg-emerald-100 p-3 text-emerald-700">auto_awesome</span>
           </div>
 
+          <ExpandableSuggestions
+            showMoreLabel={messages.summary.showMore}
+            showLessLabel={messages.summary.showLess}
+          >
           <p className="mt-4 text-sm text-slate-700">
             {aiSuggestions?.summary ? aiSuggestions.summary : messages.summary.aiSuggestionsFallback}
           </p>
@@ -732,6 +822,7 @@ export default async function ResumenSemanal({
           <p className="mt-4 text-xs text-slate-500">
             {messages.summary.aiSuggestionsDisclaimer}
           </p>
+          </ExpandableSuggestions>
         </section>
 
         <section className="pt-8 border-t border-slate-100 space-y-5">
@@ -773,11 +864,15 @@ export default async function ResumenSemanal({
                   <div className="mt-6 grid grid-cols-2 gap-4">
                     <div className="rounded-2xl bg-white/80 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">HbA1c</p>
-                      <p className="mt-2 text-3xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.hba1c ? Number(ultimoLaboratorio.hba1c) : null, "%")}</p>
+                      <p className="mt-2 text-3xl font-black text-slate-900">
+                        {formatLabValue(latestVisionResult?.hba1c ?? (ultimoLaboratorio.hba1c ? Number(ultimoLaboratorio.hba1c) : null), "%")}
+                      </p>
                     </div>
                     <div className="rounded-2xl bg-white/80 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.fastingGlucose}</p>
-                      <p className="mt-2 text-3xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.glucosa_ayuno, "mg/dL")}</p>
+                      <p className="mt-2 text-3xl font-black text-slate-900">
+                        {formatLabValue(latestVisionResult?.glucosa_ayuno ?? ultimoLaboratorio.glucosa_ayuno, "mg/dL")}
+                      </p>
                     </div>
                   </div>
                 </article>
@@ -795,19 +890,54 @@ export default async function ResumenSemanal({
                   <div className="mt-6 grid grid-cols-3 gap-3">
                     <div className="rounded-2xl bg-white/80 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.triglycerides}</p>
-                      <p className="mt-2 text-2xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.trigliceridos, "mg/dL")}</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">
+                        {formatLabValue(latestVisionResult?.trigliceridos ?? ultimoLaboratorio.trigliceridos, "mg/dL")}
+                      </p>
                     </div>
                     <div className="rounded-2xl bg-white/80 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.hdl}</p>
-                      <p className="mt-2 text-2xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.hdl, "mg/dL")}</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">
+                        {formatLabValue(latestVisionResult?.hdl ?? ultimoLaboratorio.hdl, "mg/dL")}
+                      </p>
                     </div>
                     <div className="rounded-2xl bg-white/80 p-4">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{messages.summary.ldl}</p>
-                      <p className="mt-2 text-2xl font-black text-slate-900">{formatLabValue(ultimoLaboratorio.ldl, "mg/dL")}</p>
+                      <p className="mt-2 text-2xl font-black text-slate-900">
+                        {formatLabValue(latestVisionResult?.ldl ?? ultimoLaboratorio.ldl, "mg/dL")}
+                      </p>
                     </div>
                   </div>
                 </article>
               </div>
+
+              <article className="rounded-[2rem] border border-teal-100 bg-white p-6 shadow-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">{messages.summary.latestResults}</p>
+                    <h4 className="mt-2 text-2xl font-bold text-slate-900">{messages.summary.scannedResults}</h4>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {messages.summary.studyDate}: {new Date(ultimoLaboratorio.fecha_estudio).toLocaleDateString(locale)}
+                    </p>
+                  </div>
+                  <span className="material-symbols-outlined rounded-2xl bg-teal-50 p-3 text-teal-700 shadow-sm">lab_profile</span>
+                </div>
+
+                {latestDetectedResults.length > 0 ? (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {buildLabChipsFromDetectedResults(latestDetectedResults).map((chip) => (
+                      <span
+                        key={`${chip.label}-${chip.value}`}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700"
+                      >
+                        <span className="font-bold text-slate-500">{chip.label}</span>
+                        <span className="text-slate-900">{chip.value}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">{messages.summary.noValuesAvailable}</p>
+                )}
+              </article>
 
               <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
@@ -822,21 +952,28 @@ export default async function ResumenSemanal({
                   {paciente.laboratorios.map((laboratorio: (typeof paciente.laboratorios)[number]) => {
                     // Combine vision result from current call with DB data if vision is null
                     const visionRes = labVisionResults.get(laboratorio.laboratorio_id);
-                    const effectiveData = visionRes || {
-                      hba1c: laboratorio.hba1c ? Number(laboratorio.hba1c) : null,
-                      glucosa_ayuno: laboratorio.glucosa_ayuno ? Number(laboratorio.glucosa_ayuno) : null,
-                      trigliceridos: laboratorio.trigliceridos ? Number(laboratorio.trigliceridos) : null,
-                      hdl: laboratorio.hdl ? Number(laboratorio.hdl) : null,
-                      ldl: laboratorio.ldl ? Number(laboratorio.ldl) : null,
-                      insulina: laboratorio.insulina ? Number(laboratorio.insulina) : null,
-                      alt: laboratorio.alt ? Number(laboratorio.alt) : null,
-                      ast: laboratorio.ast ? Number(laboratorio.ast) : null,
-                      tsh: laboratorio.tsh ? Number(laboratorio.tsh) : null,
-                      creatinina: laboratorio.creatinina ? Number(laboratorio.creatinina) : null,
-                      acido_urico: laboratorio.acido_urico ? Number(laboratorio.acido_urico) : null,
-                      pcr_us: laboratorio.pcr_us ? Number(laboratorio.pcr_us) : null,
-                    };
-                    const chips = buildLabChips(effectiveData, laboratorio, messages.summary.labValues);
+                    const chips = buildLabChipsFromDetectedResults(
+                      buildDetectedResultsFromStoredLab(
+                        {
+                          standardValues: {
+                            hba1c: visionRes?.hba1c ?? (laboratorio.hba1c ? Number(laboratorio.hba1c) : null),
+                            glucosa_ayuno: visionRes?.glucosa_ayuno ?? laboratorio.glucosa_ayuno,
+                            trigliceridos: visionRes?.trigliceridos ?? laboratorio.trigliceridos,
+                            hdl: visionRes?.hdl ?? laboratorio.hdl,
+                            ldl: visionRes?.ldl ?? laboratorio.ldl,
+                            insulina: visionRes?.insulina ?? (laboratorio.insulina ? Number(laboratorio.insulina) : null),
+                            alt: visionRes?.alt ?? laboratorio.alt,
+                            ast: visionRes?.ast ?? laboratorio.ast,
+                            tsh: visionRes?.tsh ?? (laboratorio.tsh ? Number(laboratorio.tsh) : null),
+                            creatinina: visionRes?.creatinina ?? (laboratorio.creatinina ? Number(laboratorio.creatinina) : null),
+                            acido_urico: visionRes?.acido_urico ?? (laboratorio.acido_urico ? Number(laboratorio.acido_urico) : null),
+                            pcr_us: visionRes?.pcr_us ?? (laboratorio.pcr_us ? Number(laboratorio.pcr_us) : null),
+                          },
+                          detectedResults: visionRes?.resultados_detectados ?? laboratorio.resultados_detectados,
+                        },
+                        messages.summary.labValues,
+                      ),
+                    );
                     return (
                       <div
                         key={laboratorio.laboratorio_id}
@@ -860,7 +997,7 @@ export default async function ResumenSemanal({
                           <div className="flex flex-wrap gap-2">
                             {chips.map((chip) => (
                               <span
-                                key={chip.label}
+                                key={`${chip.label}-${chip.value}`}
                                 className="inline-flex items-center gap-1.5 rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
                               >
                                 <span className="font-bold text-slate-500">{chip.label}</span>
@@ -889,11 +1026,7 @@ export default async function ResumenSemanal({
         </section>
 
         <div className="pt-8 border-t border-slate-100">
-          <HistorialComidas initialComidas={paciente.comidas.map((c: (typeof paciente.comidas)[number]) => ({
-            ...c,
-            razon_inadecuada: (c as unknown as { razon_inadecuada: string | null }).razon_inadecuada ?? null,
-            alternativa_saludable: (c as unknown as { alternativa_saludable: string | null }).alternativa_saludable ?? null,
-          }))} />
+          <HistorialComidas initialComidas={recentMealHistory} />
         </div>
 
       </div>

@@ -6,6 +6,19 @@ type ChatGlucoseRecord = {
   delta_glucosa: number | null;
   clasificacion_glucosa: string | null;
   comida_relacionada_id?: string | null;
+  comida_relacionada?: {
+    fecha: Date | null;
+    hora: Date | null;
+    tipo_comida: string | null;
+    alimento_principal: string | null;
+    nota: string | null;
+    kcal_estimadas: number | null;
+    carbohidratos_g: unknown;
+    proteina_g: unknown;
+    grasa_g: unknown;
+    fibra_g: unknown;
+    clasificacion_final: string | null;
+  } | null;
 };
 
 type ChatHabitRecord = {
@@ -62,6 +75,7 @@ type ChatLabRecord = {
   creatinina: unknown;
   acido_urico: unknown;
   archivo_url: string | null;
+  resultados_detectados?: unknown;
 };
 
 type ChatPatientSnapshot = {
@@ -131,6 +145,36 @@ function buildSection(title: string, items: string[], emptyMessage: string): str
   return `${title} (${items.length}):\n${items.join("\n")}`;
 }
 
+function formatDetectedLabResults(value: unknown): string {
+  if (!Array.isArray(value) || value.length === 0) {
+    return "N/D";
+  }
+
+  const entries = value.flatMap((item) => {
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+
+    const candidate = item as {
+      label?: unknown;
+      value?: unknown;
+      unit?: unknown;
+    };
+
+    if (typeof candidate.label !== "string" || candidate.value == null) {
+      return [];
+    }
+
+    const unit = typeof candidate.unit === "string" && candidate.unit.trim().length > 0
+      ? ` ${candidate.unit}`
+      : "";
+
+    return [`${candidate.label}: ${candidate.value}${unit}`];
+  });
+
+  return entries.length > 0 ? entries.join("; ") : "N/D";
+}
+
 export function buildPatientChatContext({
   patientSnapshot,
   profileExtras,
@@ -140,9 +184,12 @@ export function buildPatientChatContext({
   const latestGlucose = patientSnapshot.glucosa[0] ?? null;
   const latestHabits = patientSnapshot.habitos[0] ?? null;
 
-  const glucoseHistory = patientSnapshot.glucosa.map((item) =>
-    `- ${formatDate(item.fecha)} ${formatTime(item.hora)} | tipo: ${formatMaybe(item.tipo_glucosa)} | valor: ${formatMaybe(item.valor_glucosa, "mg/dL")} | delta: ${formatMaybe(item.delta_glucosa, "mg/dL")} | clasificacion: ${formatMaybe(item.clasificacion_glucosa)} | comida relacionada: ${formatMaybe(item.comida_relacionada_id)}`
-  );
+  const glucoseHistory = patientSnapshot.glucosa.map((item) => {
+    const mealInfo = item.comida_relacionada
+      ? ` | TRAS COMER "${item.comida_relacionada.alimento_principal || item.comida_relacionada.tipo_comida || 'alimento'}" → ${item.comida_relacionada.kcal_estimadas || '?'} kcal | C: ${item.comida_relacionada.carbohidratos_g || '?'}g | P: ${item.comida_relacionada.proteina_g || '?'}g | G: ${item.comida_relacionada.grasa_g || '?'}g | clasificacion comida: ${item.comida_relacionada.clasificacion_final || 'N/D'}`
+      : '';
+    return `- ${formatDate(item.fecha)} ${formatTime(item.hora)} | tipo: ${formatMaybe(item.tipo_glucosa)} | valor: ${formatMaybe(item.valor_glucosa, "mg/dL")} | delta: ${formatMaybe(item.delta_glucosa, "mg/dL")} | clasificacion: ${formatMaybe(item.clasificacion_glucosa)}${mealInfo}`;
+  });
 
   const habitsHistory = patientSnapshot.habitos.map((item) =>
     `- ${formatDate(item.fecha)} | agua: ${formatMaybe(item.agua_vasos, "vasos")} | sueno: ${formatMaybe(item.sueno_horas, "h")} | ejercicio: ${formatMaybe(item.ejercicio_min, "min")} | PA: ${formatMaybe(item.pa_sistolica)}/${formatMaybe(item.pa_diastolica)} | pulso: ${formatMaybe(item.pulso, "lpm")} | peso: ${formatMaybe(item.peso_kg, "kg")}`
@@ -157,7 +204,7 @@ export function buildPatientChatContext({
   );
 
   const labsHistory = patientSnapshot.laboratorios.map((item) =>
-    `- ${formatDate(item.fecha_estudio)} | HbA1c: ${formatMaybe(item.hba1c, "%")} | glucosa ayuno: ${formatMaybe(item.glucosa_ayuno, "mg/dL")} | insulina: ${formatMaybe(item.insulina)} | TG: ${formatMaybe(item.trigliceridos, "mg/dL")} | HDL: ${formatMaybe(item.hdl, "mg/dL")} | LDL: ${formatMaybe(item.ldl, "mg/dL")} | ALT: ${formatMaybe(item.alt, "U/L")} | AST: ${formatMaybe(item.ast, "U/L")} | TSH: ${formatMaybe(item.tsh)} | PCR-us: ${formatMaybe(item.pcr_us)} | creatinina: ${formatMaybe(item.creatinina, "mg/dL")} | acido urico: ${formatMaybe(item.acido_urico, "mg/dL")} | archivo: ${formatMaybe(item.archivo_url)}`
+    `- ${formatDate(item.fecha_estudio)} | HbA1c: ${formatMaybe(item.hba1c, "%")} | glucosa ayuno: ${formatMaybe(item.glucosa_ayuno, "mg/dL")} | insulina: ${formatMaybe(item.insulina)} | TG: ${formatMaybe(item.trigliceridos, "mg/dL")} | HDL: ${formatMaybe(item.hdl, "mg/dL")} | LDL: ${formatMaybe(item.ldl, "mg/dL")} | ALT: ${formatMaybe(item.alt, "U/L")} | AST: ${formatMaybe(item.ast, "U/L")} | TSH: ${formatMaybe(item.tsh)} | PCR-us: ${formatMaybe(item.pcr_us)} | creatinina: ${formatMaybe(item.creatinina, "mg/dL")} | acido urico: ${formatMaybe(item.acido_urico, "mg/dL")} | otros resultados detectados: ${formatDetectedLabResults(item.resultados_detectados)} | archivo: ${formatMaybe(item.archivo_url)}`
   );
 
   return `CONTEXTO DE LABORATORIOS DEL PACIENTE:
