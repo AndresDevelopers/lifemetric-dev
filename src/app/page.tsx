@@ -61,13 +61,9 @@ export default async function Home() {
             gte: startOfToday,
             lt: endOfToday,
           },
-          tipo_glucosa: {
-            equals: 'Ayuno',
-            mode: 'insensitive',
-          },
         },
         orderBy: [{ fecha: 'desc' }, { hora: 'desc' }],
-        take: 1,
+        take: 10,
       },
       comidas: {
         where: {
@@ -105,7 +101,10 @@ export default async function Home() {
   }
 
   // Calculate metrics
-  const lastGlucoseVal = paciente.glucosa?.[0]?.valor_glucosa;
+  const fastingGlucose = paciente.glucosa.find((entry: (typeof paciente.glucosa)[number]) => entry.tipo_glucosa?.toLowerCase() === 'ayuno');
+  const latestGlucoseOfDay = paciente.glucosa?.[0] ?? null;
+  const preferredGlucose = fastingGlucose ?? latestGlucoseOfDay;
+  const lastGlucoseVal = preferredGlucose?.valor_glucosa;
   const estimatedGlucoseFromMeals = estimateGlucoseFromMeals(
     paciente.comidas.map((meal: (typeof paciente.comidas)[number]) => ({
       carbohidratos_g: meal.carbohidratos_g != null ? Number(meal.carbohidratos_g) : null,
