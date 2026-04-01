@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, type MouseEvent } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { logoutAction } from "@/actions/auth";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -30,11 +30,23 @@ interface NavigationProps {
 
 export default function Navigation({ userName }: NavigationProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Lifemetric";
   const appBrandLogoUrl = process.env.NEXT_PUBLIC_APP_BRAND_LOGO_URL?.trim() ?? "";
   const appIconUrl = process.env.NEXT_PUBLIC_APP_ICON_URL?.trim() ?? "";
   const { messages } = useLocale();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const handleNavClick = (path: string) => (event: MouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    if (pathname === path) return;
+    setPendingPath(path);
+    startTransition(() => {
+      router.push(path, { scroll: true });
+    });
+  };
 
   const PUBLIC_PATHS = ["/login", "/recuperar", "/registro"];
   const isPublicPath = pathname && PUBLIC_PATHS.some((path) => pathname.startsWith(path));
@@ -167,6 +179,7 @@ export default function Navigation({ userName }: NavigationProps) {
               <Link
                 href={item.path}
                 key={item.path}
+                onClick={handleNavClick(item.path)}
                 className="relative -top-5 flex flex-col items-center justify-center group"
                 aria-label={item.name}
               >
@@ -179,7 +192,7 @@ export default function Navigation({ userName }: NavigationProps) {
                   transition-all duration-300 active:scale-90 group-hover:scale-110
                 `}>
                   <span className="material-symbols-outlined text-white text-[32px] font-bold">
-                    add
+                    {pendingPath === item.path ? "progress_activity" : "add"}
                   </span>
                 </div>
                 <span className={`text-[10px] font-black uppercase tracking-widest mt-2 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
@@ -193,6 +206,7 @@ export default function Navigation({ userName }: NavigationProps) {
             <Link
               href={item.path}
               key={item.path}
+              onClick={handleNavClick(item.path)}
               className={`flex-1 flex flex-col items-center justify-center py-4 transition-all active:scale-95 ${
                 isActive
                   ? "text-blue-600 dark:text-blue-400"
@@ -204,10 +218,10 @@ export default function Navigation({ userName }: NavigationProps) {
                 ${isActive ? 'scale-110' : ''}
               `}>
                 <span
-                  className="material-symbols-outlined text-[26px]"
+                  className={`material-symbols-outlined text-[26px] ${pendingPath === item.path ? "animate-spin" : ""}`}
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >
-                  {item.icon}
+                  {pendingPath === item.path ? "progress_activity" : item.icon}
                 </span>
                 <span className={`text-[9.5px] font-bold uppercase tracking-tight mt-1.5 ${isActive ? 'opacity-100' : 'opacity-60'}`}>
                   {item.name}
@@ -270,6 +284,7 @@ export default function Navigation({ userName }: NavigationProps) {
               <Link
                 href={item.path}
                 key={item.path}
+                onClick={handleNavClick(item.path)}
                 className={`flex items-center gap-4 mx-3 px-4 py-3.5 rounded-2xl transition-all hover:translate-x-1 cursor-pointer font-bold ${
                   isActive
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
@@ -277,10 +292,10 @@ export default function Navigation({ userName }: NavigationProps) {
                 }`}
               >
                 <span
-                  className="material-symbols-outlined"
+                  className={`material-symbols-outlined ${pendingPath === item.path ? "animate-spin" : ""}`}
                   style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
                 >
-                  {item.icon}
+                  {pendingPath === item.path ? "progress_activity" : item.icon}
                 </span>
                 <span className="text-sm font-semibold">{item.name}</span>
               </Link>
