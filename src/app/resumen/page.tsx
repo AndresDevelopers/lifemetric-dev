@@ -286,9 +286,10 @@ export default async function ResumenSemanal({
     ? Math.round(paciente.habitos.reduce((acc: number, curr: (typeof paciente.habitos)[number]) => acc + (curr.agua_vasos || 0), 0) / paciente.habitos.length)
     : 0;
 
-  const tomasProgramadas = paciente.medicacion.length || 1;
+  const tomasProgramadas = paciente.medicacion.length;
   const tomasRealizadas = paciente.medicacion.filter((m: (typeof paciente.medicacion)[number]) => m.estado_toma === 'Tomada' || m.estado_toma === 'tomada').length;
-  const adherenciaMedicacion = paciente.medicacion.length === 0 ? 0 : Math.round((tomasRealizadas / tomasProgramadas) * 100);
+  const adherenciaMedicacion = tomasProgramadas === 0 ? 0 : Math.round((tomasRealizadas / tomasProgramadas) * 100);
+  const medicacionTomadaResumen = tomasProgramadas === 0 ? "--" : `${tomasRealizadas}/${tomasProgramadas}`;
   const hasAlertData =
     paciente.glucosa.length > 0 ||
     filteredComidas.length > 0 ||
@@ -524,7 +525,8 @@ export default async function ResumenSemanal({
               <div className="bg-primary h-full rounded-r-full transition-all duration-1000" style={{ width: `${data.adherencia_medicacion_pct}%` }}></div>
             </div>
             <span className="material-symbols-outlined text-3xl text-slate-600 bg-slate-100 p-3 rounded-full mb-3">medication</span>
-            <div className="flex items-end gap-1"><span className="text-3xl font-black text-slate-800">{data.adherencia_medicacion_pct}</span><span className="text-sm font-bold text-slate-400 pb-1">%</span></div>
+            <div className="flex items-end gap-1"><span className="text-3xl font-black text-slate-800">{medicacionTomadaResumen}</span></div>
+            <span className="text-[11px] font-semibold text-slate-400 mt-1">{data.adherencia_medicacion_pct}%</span>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 mb-2">{messages.summary.medicationAdherence}</span>
           </div>
         </div>
