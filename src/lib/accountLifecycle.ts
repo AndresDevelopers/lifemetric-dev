@@ -27,6 +27,7 @@ type LifecyclePacienteRow = {
 
 type AccountStoragePaths = {
   mealPaths: string[];
+  medicationPaths: string[];
   labPaths: string[];
   avatarPaths: string[];
 };
@@ -96,8 +97,12 @@ export async function findLifecyclePacienteByEmail(email: string): Promise<Lifec
 }
 
 async function getPacienteStoragePaths(pacienteId: string): Promise<AccountStoragePaths> {
-  const [mealPhotos, labFiles, avatarRows] = await Promise.all([
+  const [mealPhotos, medicationPhotos, labFiles, avatarRows] = await Promise.all([
     prisma.comida.findMany({
+      where: { paciente_id: pacienteId, foto_url: { not: null } },
+      select: { foto_url: true },
+    }),
+    prisma.registroMedicacion.findMany({
       where: { paciente_id: pacienteId, foto_url: { not: null } },
       select: { foto_url: true },
     }),
@@ -116,6 +121,9 @@ async function getPacienteStoragePaths(pacienteId: string): Promise<AccountStora
   return {
     mealPaths: dedupe(
       mealPhotos.map((item: { foto_url: string | null }) => getStoragePathFromPublicUrl(item.foto_url ?? "", "comidas")),
+    ),
+    medicationPaths: dedupe(
+      medicationPhotos.map((item: { foto_url: string | null }) => getStoragePathFromPublicUrl(item.foto_url ?? "", "medicina")),
     ),
     labPaths: dedupe(
       labFiles.map((item: { archivo_url: string | null }) => getStoragePathFromPublicUrl(item.archivo_url ?? "", "laboratorios")),
@@ -149,7 +157,7 @@ export async function permanentlyDeletePacienteAccount(pacienteId: string, repla
     return { deleted: false };
   }
 
-  const { mealPaths, labPaths, avatarPaths } = await getPacienteStoragePaths(pacienteId);
+  const { mealPaths, medicationPaths, labPaths, avatarPaths } = await getPacienteStoragePaths(pacienteId);
 
   await prisma.$transaction(async (tx: TransactionClient) => {
     await tx.$executeRawUnsafe(`
@@ -177,6 +185,7 @@ export async function permanentlyDeletePacienteAccount(pacienteId: string, repla
 
   await Promise.all([
     deleteStoragePaths("comidas", mealPaths),
+    deleteStoragePaths("medicina", medicationPaths),
     deleteStoragePaths("laboratorios", labPaths),
     deleteStoragePaths("avatars", avatarPaths),
     deleteAuthUserByEmail(paciente.email),
@@ -185,6 +194,7 @@ export async function permanentlyDeletePacienteAccount(pacienteId: string, repla
   return {
     deleted: true,
     deletedMealImages: mealPaths.length,
+    deletedMedicationImages: medicationPaths.length,
     deletedLabFiles: labPaths.length,
     deletedAvatarFiles: avatarPaths.length,
     deletedEmail: paciente.email,
