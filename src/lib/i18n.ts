@@ -125,6 +125,7 @@ const messages = {
     home: {
       greeting: 'Hola, {name} 👋',
       subtitle: 'Recomendaciones clínicas activas para ti hoy.',
+      todayData: 'Datos del día',
       foodTitle: 'Registrar comida',
       foodSubtitle: 'Lleva el control de tu alimentación',
       glucoseTitle: 'Registrar glucosa',
@@ -580,6 +581,7 @@ const messages = {
     home: {
       greeting: 'Hi, {name} 👋',
       subtitle: 'Active clinical recommendations for you today.',
+      todayData: "Today's data",
       foodTitle: 'Log meal',
       foodSubtitle: 'Track your daily nutrition',
       glucoseTitle: 'Log glucose',

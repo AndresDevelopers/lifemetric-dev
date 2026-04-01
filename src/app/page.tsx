@@ -46,13 +46,19 @@ export default async function Home() {
   if (!pacienteId) {
     redirect('/login');
   }
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+
   const paciente = await prisma.paciente.findUnique({
     where: { paciente_id: pacienteId },
     include: {
       glucosa: {
         where: {
           fecha: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: startOfToday,
+            lt: endOfToday,
           },
         },
         orderBy: { fecha: 'desc' },
@@ -61,7 +67,8 @@ export default async function Home() {
       habitos: {
         where: {
           fecha: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: startOfToday,
+            lt: endOfToday,
           },
         },
         orderBy: { fecha: 'desc' },
@@ -70,7 +77,8 @@ export default async function Home() {
       medicacion: {
         where: {
           fecha: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            gte: startOfToday,
+            lt: endOfToday,
           },
         },
       },
@@ -150,6 +158,7 @@ export default async function Home() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               label={messages.summary.fastingGlucose}
+              dataLabel={messages.home.todayData}
               value={lastGlucose}
               unit="mg/dL"
               icon="glucose"
@@ -158,6 +167,7 @@ export default async function Home() {
             />
             <MetricCard
               label={messages.summary.exerciseDays}
+              dataLabel={messages.home.todayData}
               value={String(exerciseToday)}
               unit="min"
               icon="fitness_center"
@@ -166,6 +176,7 @@ export default async function Home() {
             />
             <MetricCard
               label={messages.summary.sleepAverage}
+              dataLabel={messages.home.todayData}
               value={String(sleepToday)}
               unit="h"
               icon="bedtime"
@@ -174,6 +185,7 @@ export default async function Home() {
             />
             <MetricCard
               label={messages.home.medicationAverageTime}
+              dataLabel={messages.home.todayData}
               value={averageMedicationTime}
               unit="hh:mm"
               icon="medication"
@@ -242,11 +254,12 @@ export default async function Home() {
   );
 }
 
-function MetricCard({ label, value, unit, icon, color, bgColor }: Readonly<{ label: string; value: string; unit: string; icon: string; color: string; bgColor: string }>) {
+function MetricCard({ label, dataLabel, value, unit, icon, color, bgColor }: Readonly<{ label: string; dataLabel: string; value: string; unit: string; icon: string; color: string; bgColor: string }>) {
   return (
     <div className="bg-white rounded-[2rem] p-5 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col gap-1 hover:scale-[1.02] transition-all">
       <span className={`material-symbols-outlined ${color} text-2xl mb-1 p-2 ${bgColor} w-fit rounded-2xl`}>{icon}</span>
       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="text-[10px] font-semibold text-slate-500">{dataLabel}</p>
       <div className="flex items-end gap-1">
         <span className="text-2xl font-black text-slate-800 tracking-tighter">{value}</span>
         <span className="text-[10px] font-bold text-slate-400 pb-1 uppercase">{unit}</span>

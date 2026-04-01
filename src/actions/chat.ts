@@ -15,6 +15,34 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/redis";
 import { getPromoProductGuidance } from "@/lib/productCatalog";
 
+function buildPatientRiskSignals(
+  laboratorios: Array<{
+    ldl: number | null;
+    trigliceridos: number | null;
+    hdl: number | null;
+    glucosa_ayuno: number | null;
+    hba1c: unknown;
+  }>,
+): string {
+  const hasHighLdl = laboratorios.some((lab) => lab.ldl != null && lab.ldl >= 130);
+  const hasHighTriglycerides = laboratorios.some((lab) => lab.trigliceridos != null && lab.trigliceridos >= 150);
+  const hasLowHdl = laboratorios.some((lab) => lab.hdl != null && lab.hdl < 40);
+  const hasHighFastingGlucose = laboratorios.some((lab) => lab.glucosa_ayuno != null && lab.glucosa_ayuno >= 100);
+  const hasHighHba1c = laboratorios.some((lab) => {
+    if (lab.hba1c == null) return false;
+    const numericHba1c = Number(lab.hba1c);
+    return Number.isFinite(numericHba1c) && numericHba1c >= 5.7;
+  });
+
+  return [
+    `LDL alto detectado: ${hasHighLdl ? "Sí" : "No"}`,
+    `Triglicéridos altos detectados: ${hasHighTriglycerides ? "Sí" : "No"}`,
+    `HDL bajo detectado: ${hasLowHdl ? "Sí" : "No"}`,
+    `Glucosa en ayuno elevada detectada: ${hasHighFastingGlucose ? "Sí" : "No"}`,
+    `HbA1c elevada detectada: ${hasHighHba1c ? "Sí" : "No"}`,
+  ].join("\n");
+}
+
 export async function chatWithAIAction(
   userMessage: string,
   chatHistory: { role: "user" | "ai"; content: string }[] = [],
@@ -88,6 +116,14 @@ export async function chatWithAIAction(
       latestLabDate,
       labDataIsOutdated,
     });
+    const riskSignals = buildPatientRiskSignals(patientSnapshot.laboratorios);
+    const imageContext = imageUrl
+      ? locale === "es"
+        ? `El usuario adjuntó una imagen en este turno: Sí (${imageUrl}).`
+        : `The user attached an image in this turn: Yes (${imageUrl}).`
+      : locale === "es"
+        ? "El usuario adjuntó una imagen en este turno: No."
+        : "The user attached an image in this turn: No.";
 
     const fullPrompt =
       locale === "es"
@@ -106,6 +142,8 @@ REGLAS CRITICAS:
 8. Si el usuario pide ayuda para usar la app, guialo con pasos concretos usando los modulos disponibles (Inicio, Comidas, Glucosa, Habitos, Medicacion, Laboratorios, Resumen, Ajustes).
 9. Si el usuario pide ayuda para navegar o completar una tarea dentro de Lifemetric, incluye siempre la pantalla actual, la ruta exacta, pasos numerados y que hacer si ya esta en la pantalla correcta.
 10. No inventes modulos, rutas ni botones. Usa solo el mapa funcional entregado.
+11. Si los laboratorios estan desactualizados (>3 meses), incluye SIEMPRE una recomendacion breve para actualizar examenes y aclara que el panel exacto lo define su doctor.
+12. Si hay imagen adjunta (comida o medicacion), describe primero lo que observas y luego personaliza la recomendacion cruzando con TODO el contexto clinico del paciente (laboratorios, glucosa, habitos, medicacion). Si hay riesgo (ej. colesterol alto), mencionalo de forma clara y accionable.
 
 MARCO DE PRODUCTOS:
 ${getPromoProductGuidance(locale)}
@@ -115,6 +153,12 @@ ${appNavigationContext}
 
 DATOS COMPLETOS DEL PACIENTE DISPONIBLES PARA EL CHAT:
 ${patientContext}
+
+SEÑALES CLINICAS RESUMIDAS:
+${riskSignals}
+
+CONTEXTO DE IMAGEN DEL TURNO:
+${imageContext}
 
 Contexto del chat anterior:
 ${historyContext}
@@ -138,6 +182,8 @@ CRITICAL RULES:
 8. If the user asks for help using the app, guide them with concrete steps using the available modules (Home, Food, Glucose, Habits, Medication, Labs, Summary, Settings).
 9. If the user asks for help navigating or completing a task inside Lifemetric, always include the current screen, the exact route, numbered steps, and what to do if they are already on the correct screen.
 10. Do not invent modules, routes, or buttons. Use only the provided functional map.
+11. If labs are outdated (>3 months), ALWAYS include a brief recommendation to update labs and clarify the exact panel should be defined by the doctor.
+12. If there is an attached image (food or medication), first describe what you observe and then personalize guidance using ALL available patient context (labs, glucose, habits, medication). If there is a risk signal (e.g., high cholesterol), mention it clearly and actionably.
 
 PRODUCT GUIDANCE:
 ${getPromoProductGuidance(locale)}
@@ -147,6 +193,12 @@ ${appNavigationContext}
 
 FULL PATIENT DATA AVAILABLE FOR CHAT:
 ${patientContext}
+
+SUMMARIZED CLINICAL SIGNALS:
+${riskSignals}
+
+TURN IMAGE CONTEXT:
+${imageContext}
 
 Previous chat context:
 ${historyContext}
