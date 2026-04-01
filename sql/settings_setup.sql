@@ -1,25 +1,38 @@
--- 1. Intentar agregar las columnas a "Paciente" (con mayúscula y comillas por si acaso)
-DO $$ 
-BEGIN
-    -- Intentar con Paciente (mayúscula)
-    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'Paciente') THEN
-        ALTER TABLE "Paciente" ADD COLUMN IF NOT EXISTS "avatar_url" TEXT;
-        ALTER TABLE "Paciente" ADD COLUMN IF NOT EXISTS "fecha_nacimiento" TIMESTAMP WITH TIME ZONE;
-    -- Intentar con paciente (minúscula)
-    ELSIF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'paciente') THEN
-        ALTER TABLE "paciente" ADD COLUMN IF NOT EXISTS "avatar_url" TEXT;
-        ALTER TABLE "paciente" ADD COLUMN IF NOT EXISTS "fecha_nacimiento" TIMESTAMP WITH TIME ZONE;
-    ELSE
-        RAISE NOTICE 'La tabla Paciente no se encontró. Asegúrate de haber corrido las migraciones iniciales.';
-    END IF;
-END $$;
+-- Lifemetric: setup actualizado para avatar/perfil
+-- Reemplaza el script legacy que apuntaba a tablas "Paciente"/"paciente".
 
--- 2. Crear el Bucket de Almacenamiento llamado 'avatars'
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('avatars', 'avatars', true)
+BEGIN;
+
+ALTER TABLE pacientes
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+  ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('avatars', 'avatars', true, 5242880)
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Políticas de Seguridad (Copia esto tal cual)
-CREATE POLICY "Avatars son públicos" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
-CREATE POLICY "Usuarios pueden subir sus propios avatars" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars');
-CREATE POLICY "Usuarios pueden actualizar sus avatars" ON storage.objects FOR UPDATE USING (bucket_id = 'avatars');
+DROP POLICY IF EXISTS "Avatars son publicos" ON storage.objects;
+DROP POLICY IF EXISTS "Avatars son públicos" ON storage.objects;
+DROP POLICY IF EXISTS "Avatars son pÃºblicos" ON storage.objects;
+DROP POLICY IF EXISTS "Usuarios pueden subir sus propios avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Usuarios pueden actualizar sus avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Usuarios pueden eliminar sus propios avatars" ON storage.objects;
+
+CREATE POLICY "Avatars son publicos" ON storage.objects
+FOR SELECT
+USING (bucket_id = 'avatars');
+
+CREATE POLICY "Usuarios pueden subir sus propios avatars" ON storage.objects
+FOR INSERT
+WITH CHECK (bucket_id = 'avatars');
+
+CREATE POLICY "Usuarios pueden actualizar sus avatars" ON storage.objects
+FOR UPDATE
+USING (bucket_id = 'avatars')
+WITH CHECK (bucket_id = 'avatars');
+
+CREATE POLICY "Usuarios pueden eliminar sus propios avatars" ON storage.objects
+FOR DELETE
+USING (bucket_id = 'avatars');
+
+COMMIT;

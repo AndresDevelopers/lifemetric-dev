@@ -25,6 +25,7 @@ type LoginPanelProps = {
   accountDeletedMessage: string;
   languageHelper: string;
   compact?: boolean;
+  concurrentSessionError?: string;
 };
 
 function LoginPanel({
@@ -43,6 +44,7 @@ function LoginPanel({
   accountDeletedMessage,
   languageHelper,
   compact = false,
+  concurrentSessionError,
 }: Readonly<LoginPanelProps>) {
   return (
     <div className={compact ? 'space-y-6' : 'space-y-8'}>
@@ -57,6 +59,14 @@ function LoginPanel({
           {state.error}
         </div>
       )}
+
+      {concurrentSessionError && !state?.error && (
+        <div className="p-4 rounded-2xl bg-[var(--color-primary-container)] text-[var(--color-on-primary-container)] flex items-center gap-2 text-sm font-semibold border border-[var(--color-primary)]/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+          <span className="material-symbols-outlined">security</span>
+          {concurrentSessionError}
+        </div>
+      )}
+
       {showDeletedMessage && (
         <div className="p-4 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center gap-2 text-sm font-semibold">
           <span className="material-symbols-outlined">check_circle</span>
@@ -165,6 +175,7 @@ export default function LoginPage() {
   const loginMessages = messages.auth.login;
 
   const showDeletedMessage = searchParams.get('accountDeleted') === '1';
+  const concurrentSessionError = searchParams.get('error') === 'concurrent_session' ? messages.auth.messages.concurrentSession : undefined;
 
   return (
     <div className="w-full min-h-screen relative overflow-hidden">
@@ -223,6 +234,7 @@ export default function LoginPage() {
               accountDeletedMessage={messages.settings.accountDeleted}
               languageHelper={messages.common.languageHelper}
               compact
+              concurrentSessionError={concurrentSessionError}
             />
           </div>
         </section>
@@ -291,6 +303,7 @@ export default function LoginPage() {
                 loginMessages={loginMessages}
                 accountDeletedMessage={messages.settings.accountDeleted}
                 languageHelper={messages.common.languageHelper}
+                concurrentSessionError={concurrentSessionError}
               />
             </div>
           </div>

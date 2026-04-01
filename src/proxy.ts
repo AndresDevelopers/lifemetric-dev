@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { verifySession } from '@/lib/session';
+import { verifySession, isSessionActive } from '@/lib/session';
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -58,15 +58,35 @@ export async function proxy(request: NextRequest) {
 
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
   const sessionToken = request.cookies.get('lifemetric_session')?.value;
-  const session = sessionToken ? await verifySession(sessionToken) : null;
+  const sessionPayloadStr = sessionToken ? await verifySession(sessionToken) : null;
 
-  if (!session && !isPublicPath) {
+  // Concurrent session check
+  if (sessionPayloadStr && !isPublicPath) {
+    try {
+      const payload = JSON.parse(sessionPayloadStr);
+      if (payload.sessionId) {
+        const isActive = await isSessionActive(payload.pacienteId, payload.sessionId);
+        if (!isActive) {
+          const url = request.nextUrl.clone();
+          url.pathname = '/login';
+          url.searchParams.set('error', 'concurrent_session');
+          const response = applyLocaleCookie(request, NextResponse.redirect(url));
+          response.cookies.delete('lifemetric_session');
+          return response;
+        }
+      }
+    } catch (e) {
+      // Resilience: if JSON or Redis fails, let it pass
+    }
+  }
+
+  if (!sessionPayloadStr && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return applyLocaleCookie(request, NextResponse.redirect(url));
   }
 
-  if (session && isPublicPath) {
+  if (sessionPayloadStr && isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return applyLocaleCookie(request, NextResponse.redirect(url));

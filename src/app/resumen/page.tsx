@@ -286,6 +286,26 @@ export default async function ResumenSemanal({
     return acc;
   }, {});
 
+  const habitosConPeso = paciente.habitos
+    .filter((h: (typeof paciente.habitos)[number]) => h.peso_kg != null)
+    .sort((a: (typeof paciente.habitos)[number], b: (typeof paciente.habitos)[number]) => 
+      new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    );
+  
+  let pesoActual: number | null = null;
+  if (habitosConPeso[0]?.peso_kg != null) {
+    pesoActual = Number(habitosConPeso[0].peso_kg);
+  } else if (paciente.peso_inicial_kg != null) {
+    pesoActual = Number(paciente.peso_inicial_kg);
+  }
+
+  let alertaPrincipal: string | null = null;
+  if (hasAlertData) {
+    const tienePicos = paciente.glucosa.some((g: (typeof paciente.glucosa)[number]) => g.valor_glucosa > 140) || 
+                      (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140);
+    alertaPrincipal = tienePicos ? messages.summary.glucosePeaks : messages.summary.glucoseInRange;
+  }
+
   const data = {
     paciente: `${paciente.nombre} ${paciente.apellido}`,
     edad: paciente.edad ?? null,
@@ -308,11 +328,13 @@ export default async function ResumenSemanal({
       promedio_agua: promedioAgua,
     },
     adherencia_medicacion_pct: adherenciaMedicacion,
-    alerta_principal: hasAlertData
-      ? ((paciente.glucosa.some((g: (typeof paciente.glucosa)[number]) => g.valor_glucosa > 140) || (!paciente.glucosa.length && (glucosaEstimadaPorComida ?? 0) > 140))
-          ? messages.summary.glucosePeaks
-          : messages.summary.glucoseInRange)
-      : null,
+    alerta_principal: alertaPrincipal,
+    evolution: {
+      diagnostico_inicial: paciente.diagnostico_principal,
+      producto_permitido: profileExtras.producto_permitido_registro,
+      peso_inicial: paciente.peso_inicial_kg ? Number(paciente.peso_inicial_kg) : null,
+      peso_actual: pesoActual,
+    }
   };
 
   const aiSuggestionPayload = {
@@ -399,40 +421,151 @@ export default async function ResumenSemanal({
           <a
             href={csvDataUri}
             download={exportFileName}
-            className="absolute right-5 top-5 z-20 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-white shadow-sm backdrop-blur-md transition hover:bg-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            aria-label={messages.summary.exportToSheets}
+            className="absolute right-8 bottom-8 bg-white/20 hover:bg-white/30 backdrop-blur-md p-3 rounded-full transition-all border border-white/20 group"
             title={messages.summary.exportToSheets}
           >
-            <span className="material-symbols-outlined text-[24px]">download</span>
+            <span className="material-symbols-outlined text-white group-hover:scale-110 transition-transform">download_for_offline</span>
           </a>
-          <div className="relative z-10">
-            <p className="text-blue-200 font-bold tracking-widest uppercase text-xs mb-2">{messages.summary.patientReport}</p>
-            <h2 className="text-4xl font-extrabold mb-1">{data.paciente}</h2>
-            {(data.altura_cm || data.motivo_registro) && (
-              <div className="mt-5 rounded-2xl bg-white/10 p-4 backdrop-blur-md">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-blue-200">
-                  {messages.summary.aiProfileContextTitle}
-                </p>
+
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 relative z-10">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-blue-400/30 p-2 rounded-xl backdrop-blur-sm">
+                  <span className="material-symbols-outlined text-blue-200">patient_list</span>
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">{data.paciente}</h1>
+                <span className="bg-green-500/20 text-green-300 text-xs font-medium px-2.5 py-1 rounded-full border border-green-500/30">
+                  {messages.summary.aiRead}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-4 text-blue-100/80">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-sm">calendar_month</span>
+                  <span className="text-sm font-medium">{data.edad} {messages.common.yearsOld}</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-blue-100/30 self-center"></div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">person</span>
+                  <span className="text-sm font-medium">{data.sexo}</span>
+                </div>
                 {data.altura_cm && (
-                  <p className="mt-1 text-sm text-blue-50">{messages.summary.patientHeight}: {data.altura_cm} cm</p>
-                )}
-                {data.motivo_registro && (
-                  <p className="mt-1 text-sm text-blue-50">{messages.summary.registrationReason}: {data.motivo_registro}</p>
+                  <>
+                    <div className="w-1 h-1 rounded-full bg-blue-100/30 self-center"></div>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm">straighten</span>
+                      <span className="text-sm font-medium">{data.altura_cm} cm</span>
+                    </div>
+                  </>
                 )}
               </div>
-            )}
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-blue-200/70 text-[10px] font-bold uppercase tracking-widest mb-1">{messages.summary.lastHbA1c}</p>
+                <div className="flex items-baseline justify-end gap-1">
+                  <span className="text-5xl font-black">{data.ultima_hba1c || "--"}</span>
+                  <span className="text-xl font-bold text-blue-300">%</span>
+                </div>
+              </div>
+              <div className="w-px h-12 bg-white/10"></div>
+              <div className="text-right">
+                <p className="text-blue-200/70 text-[10px] font-bold uppercase tracking-widest mb-1">{messages.summary.averageGlucose}</p>
+                <div className="flex items-baseline justify-end gap-1">
+                  <span className="text-5xl font-black">{data.promedio_glucosa || "--"}</span>
+                  <span className="text-xs font-bold text-blue-300">mg/dL</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sección de Evolución y Estado Inicial */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-col justify-between">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-primary/10 p-3 rounded-2xl">
+                <span className="material-symbols-outlined text-primary text-2xl">history</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 leading-tight text-lg">{messages.summary.evolution.title}</h3>
+                <p className="text-slate-500 text-xs">{messages.summary.evolution.subtitle}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{messages.summary.evolution.initialDiagnosis}</p>
+                <p className="font-semibold text-slate-700">{data.evolution.diagnostico_inicial || "--"}</p>
+              </div>
+              
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{messages.summary.evolution.initialProduct}</p>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
+                  <p className="font-semibold text-slate-700">{data.evolution.producto_permitido || "--"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 shadow-lg shadow-slate-200/50 border border-slate-100">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-slate-100 p-3 rounded-2xl">
+                <span className="material-symbols-outlined text-slate-600 text-2xl">trending_up</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 leading-tight text-lg">{messages.summary.evolution.currentStatus}</h3>
+                <p className="text-slate-500 text-xs">{messages.summary.evolution.sinceStart}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col justify-center items-center text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{messages.summary.evolution.weightChange}</p>
+                {data.evolution.peso_inicial && data.evolution.peso_actual ? (
+                  <>
+                    <div className={`text-2xl font-black ${data.evolution.peso_actual < data.evolution.peso_inicial ? 'text-green-600' : 'text-slate-800'}`}>
+                      {data.evolution.peso_actual - data.evolution.peso_inicial > 0 ? '+' : ''}{Math.round((data.evolution.peso_actual - data.evolution.peso_inicial) * 10) / 10} kg
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">{data.evolution.peso_inicial} kg → {data.evolution.peso_actual} kg</p>
+                  </>
+                ) : (
+                  <span className="text-2xl font-black text-slate-300">--</span>
+                )}
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex flex-col justify-center items-center text-center">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{messages.summary.evolution.glucoseChange}</p>
+                {data.ultima_hba1c > 0 ? (
+                  <>
+                    <div className="text-2xl font-black text-slate-800">
+                      {data.ultima_hba1c}%
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">HbA1c actual</p>
+                  </>
+                ) : (
+                  <span className="text-2xl font-black text-slate-300">--</span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+              <p className="text-xs text-emerald-800 font-medium flex items-start gap-2">
+                <span className="material-symbols-outlined text-sm mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                {data.ultima_hba1c < 7 ? messages.summary.evolution.evolutionPositive : messages.summary.evolution.evolutionStatic}
+              </p>
+            </div>
           </div>
         </div>
 
         {mostrarAlerta && (
-          <div className="grid md:grid-cols-1 gap-6">
-            <div className="bg-rose-50 border border-rose-100 rounded-[2rem] p-6 shadow-sm">
-              <div className="flex gap-3 mb-2">
-                <span className="material-symbols-outlined text-rose-500 mt-1" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
-                <div>
-                  <h3 className="font-bold text-rose-900">{messages.summary.mainAlert}</h3>
-                  <p className="text-rose-800/80 text-sm mt-1">{data.alerta_principal ?? messages.summary.waitingForAlertData}</p>
-                </div>
+          <div className="bg-rose-50 border border-rose-100 rounded-[2rem] p-6 shadow-sm mt-6">
+            <div className="flex gap-3 mb-2">
+              <span className="material-symbols-outlined text-rose-500 mt-1" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              <div>
+                <h3 className="font-bold text-rose-900">{messages.summary.mainAlert}</h3>
+                <p className="text-rose-800/80 text-sm mt-1">{data.alerta_principal ?? messages.summary.waitingForAlertData}</p>
               </div>
             </div>
           </div>

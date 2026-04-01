@@ -112,31 +112,6 @@ CREATE TABLE IF NOT EXISTS laboratorios (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE OR REPLACE FUNCTION public.authenticate_paciente(
-  p_email TEXT,
-  p_password TEXT
-)
-RETURNS TABLE (
-  paciente_id UUID,
-  email TEXT,
-  nombre TEXT,
-  apellido TEXT
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    pacientes.paciente_id,
-    pacientes.email,
-    pacientes.nombre,
-    pacientes.apellido
-  FROM pacientes
-  WHERE lower(pacientes.email) = lower(p_email)
-    AND pacientes.activo = true
-    AND pacientes.password_hash = crypt(p_password, pacientes.password_hash)
-  LIMIT 1;
-END;
-$$;
+-- La autenticacion actual usa Supabase Auth + Prisma.
+-- Eliminamos la funcion legacy si existe para no mantener SQL obsoleto.
+DROP FUNCTION IF EXISTS public.authenticate_paciente(TEXT, TEXT);

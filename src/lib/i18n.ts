@@ -1,4 +1,4 @@
-﻿export const LOCALE_COOKIE_NAME = 'lifemetric';
+export const LOCALE_COOKIE_NAME = 'lifemetric';
 export const LOCALE_EXPLICIT_COOKIE_NAME = 'lifemetric_locale_explicit';
 
 export type Locale = 'es' | 'en';
@@ -40,6 +40,7 @@ const messages = {
       select: 'Seleccione',
       yes: 'Sí',
       no: 'No',
+      yearsOld: 'años',
     },
     navigation: {
       home: 'Inicio',
@@ -104,6 +105,7 @@ const messages = {
         backToHome: 'Volver al inicio',
       },
       messages: {
+        concurrentSession: 'Su sesión se ha cerrado por seguridad ya que ingresó desde otro dispositivo.',
         invalidCaptcha: 'Captcha inválido',
         invalidCredentials: 'Credenciales inválidas',
         accountInactive: 'Tu cuenta fue desactivada por inactividad. Revisa tu correo: conservaremos tus datos por 3 meses antes de eliminarlos automáticamente.',
@@ -215,6 +217,19 @@ const messages = {
       exportToSheets: 'Descargar resumen para Google Sheets',
       aiRead: 'Leído por IA',
       noValuesAvailable: 'Sin valores disponibles',
+      evolution: {
+        title: 'Evolución y Estado Inicial',
+        subtitle: 'Comparativa de cómo empezaste vs. tu progreso actual.',
+        initialDiagnosis: 'Diagnóstico Inicial',
+        initialProduct: 'Producto',
+        initialStatus: 'Estado al Ingreso',
+        currentStatus: 'Estado Actual',
+        evolutionPositive: 'Tu evolución muestra una respuesta positiva al tratamiento.',
+        evolutionStatic: 'Mantén la constancia para ver mayores cambios.',
+        weightChange: 'Variación de peso',
+        glucoseChange: 'Variación de glucosa',
+        sinceStart: 'Desde el inicio',
+      },
       labValues: {
         hba1c: 'HbA1c',
         fastingGlucose: 'Glucosa ayuno',
@@ -512,6 +527,7 @@ const messages = {
       select: 'Select',
       yes: 'Yes',
       no: 'No',
+      yearsOld: 'years old',
     },
     navigation: {
       home: 'Home',
@@ -576,6 +592,7 @@ const messages = {
         backToHome: 'Back to home',
       },
       messages: {
+        concurrentSession: 'Your session has been closed for security because you logged in from another device.',
         invalidCaptcha: 'Invalid captcha',
         invalidCredentials: 'Invalid credentials',
         accountInactive: 'Your account was deactivated due to inactivity. Check your email: we will keep your data for 3 months before automatic deletion.',
@@ -687,6 +704,19 @@ const messages = {
       exportToSheets: 'Download summary for Google Sheets',
       aiRead: 'AI-read',
       noValuesAvailable: 'No values available',
+      evolution: {
+        title: 'Evolution and Initial State',
+        subtitle: 'Comparison of how you started vs. your current progress.',
+        initialDiagnosis: 'Initial Diagnosis',
+        initialProduct: 'Authorized Product',
+        initialStatus: 'Status at Admission',
+        currentStatus: 'Current Status',
+        evolutionPositive: 'Your evolution shows a positive response to treatment.',
+        evolutionStatic: 'Maintain consistency to see greater changes.',
+        weightChange: 'Weight change',
+        glucoseChange: 'Glucose change',
+        sinceStart: 'Since start',
+      },
       labValues: {
         hba1c: 'HbA1c',
         fastingGlucose: 'Fasting glucose',

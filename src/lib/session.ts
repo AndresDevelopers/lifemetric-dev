@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redisClient } from './redis';
 
 /**
  * Utility to sign and verify session tokens using native Web Crypto API.
@@ -63,9 +64,35 @@ export async function verifySession(token: string): Promise<string | null> {
   }
 }
 
+/**
+ * Validates if the session is still active in Redis (one session per user).
+ */
+export async function isSessionActive(pacienteId: string, sessionId: string): Promise<boolean> {
+  if (!redisClient) return true; // Fallback if Redis is not configured
+  try {
+    const activeSessionId = await redisClient.get(`active_session:${pacienteId}`);
+    // If no session is found, we allow it (might be a legacy session or Redis cleared)
+    return !activeSessionId || activeSessionId === sessionId;
+  } catch (error) {
+    console.error('Redis active session check failed:', error);
+    return true; // Resilience fallback
+  }
+}
+
 export async function setSession(pacienteId: string) {
-  const payload = JSON.stringify({ pacienteId, timestamp: Date.now() });
+  const sessionId = crypto.randomUUID();
+  const payload = JSON.stringify({ pacienteId, sessionId, timestamp: Date.now() });
   const token = await signSession(payload);
+
+  // Store active session in Redis to prevent concurrent logins
+  if (redisClient) {
+    try {
+      await redisClient.set(`active_session:${pacienteId}`, sessionId, { ex: 86400 * 7 });
+    } catch (error) {
+      console.error('Failed to store active session in Redis:', error);
+    }
+  }
+
   const cookieStore = await cookies();
   
   cookieStore.set('lifemetric_session', token, {
@@ -79,5 +106,20 @@ export async function setSession(pacienteId: string) {
 
 export async function deleteSession() {
   const cookieStore = await cookies();
+  const sessionToken = cookieStore.get('lifemetric_session')?.value;
+  
+  if (sessionToken && redisClient) {
+    try {
+      const payloadStr = await verifySession(sessionToken);
+      if (payloadStr) {
+        const { pacienteId } = JSON.parse(payloadStr);
+        await redisClient.del(`active_session:${pacienteId}`);
+      }
+    } catch (e) {
+      // Ignore errors during logout
+    }
+  }
+
   cookieStore.delete('lifemetric_session');
 }
+
