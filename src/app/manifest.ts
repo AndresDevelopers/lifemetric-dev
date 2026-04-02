@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
+import { getPublicAppFaviconUrl, getPublicAppName } from "@/lib/appBranding";
 
 export default function manifest(): MetadataRoute.Manifest {
-  const appName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Lifemetric";
+  const appName = getPublicAppName();
+  const appFaviconUrl = getPublicAppFaviconUrl();
 
   return {
     name: appName,
@@ -14,15 +16,15 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es",
     icons: [
       {
-        src: "/next.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: appFaviconUrl,
+        sizes: "512x512",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/globe.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: appFaviconUrl,
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
       },
     ],

@@ -15,9 +15,10 @@ La app de desarrollo corre en [http://localhost:3003](http://localhost:3003).
 
 La app ya expone capacidades de Progressive Web App (PWA):
 
-- Manifest web en `src/app/manifest.ts` con modo `standalone`, `start_url` raíz e iconos.
+- Manifest web en `src/app/manifest.ts` con modo `standalone`, `start_url` raíz e iconos, usando `NEXT_PUBLIC_APP_NAME` y `NEXT_PUBLIC_APP_FAVICON_URL`.
 - Registro de Service Worker cliente en `src/components/PwaRegistrar.tsx`.
 - Service Worker en `public/sw.js` con cache de app-shell y estrategia cache-first para recursos GET.
+- Endpoint Android App Links en `public/.well-known/assetlinks.json` (actualmente `[]` como placeholder explícito para evitar 404s mientras no haya app nativa asociada).
 
 Esto habilita instalación en dispositivos compatibles y mejora resiliencia offline básica de rutas críticas.
 
@@ -62,6 +63,7 @@ pnpm build
 - Evita introducir imports de paquetes opcionales en rutas críticas (`layout`, auth) sin fallback explícito, para prevenir errores 500 por resolución de módulos.
 - El parser de PDF para laboratorios (`pdf-parse`) se carga de forma diferida (lazy import) para evitar fallos SSR por dependencias que requieren APIs del DOM en rutas de autenticación.
 - En login/registro se persiste geocontexto de ejecución (ciudad, país y zona horaria detectada) para que cálculos diarios y etiquetas de fecha/hora se alineen automáticamente con la ubicación del paciente.
+- En formularios de **Glucosa**, **Comidas** y **Medicación**, la fecha/hora inicial se precarga usando la zona horaria persistida en login/registro (`lifemetric_timezone`) para evitar desfases al registrar datos clínicos.
 
 
 ## Email y AI

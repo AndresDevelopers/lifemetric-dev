@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { getComidasPorFecha, getSessionPacienteId } from "@/actions/data";
 import { createGlucosaAction } from "@/actions/glucosa";
 import { useLocale } from "@/components/providers/LocaleProvider";
+import { useRuntimeDateTimeDefaults } from "@/hooks/useRuntimeDateTimeDefaults";
 
 const glucosaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -27,13 +28,13 @@ export default function NuevaGlucosa() {
   const { messages } = useLocale();
   const glucoseMessages = messages.glucoseForm;
   
-  const now = new Date();
-  
+  const runtimeDateTime = useRuntimeDateTimeDefaults();
+
   const { register, handleSubmit, setValue, control, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(glucosaSchema),
     defaultValues: {
-      fecha: now.toISOString().slice(0, 10),
-      hora: now.toTimeString().slice(0, 5),
+      fecha: runtimeDateTime.date,
+      hora: runtimeDateTime.time,
       tipo_glucosa: "ayuno",
       paciente_id: "",
     }
@@ -43,12 +44,17 @@ export default function NuevaGlucosa() {
     async function loadData() {
       const pId = await getSessionPacienteId();
       if (pId) setValue("paciente_id", pId);
-      const comidas = await getComidasPorFecha(new Date().toISOString().slice(0, 10));
+      const comidas = await getComidasPorFecha(runtimeDateTime.date);
       setComidasHoy(comidas as {comida_id: string, alimento_principal: string | null, tipo_comida: string, hora: Date}[]);
     }
     loadData();
-  }, [setValue]);
+  }, [runtimeDateTime.date, setValue]);
 
+
+  useEffect(() => {
+    setValue("fecha", runtimeDateTime.date, { shouldDirty: false });
+    setValue("hora", runtimeDateTime.time, { shouldDirty: false });
+  }, [runtimeDateTime.date, runtimeDateTime.time, setValue]);
   const tipo_glucosa = useWatch({ control, name: "tipo_glucosa" });
   const fechaSeleccionada = useWatch({ control, name: "fecha" });
 
@@ -171,7 +177,7 @@ export default function NuevaGlucosa() {
                 >
                   <option value="">{glucoseMessages.noMealLink}</option>
                   {comidasHoy.map(c => {
-                    const horaStr = new Date(c.hora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const horaStr = new Date(c.hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: runtimeDateTime.timeZone });
                     return (
                       <option key={c.comida_id} value={c.comida_id}>
                         {c.alimento_principal || c.tipo_comida} - {glucoseMessages.todayAt} {horaStr}

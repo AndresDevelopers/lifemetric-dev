@@ -12,6 +12,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
 import { getMedicationCatalogDescription } from "@/lib/medicationCatalog";
 import { supabase } from "@/lib/supabase";
+import { useRuntimeDateTimeDefaults } from "@/hooks/useRuntimeDateTimeDefaults";
 
 const medicacionSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -37,13 +38,13 @@ export default function NuevaMedicacion() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { locale, messages } = useLocale();
   const medicationMessages = messages.medicationForm;
-  const now = new Date();
+  const runtimeDateTime = useRuntimeDateTimeDefaults();
 
   const { register, handleSubmit, setValue, control } = useForm<FormValues>({
     resolver: zodResolver(medicacionSchema),
     defaultValues: {
-      fecha: now.toISOString().slice(0, 10),
-      hora: now.toTimeString().slice(0, 5),
+      fecha: runtimeDateTime.date,
+      hora: runtimeDateTime.time,
       estado_toma: "tomada",
       paciente_id: "",
       foto_url: "",
@@ -61,6 +62,11 @@ export default function NuevaMedicacion() {
     void loadData();
   }, [setValue]);
 
+
+  useEffect(() => {
+    setValue("fecha", runtimeDateTime.date, { shouldDirty: false });
+    setValue("hora", runtimeDateTime.time, { shouldDirty: false });
+  }, [runtimeDateTime.date, runtimeDateTime.time, setValue]);
   const estado = useWatch({ control, name: "estado_toma" });
   const medicamento = useWatch({ control, name: "medicamento" });
 

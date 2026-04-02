@@ -8,6 +8,7 @@ import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import PwaRegistrar from "@/components/PwaRegistrar";
 import { getSessionPaciente } from "@/actions/data";
 import { resolveAppBaseUrl } from "@/lib/url";
+import { getPublicAppFaviconUrl, getPublicAppName } from "@/lib/appBranding";
 import {
   LOCALE_COOKIE_NAME,
   LOCALE_EXPLICIT_COOKIE_NAME,
@@ -15,8 +16,8 @@ import {
 } from "@/lib/i18n";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const appName = process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Lifemetric";
-  const faviconUrl = process.env.NEXT_PUBLIC_APP_FAVICON_URL?.trim() || "/favicon.ico";
+  const appName = getPublicAppName();
+  const faviconUrl = getPublicAppFaviconUrl();
   const appBaseUrl = resolveAppBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
   return {
     metadataBase: appBaseUrl,

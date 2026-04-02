@@ -17,6 +17,10 @@ const supabaseLibPath = path.join(process.cwd(), 'src', 'lib', 'supabase.ts');
 const emailPath = path.join(process.cwd(), 'src', 'lib', 'email.ts');
 const retentionRoutePath = path.join(process.cwd(), 'src', 'app', 'api', 'maintenance', 'storage-retention', 'route.ts');
 const labPagePath = path.join(process.cwd(), 'src', 'app', 'laboratorios', 'nuevo', 'page.tsx');
+const glucosePagePath = path.join(process.cwd(), 'src', 'app', 'glucosa', 'nuevo', 'page.tsx');
+const medicationPagePath = path.join(process.cwd(), 'src', 'app', 'medicacion', 'nuevo', 'page.tsx');
+const foodPagePath = path.join(process.cwd(), 'src', 'app', 'comidas', 'nuevo', 'page.tsx');
+const runtimeDateTimeHookPath = path.join(process.cwd(), 'src', 'hooks', 'useRuntimeDateTimeDefaults.ts');
 const storageRetentionLibPath = path.join(process.cwd(), 'src', 'lib', 'storageRetention.ts');
 const readmePath = path.join(process.cwd(), 'README.md');
 const packageJsonPath = path.join(process.cwd(), 'package.json');
@@ -36,6 +40,10 @@ const supabaseLib = fs.readFileSync(supabaseLibPath, 'utf8');
 const email = fs.readFileSync(emailPath, 'utf8');
 const retentionRoute = fs.readFileSync(retentionRoutePath, 'utf8');
 const labPage = fs.readFileSync(labPagePath, 'utf8');
+const glucosePage = fs.readFileSync(glucosePagePath, 'utf8');
+const medicationPage = fs.readFileSync(medicationPagePath, 'utf8');
+const foodPage = fs.readFileSync(foodPagePath, 'utf8');
+const runtimeDateTimeHook = fs.readFileSync(runtimeDateTimeHookPath, 'utf8');
 const storageRetentionLib = fs.readFileSync(storageRetentionLibPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 const packageJson = fs.readFileSync(packageJsonPath, 'utf8');
@@ -164,6 +172,19 @@ test('delete account keeps lab evidence while purging user data and uploaded mea
   assert.match(auth, /redirect\(`\/login\?accountDeleted=1&lang=\$\{locale\}`\)/);
 });
 
+
+
+test('glucose, medication and food forms initialize date/time from runtime timezone cookie', () => {
+  assert.match(glucosePage, /useRuntimeDateTimeDefaults/);
+  assert.match(glucosePage, /setValue\("fecha", runtimeDateTime\.date/);
+  assert.match(glucosePage, /setValue\("hora", runtimeDateTime\.time/);
+  assert.match(medicationPage, /useRuntimeDateTimeDefaults/);
+  assert.match(foodPage, /useRuntimeDateTimeDefaults/);
+  assert.match(runtimeDateTimeHook, /RUNTIME_TIMEZONE_COOKIE_NAME/);
+  assert.match(runtimeDateTimeHook, /document\.cookie/);
+  assert.match(runtimeDateTimeHook, /formatRuntimeDateKey/);
+  assert.match(runtimeDateTimeHook, /formatRuntimeTimeKey/);
+});
 test('laboratory uploads use dedicated storage bucket and retention route exists', () => {
   assert.match(labPage, /storage\.from\("laboratorios"\)\.upload/);
   assert.match(retentionRoute, /MEAL_IMAGE_RETENTION_DAYS/);

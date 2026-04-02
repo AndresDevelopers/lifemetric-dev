@@ -11,6 +11,7 @@ import { clasificarYGuardarComida, inferMealFromPhoto } from "@/actions/comida";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { supabase } from "@/lib/supabase";
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
+import { useRuntimeDateTimeDefaults } from "@/hooks/useRuntimeDateTimeDefaults";
 
 const comidaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -49,19 +50,23 @@ export default function NuevaComida() {
   const { locale, messages } = useLocale();
   const foodMessages = messages.foodForm;
   
-  const now = new Date();
-  const currentDate = now.toISOString().slice(0, 10);
-  const currentTime = now.toTimeString().slice(0, 5);
+  const runtimeDateTime = useRuntimeDateTimeDefaults();
 
   const { register, handleSubmit, setValue, watch } = useForm<FormValues>({
     resolver: zodResolver(comidaSchema),
     defaultValues: {
-      fecha: currentDate,
-      hora: currentTime,
+      fecha: runtimeDateTime.date,
+      hora: runtimeDateTime.time,
       tipo_comida: "Desayuno",
       paciente_id: "", 
     }
   });
+
+
+  useEffect(() => {
+    setValue("fecha", runtimeDateTime.date, { shouldDirty: false });
+    setValue("hora", runtimeDateTime.time, { shouldDirty: false });
+  }, [runtimeDateTime.date, runtimeDateTime.time, setValue]);
 
   useEffect(() => {
     async function loadData() {
