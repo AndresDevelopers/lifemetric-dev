@@ -58,7 +58,7 @@ pnpm build
 - Login/registro/recuperación usan **Supabase Auth** como fuente de verdad de credenciales; la tabla `pacientes` se mantiene para perfil clínico y sesión interna.
 - Si la lectura de perfil en PostgreSQL falla temporalmente, la sesión no se suplanta con datos ficticios: el runtime trata al usuario como no autenticado para evitar bucles `/login` ↔ `/` y estados inconsistentes.
 - El **rate limiting** se aplica con Upstash Redis usando comandos nativos (`INCR` + `EXPIRE`) para reducir dependencias críticas en runtime.
-- La firma de sesión busca secreto en `AUTH_SECRET`, `SESSION_SECRET` o `NEXTAUTH_SECRET` para evitar errores de login por configuración parcial.
+- La firma de sesión usa `AUTH_SECRET`, `SESSION_SECRET` o `NEXTAUTH_SECRET`; si faltan, usa `SUPABASE_SERVICE_ROLE_KEY`/`DATABASE_URL` como fallback estable. En producción, si no existe ningún secreto estable, el runtime falla rápido con error explícito para evitar invalidar sesiones tras reinicios.
 - Prisma intenta resolver conexión desde `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_DB_URL`, `SUPABASE_DATABASE_URL`, `SUPABASE_POOLER_URL` o variables `POSTGRES_*` para compatibilidad con despliegues Supabase/Vercel. Si ninguna variable está presente, el runtime falla rápido con error explícito (no hace fallback silencioso a `127.0.0.1`).
 - Evita introducir imports de paquetes opcionales en rutas críticas (`layout`, auth) sin fallback explícito, para prevenir errores 500 por resolución de módulos.
 - El parser de PDF para laboratorios (`pdf-parse`) se carga de forma diferida (lazy import) para evitar fallos SSR por dependencias que requieren APIs del DOM en rutas de autenticación.
