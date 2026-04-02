@@ -9,6 +9,7 @@ import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useClientTimeZone } from '@/hooks/useClientTimeZone';
+import { shouldShowPwaInstallHint } from '@/lib/pwaInstallPrompt';
 
 type LoginPanelProps = {
   action: (payload: FormData) => void;
@@ -178,6 +179,13 @@ export default function LoginPage() {
   const { locale, messages } = useLocale();
   const clientTimeZone = useClientTimeZone();
   const loginMessages = messages.auth.login;
+  const [showInstallHint] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return shouldShowPwaInstallHint(window.navigator.userAgent, window.navigator.vendor ?? '');
+  });
 
   const showDeletedMessage = searchParams.get('accountDeleted') === '1';
   const concurrentSessionError = searchParams.get('error') === 'concurrent_session' ? messages.auth.messages.concurrentSession : undefined;
@@ -191,6 +199,20 @@ export default function LoginPage() {
       <main className="relative z-10">
         <section className="md:hidden min-h-screen flex flex-col bg-gradient-to-b from-[#0c5fae] via-[#0a4f93] to-[#083f78]">
           <div className="px-5 pt-8 pb-24 text-white">
+            {showInstallHint && (
+              <div className="mb-5 rounded-2xl border border-cyan-100/35 bg-[#04264f]/55 px-4 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
+                <p className="text-sm font-semibold text-cyan-100">
+                  {locale === 'es'
+                    ? 'Instala esta app para acceso rápido desde tu pantalla de inicio.'
+                    : 'Install this app for quick access from your home screen.'}
+                </p>
+                <p className="mt-1 text-xs text-cyan-100/90">
+                  {locale === 'es'
+                    ? 'En iOS: Compartir → "Añadir a pantalla de inicio". En Android: usa el menú del navegador.'
+                    : 'On iOS: Share → "Add to Home Screen". On Android: use your browser menu.'}
+                </p>
+              </div>
+            )}
             <span className="inline-flex items-center rounded-full border border-cyan-100/30 bg-[#04264f]/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100/90 mb-5">
               {locale === 'es' ? 'Plataforma clínica segura' : 'Secure clinical platform'}
             </span>

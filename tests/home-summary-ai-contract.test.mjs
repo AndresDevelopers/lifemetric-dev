@@ -55,6 +55,16 @@ test('summary payload includes inferred glucose fallback when user has no logs',
   assert.match(summary, /promedioGlucosaConFallback/);
 });
 
+test('summary AI uses persistent DB cache and only regenerates when payload changes', () => {
+  assert.match(summary, /computePayloadHash/);
+  assert.match(summary, /prisma\.summaryAiCache\.findUnique/);
+  assert.match(summary, /payload_hash === summaryPayloadHash/);
+  assert.match(summary, /prisma\.summaryAiCache\.upsert/);
+  assert.match(summary, /buildClinicalSuggestions\(\{ locale, data: aiSuggestionPayload \}\)/);
+  assert.match(summary, /aiSuggestions = generatedSuggestions/);
+  assert.match(summary, /try \{\s*await prisma\.summaryAiCache\.upsert/s);
+});
+
 test('lab upload and summary preserve dynamic AI-detected lab fields', () => {
   assert.match(ai, /resultados_detectados/);
   assert.match(summary, /buildDetectedResultsFromStoredLab/);

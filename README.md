@@ -17,10 +17,13 @@ La app ya expone capacidades de Progressive Web App (PWA):
 
 - Manifest web en `src/app/manifest.ts` con modo `standalone`, `start_url` raíz e iconos, usando `NEXT_PUBLIC_APP_NAME` y `NEXT_PUBLIC_APP_FAVICON_URL`.
 - Registro de Service Worker cliente en `src/components/PwaRegistrar.tsx`.
-- Service Worker en `public/sw.js` con cache de app-shell y estrategia cache-first para recursos GET.
+- Service Worker en `public/sw.js` con cache de app-shell y estrategias diferenciadas de fetch para navegación y assets estáticos.
+- El Service Worker aplica **network-first en navegación HTML** y **cache-first solo para assets estáticos** (`/_next/static`, scripts, estilos, fuentes, imágenes) para evitar pantallas en blanco al reabrir la PWA instalada con bundles antiguos en caché.
 - Endpoint Android App Links en `public/.well-known/assetlinks.json` (actualmente `[]` como placeholder explícito para evitar 404s mientras no haya app nativa asociada).
 
 Esto habilita instalación en dispositivos compatibles y mejora resiliencia offline básica de rutas críticas.
+
+- En `login`, se muestra un **install hint** en la parte superior solo en sistemas operativos móviles cuando la app no está instalada. Se oculta automáticamente en modo standalone y también se excluye en **Google Chrome en Android**; en navegadores móviles como Safari, Edge, Brave u Opera sí puede mostrarse.
 
 ## Prisma
 
@@ -64,6 +67,7 @@ pnpm build
 - El parser de PDF para laboratorios (`pdf-parse`) se carga de forma diferida (lazy import) para evitar fallos SSR por dependencias que requieren APIs del DOM en rutas de autenticación.
 - En login/registro se persiste geocontexto de ejecución (ciudad, país y zona horaria detectada) para que cálculos diarios y etiquetas de fecha/hora se alineen automáticamente con la ubicación del paciente.
 - En formularios de **Glucosa**, **Comidas** y **Medicación**, la fecha/hora inicial se precarga usando la zona horaria persistida en login/registro (`lifemetric_timezone`) para evitar desfases al registrar datos clínicos.
+- El módulo **Resumen** usa caché persistente de sugerencias IA por paciente/idioma/rango (`summary_ai_cache`) y solo vuelve a consultar IA cuando cambia el snapshot clínico (hash del payload), reduciendo latencia y costo en recargas frecuentes.
 
 
 ## Email y AI
