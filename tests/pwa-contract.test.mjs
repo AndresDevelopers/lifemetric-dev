@@ -40,9 +40,13 @@ test('layout metadata uses public app branding env helpers', () => {
 test('service worker enables app-shell caching', () => {
   assert.match(registrarSource, /const SERVICE_WORKER_PATH = "\/sw\.js"/);
   assert.match(registrarSource, /navigator\.serviceWorker\.register\(SERVICE_WORKER_PATH/);
-  assert.match(serviceWorkerSource, /const CACHE_VERSION = "lifemetric-pwa-v1"/);
+  assert.match(serviceWorkerSource, /const CACHE_VERSION = "lifemetric-pwa-v2"/);
   assert.match(serviceWorkerSource, /self\.addEventListener\("install"/);
   assert.match(serviceWorkerSource, /self\.addEventListener\("fetch"/);
+  assert.match(serviceWorkerSource, /isNavigationRequest/);
+  assert.match(serviceWorkerSource, /isCacheableStaticAsset/);
+  assert.match(serviceWorkerSource, /event\.request\.mode === "navigate"/);
+  assert.match(serviceWorkerSource, /if \(!isStaticAsset\) \{\s*return;\s*\}/);
 });
 
 

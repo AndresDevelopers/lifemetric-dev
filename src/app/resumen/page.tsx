@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ExpandableSuggestions from "@/components/resumen/ExpandableSuggestions";
@@ -70,13 +71,6 @@ function formatLabValue(
   return suffix ? `${value} ${suffix}` : String(value);
 }
 
-const getCachedAISuggestions = unstable_cache(
-  async (...[locale, data]: ["es" | "en", Record<string, unknown>, string, string, string]) =>
-    buildClinicalSuggestions({ locale, data }),
-  ["clinical-suggestions"],
-  { revalidate: 3600 }
-);
-
 const getCachedLabVision = unstable_cache(
   async (imageUrl: string, locale: "es" | "en") => extractLabValuesFromImage({ imageUrl, locale }),
   ["lab-vision"],
@@ -84,6 +78,25 @@ const getCachedLabVision = unstable_cache(
 );
 
 const LAB_VISION_TIMEOUT_MS = 2500;
+
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(",")}]`;
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+      left.localeCompare(right),
+    );
+    return `{${entries.map(([key, nestedValue]) => `"${key}":${stableSerialize(nestedValue)}`).join(",")}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function computePayloadHash(payload: Record<string, unknown>): string {
+  return createHash("sha256").update(stableSerialize(payload)).digest("hex");
+}
 
 export default async function ResumenSemanal({
   searchParams,
@@ -442,17 +455,59 @@ export default async function ResumenSemanal({
       })),
   };
 
-  let aiSuggestions = null;
-  try {
-    aiSuggestions = await getCachedAISuggestions(
-      locale,
-      aiSuggestionPayload,
-      pacienteId,
-      startDateStr,
-      endDateStr
-    );
-  } catch {
-    aiSuggestions = null;
+  const rangeFromDate = new Date(`${startDateStr}T00:00:00.000Z`);
+  const rangeToDate = new Date(`${endDateStr}T00:00:00.000Z`);
+  const summaryPayloadHash = computePayloadHash(aiSuggestionPayload);
+
+  const cachedSummary = await prisma.summaryAiCache.findUnique({
+    where: {
+      paciente_id_locale_range_from_range_to: {
+        paciente_id: pacienteId,
+        locale,
+        range_from: rangeFromDate,
+        range_to: rangeToDate,
+      },
+    },
+  });
+
+  let aiSuggestions: Awaited<ReturnType<typeof buildClinicalSuggestions>> | null = null;
+  const hasValidPersistentSummary =
+    cachedSummary &&
+    cachedSummary.payload_hash === summaryPayloadHash &&
+    cachedSummary.suggestions != null;
+
+  if (hasValidPersistentSummary) {
+    aiSuggestions = cachedSummary.suggestions as Awaited<ReturnType<typeof buildClinicalSuggestions>>;
+  } else {
+    try {
+      const generatedSuggestions = await buildClinicalSuggestions({ locale, data: aiSuggestionPayload });
+      aiSuggestions = generatedSuggestions;
+
+      await prisma.summaryAiCache.upsert({
+        where: {
+          paciente_id_locale_range_from_range_to: {
+            paciente_id: pacienteId,
+            locale,
+            range_from: rangeFromDate,
+            range_to: rangeToDate,
+          },
+        },
+        update: {
+          payload_hash: summaryPayloadHash,
+          suggestions: generatedSuggestions,
+        },
+        create: {
+          paciente_id: pacienteId,
+          locale,
+          range_from: rangeFromDate,
+          range_to: rangeToDate,
+          payload_hash: summaryPayloadHash,
+          suggestions: generatedSuggestions,
+        },
+      });
+    } catch {
+      aiSuggestions = (cachedSummary?.suggestions as Awaited<ReturnType<typeof buildClinicalSuggestions>> | null) ?? null;
+    }
   }
 
   const csvContent = buildSummaryCsv({
