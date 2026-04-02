@@ -10,7 +10,6 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { PDFParse } from "pdf-parse";
 
 const AI_GATEWAY_BASE_URL = 'https://ai-gateway.vercel.sh/v1';
 const GEMINI_DIRECT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
@@ -141,18 +140,42 @@ const standardLabLabels = {
   pcr_us: "PCR-us",
 } as const;
 
-function configurePdfWorker() {
-  try {
-    const workerPath = path.join(process.cwd(), "node_modules", "pdf-parse", "dist", "worker", "pdf.worker.mjs");
-    const workerSource = readFileSync(workerPath);
-    const workerDataUrl = `data:text/javascript;base64,${workerSource.toString("base64")}`;
-    PDFParse.setWorker(workerDataUrl);
-  } catch (error) {
-    console.warn("[configurePdfWorker] Could not configure pdf worker explicitly", error);
-  }
-}
+type PdfParseInstance = {
+  getText: () => Promise<{ text?: string | null }>;
+  destroy: () => Promise<void>;
+};
 
-configurePdfWorker();
+type PdfParseConstructor = {
+  new (options: { data: Buffer }): PdfParseInstance;
+  setWorker: (workerSource: string) => void;
+};
+
+let pdfParseConstructor: PdfParseConstructor | null = null;
+let pdfWorkerConfigured = false;
+
+async function getPdfParseConstructor(): Promise<PdfParseConstructor> {
+  if (pdfParseConstructor) {
+    return pdfParseConstructor;
+  }
+
+  const module = await import("pdf-parse");
+  const constructor = (module as { PDFParse: PdfParseConstructor }).PDFParse;
+
+  if (!pdfWorkerConfigured) {
+    try {
+      const workerPath = path.join(process.cwd(), "node_modules", "pdf-parse", "dist", "worker", "pdf.worker.mjs");
+      const workerSource = readFileSync(workerPath);
+      const workerDataUrl = `data:text/javascript;base64,${workerSource.toString("base64")}`;
+      constructor.setWorker(workerDataUrl);
+      pdfWorkerConfigured = true;
+    } catch (error) {
+      console.warn("[configurePdfWorker] Could not configure pdf worker explicitly", error);
+    }
+  }
+
+  pdfParseConstructor = constructor;
+  return pdfParseConstructor;
+}
 
 type ApiConfig = { apiKey: string; baseUrl: string; model: string };
 
@@ -221,6 +244,7 @@ function isPdfUrl(url: string): boolean {
 
 async function extractPdfTextFromUrl(url: string): Promise<string | null> {
   const parsePdfBuffer = async (buffer: Buffer, contentType?: string) => {
+    const PDFParse = await getPdfParseConstructor();
     const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
     await parser.destroy();

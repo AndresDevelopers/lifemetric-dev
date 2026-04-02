@@ -127,14 +127,6 @@ export default function RegisterPage() {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="doctorAsignado" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.attendingDoctor}</label>
-              <select id="doctorAsignado" name="doctorAsignado" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]">
-                <option value="">{messages.common.select}</option>
-                <option value="Renato">Renato</option>
-                <option value="Ulysses">Ulysses</option>
-              </select>
-            </div>
 
             <div className="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-4 py-3">
               <label htmlFor="newsletterSubscribed" className="flex items-start gap-3 cursor-pointer">

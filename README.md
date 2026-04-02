@@ -11,6 +11,16 @@ pnpm dev
 
 La app de desarrollo corre en [http://localhost:3003](http://localhost:3003).
 
+## PWA
+
+La app ya expone capacidades de Progressive Web App (PWA):
+
+- Manifest web en `src/app/manifest.ts` con modo `standalone`, `start_url` raíz e iconos.
+- Registro de Service Worker cliente en `src/components/PwaRegistrar.tsx`.
+- Service Worker en `public/sw.js` con cache de app-shell y estrategia cache-first para recursos GET.
+
+Esto habilita instalación en dispositivos compatibles y mejora resiliencia offline básica de rutas críticas.
+
 ## Prisma
 
 Este proyecto usa `prisma.config.ts` como fuente de configuracion. `DATABASE_URL` y `DIRECT_URL` deben vivir en archivos `.env`; no se definen dentro de `prisma/schema.prisma`.
@@ -50,6 +60,7 @@ pnpm build
 - La firma de sesión busca secreto en `AUTH_SECRET`, `SESSION_SECRET` o `NEXTAUTH_SECRET` para evitar errores de login por configuración parcial.
 - Prisma intenta resolver conexión desde `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_DB_URL`, `SUPABASE_DATABASE_URL`, `SUPABASE_POOLER_URL` o variables `POSTGRES_*` para compatibilidad con despliegues Supabase/Vercel. Si ninguna variable está presente, el runtime falla rápido con error explícito (no hace fallback silencioso a `127.0.0.1`).
 - Evita introducir imports de paquetes opcionales en rutas críticas (`layout`, auth) sin fallback explícito, para prevenir errores 500 por resolución de módulos.
+- El parser de PDF para laboratorios (`pdf-parse`) se carga de forma diferida (lazy import) para evitar fallos SSR por dependencias que requieren APIs del DOM en rutas de autenticación.
 
 
 ## Email y AI
@@ -90,9 +101,7 @@ Además, el formulario de laboratorios permite autocompletado de biomarcadores c
 - Al eliminar cuenta desde Ajustes se purgan registros del usuario (comidas, glucosa, hábitos, medicación y datos personales), pero se conservan temporalmente las evidencias de laboratorio hasta cumplir su retención de 2 años para mejora de modelos de IA.
 - Para eliminar cuenta en Ajustes ahora se exige repetir la contraseña actual. Si es válida, la sesión se cierra y se redirige a login mostrando confirmación de cuenta eliminada.
 - Si el usuario pasa 1 año sin iniciar sesión, el job de retención elimina su cuenta por inactividad con el mismo criterio de purga (conservando evidencias de laboratorio hasta su vencimiento de 2 años).
-- Registro ahora incluye:
-  - Producto (Permitido) seleccionado por el paciente.
-  - Doctor que atendió (Renato o Ulysses).
+- Registro ahora incluye selección de Producto (Permitido) por parte del paciente.
 
 ### Job de retención (cron)
 

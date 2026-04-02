@@ -5,6 +5,7 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import ChatWidget from "@/components/ChatWidget";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
+import PwaRegistrar from "@/components/PwaRegistrar";
 import { getSessionPaciente } from "@/actions/data";
 import { resolveAppBaseUrl } from "@/lib/url";
 import {
@@ -24,6 +25,8 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${appName}`,
     },
     description: "Sistema clínico para diabéticos",
+    applicationName: appName,
+    manifest: "/manifest.webmanifest",
     icons: {
       icon: faviconUrl,
       shortcut: faviconUrl,
@@ -69,6 +72,7 @@ export default async function RootLayout({
           <main className="flex-1 w-full relative">
             {children}
             {user && <ChatWidget />}
+            <PwaRegistrar />
           </main>
         </LocaleProvider>
       </body>
