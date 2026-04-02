@@ -74,10 +74,13 @@ test('login bootstraps paciente row when supabase auth user exists but profile r
 
 test('auth actions support botid provider fallback and login sends captchaProvider', () => {
   assert.match(auth, /captchaProvider:\s*z\.enum\(\['turnstile',\s*'botid'\]\)\.optional\(\)/);
+  assert.match(auth, /clientTimeZone:\s*z\.string\(\)\.optional\(\)/);
   assert.match(auth, /data\.captchaProvider !== 'botid'/);
   assert.match(auth, /x-vercel-botid/);
   assert.match(auth, /isBotIdBlocked/);
+  assert.match(auth, /persistRuntimeGeoCookies\(data\.clientTimeZone\)/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
+  assert.match(login, /name=\"clientTimeZone\" value=\{clientTimeZone\}/);
   assert.match(login, /accountDeleted/);
 });
 
@@ -99,6 +102,7 @@ test('register page does not auto-redirect when registration requires email veri
   assert.match(register, /name="fechaNacimiento"/);
   assert.match(register, /name="diagnostico"/);
   assert.match(register, /name="productoPermitido"/);
+  assert.match(register, /name="clientTimeZone"/);
   assert.doesNotMatch(register, /name="doctorAsignado"/);
   assert.match(register, /diagnosisOptions\.map/);
 });

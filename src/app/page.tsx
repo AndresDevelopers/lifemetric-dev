@@ -11,6 +11,14 @@ import {
 import { prisma } from '@/lib/prisma';
 import { getSessionPacienteId } from '@/actions/data';
 import { estimateGlucoseFromMeals } from '@/lib/glucoseInference';
+import {
+  formatRuntimeDateKey,
+  formatRuntimeDateTime,
+  resolveRuntimeGeo,
+  RUNTIME_CITY_COOKIE_NAME,
+  RUNTIME_COUNTRY_COOKIE_NAME,
+  RUNTIME_TIMEZONE_COOKIE_NAME,
+} from '@/lib/runtimeGeo';
 
 
 function formatAverageMedicationTime(entries: { hora: Date }[]): string {
@@ -41,16 +49,29 @@ export default async function Home() {
     country: headerStore.get('x-vercel-ip-country') ?? headerStore.get('cf-ipcountry'),
     city: headerStore.get('x-vercel-ip-city') ?? headerStore.get('cf-ipcity'),
   });
+  const runtimeGeo = resolveRuntimeGeo({
+    headerCountry: headerStore.get('x-vercel-ip-country') ?? headerStore.get('cf-ipcountry'),
+    headerCity: headerStore.get('x-vercel-ip-city') ?? headerStore.get('cf-ipcity'),
+    headerTimeZone: headerStore.get('x-vercel-ip-timezone') ?? headerStore.get('cf-timezone'),
+    cookieCountry: cookieStore.get(RUNTIME_COUNTRY_COOKIE_NAME)?.value,
+    cookieCity: cookieStore.get(RUNTIME_CITY_COOKIE_NAME)?.value,
+    cookieTimeZone: cookieStore.get(RUNTIME_TIMEZONE_COOKIE_NAME)?.value,
+  });
 
   const messages = getMessages(locale);
   const pacienteId = await getSessionPacienteId();
   if (!pacienteId) {
     redirect('/login');
   }
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  const runtimeDateKey = formatRuntimeDateKey(runtimeGeo.timeZone);
+  const startOfToday = new Date(`${runtimeDateKey}T00:00:00.000Z`);
   const endOfToday = new Date(startOfToday);
   endOfToday.setDate(endOfToday.getDate() + 1);
+  const runtimeDateTimeLabel = formatRuntimeDateTime({
+    locale,
+    timeZone: runtimeGeo.timeZone,
+  });
+  const runtimeLocationLabel = [runtimeGeo.city, runtimeGeo.country].filter(Boolean).join(', ');
 
   const paciente = await prisma.paciente.findUnique({
     where: { paciente_id: pacienteId },
@@ -180,10 +201,16 @@ export default async function Home() {
 
         {/* ── Today's Health Overview ── */}
         <section className="space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
-              {messages.home.healthOverview}
-            </h3>
+          <div className="flex items-start justify-between gap-4 px-2">
+            <div className="space-y-1">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                {messages.home.healthOverview}
+              </h3>
+              <p className="text-[11px] font-medium text-slate-500">
+                {messages.home.cardsRuntimeLabel}: {runtimeDateTimeLabel}
+                {runtimeLocationLabel ? ` · ${runtimeLocationLabel}` : ''}
+              </p>
+            </div>
             <Link href="/resumen" className="text-xs font-bold text-primary hover:underline transition-all flex items-center gap-1 group">
               {messages.summary.detailedAnalysis} <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </Link>

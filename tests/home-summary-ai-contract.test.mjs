@@ -44,6 +44,8 @@ const appNavigation = fs.readFileSync(appNavigationPath, 'utf8');
 test('home quick actions include laboratories shortcut', () => {
   assert.match(home, /href="\/laboratorios\/nuevo"/);
   assert.match(home, /messages\.home\.labsTitle/);
+  assert.match(home, /messages\.home\.cardsRuntimeLabel/);
+  assert.match(home, /runtimeDateTimeLabel/);
   assert.doesNotMatch(home, /paciente\.nombre\.charAt\(0\)/);
 });
 

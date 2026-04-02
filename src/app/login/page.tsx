@@ -8,6 +8,7 @@ import { loginAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import { useClientTimeZone } from '@/hooks/useClientTimeZone';
 
 type LoginPanelProps = {
   action: (payload: FormData) => void;
@@ -24,6 +25,7 @@ type LoginPanelProps = {
   loginMessages: ReturnType<typeof useLocale>['messages']['auth']['login'];
   accountDeletedMessage: string;
   languageHelper: string;
+  clientTimeZone: string;
   compact?: boolean;
   concurrentSessionError?: string;
 };
@@ -43,6 +45,7 @@ function LoginPanel({
   loginMessages,
   accountDeletedMessage,
   languageHelper,
+  clientTimeZone,
   compact = false,
   concurrentSessionError,
 }: Readonly<LoginPanelProps>) {
@@ -78,6 +81,7 @@ function LoginPanel({
         <input type="hidden" name="captchaToken" value={captchaToken} />
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="captchaProvider" value={captchaProvider} />
+        <input type="hidden" name="clientTimeZone" value={clientTimeZone} />
 
         <div className="space-y-2 group">
           <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
@@ -172,6 +176,7 @@ export default function LoginPage() {
   const appBrandLogoUrl = process.env.NEXT_PUBLIC_APP_BRAND_LOGO_URL?.trim() ?? '';
   const appIconUrl = process.env.NEXT_PUBLIC_APP_ICON_URL?.trim() ?? '';
   const { locale, messages } = useLocale();
+  const clientTimeZone = useClientTimeZone();
   const loginMessages = messages.auth.login;
 
   const showDeletedMessage = searchParams.get('accountDeleted') === '1';
@@ -233,6 +238,7 @@ export default function LoginPage() {
               loginMessages={loginMessages}
               accountDeletedMessage={messages.settings.accountDeleted}
               languageHelper={messages.common.languageHelper}
+              clientTimeZone={clientTimeZone}
               compact
               concurrentSessionError={concurrentSessionError}
             />
@@ -303,6 +309,7 @@ export default function LoginPage() {
                 loginMessages={loginMessages}
                 accountDeletedMessage={messages.settings.accountDeleted}
                 languageHelper={messages.common.languageHelper}
+                clientTimeZone={clientTimeZone}
                 concurrentSessionError={concurrentSessionError}
               />
             </div>

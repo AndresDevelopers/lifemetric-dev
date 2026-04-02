@@ -61,6 +61,7 @@ pnpm build
 - Prisma intenta resolver conexión desde `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_DB_URL`, `SUPABASE_DATABASE_URL`, `SUPABASE_POOLER_URL` o variables `POSTGRES_*` para compatibilidad con despliegues Supabase/Vercel. Si ninguna variable está presente, el runtime falla rápido con error explícito (no hace fallback silencioso a `127.0.0.1`).
 - Evita introducir imports de paquetes opcionales en rutas críticas (`layout`, auth) sin fallback explícito, para prevenir errores 500 por resolución de módulos.
 - El parser de PDF para laboratorios (`pdf-parse`) se carga de forma diferida (lazy import) para evitar fallos SSR por dependencias que requieren APIs del DOM en rutas de autenticación.
+- En login/registro se persiste geocontexto de ejecución (ciudad, país y zona horaria detectada) para que cálculos diarios y etiquetas de fecha/hora se alineen automáticamente con la ubicación del paciente.
 
 
 ## Email y AI

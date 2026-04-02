@@ -7,6 +7,7 @@ import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { translateTemplate } from '@/lib/i18n';
 import { PROMO_FOCUS_PRODUCTS, REGISTER_DIAGNOSIS_OPTIONS } from '@/lib/productCatalog';
+import { useClientTimeZone } from '@/hooks/useClientTimeZone';
 
 export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const { locale, messages } = useLocale();
+  const clientTimeZone = useClientTimeZone();
   const registerMessages = messages.auth.register;
   const diagnosisOptions = REGISTER_DIAGNOSIS_OPTIONS[locale];
 
@@ -66,6 +68,7 @@ export default function RegisterPage() {
             <input type="hidden" name="captchaToken" value={captchaToken} />
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="captchaProvider" value={captchaProvider} />
+            <input type="hidden" name="clientTimeZone" value={clientTimeZone} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="space-y-1">
