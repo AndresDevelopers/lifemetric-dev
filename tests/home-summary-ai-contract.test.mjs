@@ -61,6 +61,8 @@ test('summary AI uses persistent DB cache and only regenerates when payload chan
   assert.match(summary, /payload_hash === summaryPayloadHash/);
   assert.match(summary, /prisma\.summaryAiCache\.upsert/);
   assert.match(summary, /buildClinicalSuggestions\(\{ locale, data: aiSuggestionPayload \}\)/);
+  assert.match(summary, /aiSuggestions = generatedSuggestions/);
+  assert.match(summary, /try \{\s*await prisma\.summaryAiCache\.upsert/s);
 });
 
 test('lab upload and summary preserve dynamic AI-detected lab fields', () => {

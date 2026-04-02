@@ -459,16 +459,29 @@ export default async function ResumenSemanal({
   const rangeToDate = new Date(`${endDateStr}T00:00:00.000Z`);
   const summaryPayloadHash = computePayloadHash(aiSuggestionPayload);
 
-  const cachedSummary = await prisma.summaryAiCache.findUnique({
-    where: {
-      paciente_id_locale_range_from_range_to: {
-        paciente_id: pacienteId,
-        locale,
-        range_from: rangeFromDate,
-        range_to: rangeToDate,
+  let cachedSummary: {
+    payload_hash: string;
+    suggestions: unknown;
+  } | null = null;
+
+  try {
+    cachedSummary = await prisma.summaryAiCache.findUnique({
+      where: {
+        paciente_id_locale_range_from_range_to: {
+          paciente_id: pacienteId,
+          locale,
+          range_from: rangeFromDate,
+          range_to: rangeToDate,
+        },
       },
-    },
-  });
+      select: {
+        payload_hash: true,
+        suggestions: true,
+      },
+    });
+  } catch {
+    cachedSummary = null;
+  }
 
   let aiSuggestions: Awaited<ReturnType<typeof buildClinicalSuggestions>> | null = null;
   const hasValidPersistentSummary =
@@ -476,35 +489,37 @@ export default async function ResumenSemanal({
     cachedSummary.payload_hash === summaryPayloadHash &&
     cachedSummary.suggestions != null;
 
-  if (hasValidPersistentSummary) {
+  if (cachedSummary && hasValidPersistentSummary) {
     aiSuggestions = cachedSummary.suggestions as Awaited<ReturnType<typeof buildClinicalSuggestions>>;
   } else {
     try {
       const generatedSuggestions = await buildClinicalSuggestions({ locale, data: aiSuggestionPayload });
       aiSuggestions = generatedSuggestions;
 
-      await prisma.summaryAiCache.upsert({
-        where: {
-          paciente_id_locale_range_from_range_to: {
+      try {
+        await prisma.summaryAiCache.upsert({
+          where: {
+            paciente_id_locale_range_from_range_to: {
+              paciente_id: pacienteId,
+              locale,
+              range_from: rangeFromDate,
+              range_to: rangeToDate,
+            },
+          },
+          update: {
+            payload_hash: summaryPayloadHash,
+            suggestions: generatedSuggestions,
+          },
+          create: {
             paciente_id: pacienteId,
             locale,
             range_from: rangeFromDate,
             range_to: rangeToDate,
+            payload_hash: summaryPayloadHash,
+            suggestions: generatedSuggestions,
           },
-        },
-        update: {
-          payload_hash: summaryPayloadHash,
-          suggestions: generatedSuggestions,
-        },
-        create: {
-          paciente_id: pacienteId,
-          locale,
-          range_from: rangeFromDate,
-          range_to: rangeToDate,
-          payload_hash: summaryPayloadHash,
-          suggestions: generatedSuggestions,
-        },
-      });
+        });
+      } catch {}
     } catch {
       aiSuggestions = (cachedSummary?.suggestions as Awaited<ReturnType<typeof buildClinicalSuggestions>> | null) ?? null;
     }
