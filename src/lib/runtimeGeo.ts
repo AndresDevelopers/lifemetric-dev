@@ -24,7 +24,7 @@ function cleanValue(value?: string | null): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
-function isValidTimeZone(timeZone?: string | null): timeZone is string {
+export function isValidTimeZone(timeZone?: string | null): timeZone is string {
   if (!timeZone) {
     return false;
   }
@@ -75,5 +75,15 @@ export function formatRuntimeDateKey(timeZone: string, date: Date = new Date()):
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
+  }).format(date);
+}
+
+
+export function formatRuntimeTimeKey(timeZone: string, date: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
   }).format(date);
 }
