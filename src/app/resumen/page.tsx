@@ -1,11 +1,12 @@
 import { cookies, headers } from "next/headers";
-import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import ExpandableSuggestions from "@/components/resumen/ExpandableSuggestions";
-import HistorialComidas from "@/components/resumen/HistorialComidas";
+import { Suspense } from "react";
+import HistorialComidas from "@/components/resumen/HistorialComidasClient";
 import SummaryHeader from "@/components/resumen/SummaryHeader";
-import { buildClinicalSuggestions, extractLabValuesFromImage } from "@/lib/ai/gemini";
+import AiSuggestions from "@/components/resumen/AiSuggestions";
+import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+import { extractLabValuesFromImage } from "@/lib/ai/gemini";
 import { unstable_cache } from "next/cache";
 import { estimateGlucoseFromMeals } from "@/lib/glucoseInference";
 import {
@@ -22,6 +23,9 @@ import {
   buildLabChipsFromDetectedResults,
 } from "@/lib/labResults";
 import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+
+// Revalidar cada 5 minutos para mejorar el rendimiento
+export const revalidate = 300;
 
 function escapeCsvValue(value: string | number): string {
   const normalized = String(value).replaceAll('"', '""');
@@ -78,25 +82,6 @@ const getCachedLabVision = unstable_cache(
 );
 
 const LAB_VISION_TIMEOUT_MS = 2500;
-
-function stableSerialize(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableSerialize(item)).join(",")}]`;
-  }
-
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
-      left.localeCompare(right),
-    );
-    return `{${entries.map(([key, nestedValue]) => `"${key}":${stableSerialize(nestedValue)}`).join(",")}}`;
-  }
-
-  return JSON.stringify(value);
-}
-
-function computePayloadHash(payload: Record<string, unknown>): string {
-  return createHash("sha256").update(stableSerialize(payload)).digest("hex");
-}
 
 export default async function ResumenSemanal({
   searchParams,
@@ -457,73 +442,6 @@ export default async function ResumenSemanal({
 
   const rangeFromDate = new Date(`${startDateStr}T00:00:00.000Z`);
   const rangeToDate = new Date(`${endDateStr}T00:00:00.000Z`);
-  const summaryPayloadHash = computePayloadHash(aiSuggestionPayload);
-
-  let cachedSummary: {
-    payload_hash: string;
-    suggestions: unknown;
-  } | null = null;
-
-  try {
-    cachedSummary = await prisma.summaryAiCache.findUnique({
-      where: {
-        paciente_id_locale_range_from_range_to: {
-          paciente_id: pacienteId,
-          locale,
-          range_from: rangeFromDate,
-          range_to: rangeToDate,
-        },
-      },
-      select: {
-        payload_hash: true,
-        suggestions: true,
-      },
-    });
-  } catch {
-    cachedSummary = null;
-  }
-
-  let aiSuggestions: Awaited<ReturnType<typeof buildClinicalSuggestions>> | null = null;
-  const hasValidPersistentSummary =
-    cachedSummary &&
-    cachedSummary.payload_hash === summaryPayloadHash &&
-    cachedSummary.suggestions != null;
-
-  if (cachedSummary && hasValidPersistentSummary) {
-    aiSuggestions = cachedSummary.suggestions as Awaited<ReturnType<typeof buildClinicalSuggestions>>;
-  } else {
-    try {
-      const generatedSuggestions = await buildClinicalSuggestions({ locale, data: aiSuggestionPayload });
-      aiSuggestions = generatedSuggestions;
-
-      try {
-        await prisma.summaryAiCache.upsert({
-          where: {
-            paciente_id_locale_range_from_range_to: {
-              paciente_id: pacienteId,
-              locale,
-              range_from: rangeFromDate,
-              range_to: rangeToDate,
-            },
-          },
-          update: {
-            payload_hash: summaryPayloadHash,
-            suggestions: generatedSuggestions,
-          },
-          create: {
-            paciente_id: pacienteId,
-            locale,
-            range_from: rangeFromDate,
-            range_to: rangeToDate,
-            payload_hash: summaryPayloadHash,
-            suggestions: generatedSuggestions,
-          },
-        });
-      } catch {}
-    } catch {
-      aiSuggestions = (cachedSummary?.suggestions as Awaited<ReturnType<typeof buildClinicalSuggestions>> | null) ?? null;
-    }
-  }
 
   const csvContent = buildSummaryCsv({
     patient: data.paciente,
@@ -702,11 +620,10 @@ export default async function ResumenSemanal({
                   <div className="flex flex-col">
                     <p className="text-xs text-emerald-800 font-bold mb-1">Impacto de {data.evolution.producto_permitido || 'Lifemetric'}:</p>
                     <p className="text-xs text-slate-700 italic leading-relaxed">
-                      {aiSuggestions?.evolutionMessage || (
-                        (data.evolution.peso_actual && data.evolution.peso_inicial && data.evolution.peso_actual < data.evolution.peso_inicial)
-                          ? `Lograste bajar ${Math.round((data.evolution.peso_inicial - data.evolution.peso_actual) * 10) / 10} kg gracias al producto y tu constancia. ${messages.summary.evolution.evolutionPositive}`
-                          : messages.summary.evolution.evolutionStatic
-                      )}
+                      {(data.evolution.peso_actual && data.evolution.peso_inicial && data.evolution.peso_actual < data.evolution.peso_inicial)
+                        ? `Lograste bajar ${Math.round((data.evolution.peso_inicial - data.evolution.peso_actual) * 10) / 10} kg gracias al producto y tu constancia. ${messages.summary.evolution.evolutionPositive}`
+                        : messages.summary.evolution.evolutionStatic
+                      }
                     </p>
                   </div>
                 </div>
@@ -796,104 +713,38 @@ export default async function ResumenSemanal({
           )}
         </section>
 
-        <section className="rounded-[2rem] border border-emerald-100 bg-white p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">{messages.summary.aiSuggestionsTitle}</h3>
-              <p className="text-sm text-slate-500">{messages.summary.aiSuggestionsSubtitle}</p>
-            </div>
-            <span className="material-symbols-outlined rounded-2xl bg-emerald-100 p-3 text-emerald-700">auto_awesome</span>
-          </div>
-
-          <ExpandableSuggestions
-            showMoreLabel={messages.summary.showMore}
-            showLessLabel={messages.summary.showLess}
-          >
-          <p className="mt-4 text-sm text-slate-700">
-            {aiSuggestions?.summary ? aiSuggestions.summary : messages.summary.aiSuggestionsFallback}
-          </p>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {aiSuggestions?.centralProblems?.length ? (
-              <article className="rounded-xl bg-slate-50 px-4 py-3">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-600">{messages.summary.centralProblems}</p>
-                <ul className="mt-2 space-y-1 text-sm text-slate-800">
-                  {aiSuggestions.centralProblems.map((item) => <li key={item}>• {item}</li>)}
-                </ul>
-              </article>
-            ) : null}
-            {aiSuggestions?.priorityPlan?.length ? (
-              <article className="rounded-xl bg-blue-50 px-4 py-3">
-                <p className="text-xs font-black uppercase tracking-wider text-blue-700">{messages.summary.priorityPlan}</p>
-                <ul className="mt-2 space-y-1 text-sm text-blue-900">
-                  {aiSuggestions.priorityPlan.map((item) => <li key={item}>• {item}</li>)}
-                </ul>
-              </article>
-            ) : null}
-            {aiSuggestions?.nutritionFocus?.length ? (
-              <article className="rounded-xl bg-emerald-50 px-4 py-3">
-                <p className="text-xs font-black uppercase tracking-wider text-emerald-700">{messages.summary.nutritionFocus}</p>
-                <ul className="mt-2 space-y-1 text-sm text-emerald-900">
-                  {aiSuggestions.nutritionFocus.map((item) => <li key={item}>• {item}</li>)}
-                </ul>
-              </article>
-            ) : null}
-            {aiSuggestions?.lifestyleFocus?.length ? (
-              <article className="rounded-xl bg-violet-50 px-4 py-3">
-                <p className="text-xs font-black uppercase tracking-wider text-violet-700">{messages.summary.lifestyleFocus}</p>
-                <ul className="mt-2 space-y-1 text-sm text-violet-900">
-                  {aiSuggestions.lifestyleFocus.map((item) => <li key={item}>• {item}</li>)}
-                </ul>
-              </article>
-            ) : null}
-          </div>
-
-          {aiSuggestions?.recommendedLabs?.length ? (
-            <article className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-wider text-cyan-700">{messages.summary.recommendedLabs}</p>
-              <ul className="mt-2 space-y-1 text-sm text-cyan-900">
-                {aiSuggestions.recommendedLabs.map((item) => <li key={item}>• {item}</li>)}
-              </ul>
-            </article>
-          ) : null}
-
-          {aiSuggestions?.productsGuidance?.length ? (
-            <article className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-wider text-rose-700">{messages.summary.productsGuidance}</p>
-              <ul className="mt-2 space-y-1 text-sm text-rose-900">
-                {aiSuggestions.productsGuidance.map((item) => <li key={item}>• {item}</li>)}
-              </ul>
-            </article>
-          ) : null}
-
-          {aiSuggestions?.expectedProgress?.length ? (
-            <article className="mt-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
-              <p className="text-xs font-black uppercase tracking-wider text-teal-700">{messages.summary.expectedProgress}</p>
-              <ul className="mt-2 space-y-1 text-sm text-teal-900">
-                {aiSuggestions.expectedProgress.map((item) => <li key={item}>• {item}</li>)}
-              </ul>
-            </article>
-          ) : null}
-
-          {aiSuggestions?.patientMessage && (
-            <blockquote className="mt-4 rounded-xl border-l-4 border-primary bg-primary/5 px-4 py-3 text-sm text-slate-700 italic">
-              “{aiSuggestions.patientMessage}”
-            </blockquote>
-          )}
-
-          <ul className="mt-4 space-y-2">
-            {(aiSuggestions?.suggestions ?? [messages.summary.keepTracking]).map((suggestion) => (
-              <li key={suggestion} className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                • {suggestion}
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-4 text-xs text-slate-500">
-            {messages.summary.aiSuggestionsDisclaimer}
-          </p>
-          </ExpandableSuggestions>
-        </section>
+        <Suspense fallback={
+          <AiSuggestionsLoading 
+            messages={{
+              aiSuggestionsTitle: messages.summary.aiSuggestionsTitle,
+              aiSuggestionsSubtitle: messages.summary.aiSuggestionsSubtitle,
+            }}
+          />
+        }>
+          <AiSuggestions
+            pacienteId={pacienteId}
+            locale={locale}
+            rangeFrom={rangeFromDate}
+            rangeTo={rangeToDate}
+            aiSuggestionPayload={aiSuggestionPayload}
+            messages={{
+              aiSuggestionsTitle: messages.summary.aiSuggestionsTitle,
+              aiSuggestionsSubtitle: messages.summary.aiSuggestionsSubtitle,
+              showMore: messages.summary.showMore,
+              showLess: messages.summary.showLess,
+              aiSuggestionsFallback: messages.summary.aiSuggestionsFallback,
+              centralProblems: messages.summary.centralProblems,
+              priorityPlan: messages.summary.priorityPlan,
+              nutritionFocus: messages.summary.nutritionFocus,
+              lifestyleFocus: messages.summary.lifestyleFocus,
+              recommendedLabs: messages.summary.recommendedLabs,
+              productsGuidance: messages.summary.productsGuidance,
+              expectedProgress: messages.summary.expectedProgress,
+              aiSuggestionsDisclaimer: messages.summary.aiSuggestionsDisclaimer,
+              keepTracking: messages.summary.keepTracking,
+            }}
+          />
+        </Suspense>
 
         <section className="pt-8 border-t border-slate-100 space-y-5">
           <div className="flex items-center gap-3">
@@ -1103,3 +954,4 @@ export default async function ResumenSemanal({
     </div>
   );
 }
+

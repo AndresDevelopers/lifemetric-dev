@@ -28,9 +28,9 @@ const MEAL_HISTORY_REFRESH_MS = 15_000;
 
 function getTodayStr() {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
+  const year = today.getUTCFullYear();
+  const month = String(today.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(today.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
@@ -62,6 +62,7 @@ export default function HistorialComidas({
   const initialViewDate = getMonthYearFromDateKey(initialLatestDate);
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [activeTooltipId, setActiveTooltipId] = useState<string | null>(null);
   const [comidas, setComidas] = useState<readonly MealHistoryEntry[]>(initialComidas);
   const [filterDate, setFilterDate] = useState<string | null>(initialLatestDate);
   const [viewMonth, setViewMonth] = useState<number>(initialViewDate.month);
@@ -92,6 +93,21 @@ export default function HistorialComidas({
       document.body.style.overflow = 'unset';
     };
   }, [selectedImage]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.closest('[data-tooltip-root="true"]')) {
+        setActiveTooltipId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, []);
 
   useEffect(() => {
     const previousLatestDate = pickLatestMealHistoryDate(comidasRef.current);
@@ -467,87 +483,131 @@ export default function HistorialComidas({
             </p>
           </div>
         ) : filteredComidas.length > 0 ? (
-          filteredComidas.map((comida, idx) => (
-            <div
-              key={comida.comida_id}
-              className="bg-white rounded-3xl p-5 flex items-center gap-4 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:scale-[1.01] group relative overflow-hidden active:scale-[0.98] duration-300 sm:pr-8"
-              style={{ animationDelay: `${idx * 50}ms` }}
-            >
+          filteredComidas.map((comida, idx) => {
+            const isInadequate = isFoodClassificationInadequate(comida.clasificacion_final);
+            const insightTooltipId = `${comida.comida_id}-insight`;
+            const reasonTooltipId = `${comida.comida_id}-reason`;
+            const hasOpenTooltip =
+              activeTooltipId === insightTooltipId || activeTooltipId === reasonTooltipId;
+
+            return (
+              <div
+                key={comida.comida_id}
+                className={`bg-white rounded-3xl p-5 flex flex-col gap-4 shadow-sm border border-slate-100 hover:shadow-md transition-all hover:scale-[1.01] group relative overflow-visible active:scale-[0.98] duration-300 sm:flex-row sm:items-center sm:pr-8 ${
+                  hasOpenTooltip ? 'z-30 hover:z-30' : 'z-0 hover:z-10'
+                }`}
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
               <div className={`absolute left-0 top-0 bottom-0 w-1 ${getAccentClass(comida.tipo_comida)} opacity-70`}></div>
 
-              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 border ${getColorClass(comida.tipo_comida)} shadow-inner`}>
-                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  {getIcon(comida.tipo_comida)}
-                </span>
-              </div>
+                <div className="flex items-start gap-4 min-w-0 flex-1">
+                  <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 border ${getColorClass(comida.tipo_comida)} shadow-inner`}>
+                    <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {getIcon(comida.tipo_comida)}
+                    </span>
+                  </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h4 className="font-extrabold text-slate-800 truncate leading-tight">{translateMealType(comida.tipo_comida, locale)}</h4>
-                  <details className="group/insight relative">
-                    <summary
-                      className="list-none h-6 w-6 rounded-full border border-sky-200 bg-sky-50 text-sky-700 flex items-center justify-center cursor-pointer"
-                      aria-label={historyMessages.mealInsightLabel}
-                    >
-                      <span className="material-symbols-outlined text-[15px]">info</span>
-                    </summary>
-                    <div className={`absolute z-20 mt-2 w-72 max-w-[70vw] rounded-xl border p-3 shadow-xl ${getMealInsight(comida).tone}`}>
-                      <p className="text-[11px] font-black uppercase tracking-wider">{historyMessages.mealInsightTitle}</p>
-                      <p className="mt-1 text-xs leading-relaxed">{getMealInsight(comida).text}</p>
-                      <p className="mt-2 text-[11px]">{historyMessages.mealInsightOptimization}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <h4 className="font-extrabold text-slate-800 truncate leading-tight">{translateMealType(comida.tipo_comida, locale)}</h4>
+                      <div className="group/insight relative inline-flex shrink-0" data-tooltip-root="true">
+                        <button
+                          type="button"
+                          className="list-none h-6 w-6 rounded-full border border-sky-200 bg-sky-50 text-sky-700 flex items-center justify-center cursor-pointer"
+                          aria-label={historyMessages.mealInsightLabel}
+                          aria-expanded={activeTooltipId === insightTooltipId}
+                          onClick={() =>
+                            setActiveTooltipId((currentId) =>
+                              currentId === insightTooltipId ? null : insightTooltipId,
+                            )
+                          }
+                        >
+                          <span className="material-symbols-outlined text-[15px]">info</span>
+                        </button>
+                        {activeTooltipId === insightTooltipId ? (
+                          <div className={`absolute left-1/2 top-full z-40 mt-3 w-[min(22rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border p-3 shadow-xl sm:w-[26rem] sm:max-w-[calc(100vw-3rem)] ${getMealInsight(comida).tone}`}>
+                            <div className={`absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t ${getMealInsight(comida).tone}`}></div>
+                            <p className="text-[11px] font-black uppercase tracking-wider">{historyMessages.mealInsightTitle}</p>
+                            <p className="mt-1 text-xs leading-relaxed">{getMealInsight(comida).text}</p>
+                            <p className="mt-2 text-[11px]">{historyMessages.mealInsightOptimization}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                      {isInadequate && comida.razon_inadecuada ? (
+                        <div className="group/reason relative inline-flex shrink-0" data-tooltip-root="true">
+                          <button
+                            type="button"
+                            className="list-none h-6 w-6 rounded-full border border-rose-200 bg-rose-50 text-rose-700 flex items-center justify-center cursor-pointer"
+                            aria-label={translateFoodClassification(comida.clasificacion_final, locale)}
+                            aria-expanded={activeTooltipId === reasonTooltipId}
+                            onClick={() =>
+                              setActiveTooltipId((currentId) =>
+                                currentId === reasonTooltipId ? null : reasonTooltipId,
+                              )
+                            }
+                          >
+                            <span className="material-symbols-outlined text-[15px]">error</span>
+                          </button>
+                          {activeTooltipId === reasonTooltipId ? (
+                            <div className="absolute left-1/2 top-full z-40 mt-3 w-[min(22rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-900 shadow-xl sm:w-[26rem] sm:max-w-[calc(100vw-3rem)]">
+                              <div className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-rose-200 bg-rose-50"></div>
+                              <p className="text-[11px] font-black uppercase tracking-wider">
+                                {translateFoodClassification(comida.clasificacion_final, locale)}
+                              </p>
+                              <p className="mt-1 text-xs leading-relaxed">{comida.razon_inadecuada}</p>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <span className="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 bg-slate-50 text-slate-400 rounded-lg shrink-0 border border-slate-100">
+                        {comida.hora}
+                      </span>
                     </div>
-                  </details>
-                  <span className="text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 bg-slate-50 text-slate-400 rounded-lg shrink-0 border border-slate-100">
-                    {comida.hora}
-                  </span>
+                    <p className="text-[13px] text-slate-600 font-medium truncate">
+                      {comida.alimento_principal || historyMessages.noDescription}
+                    </p>
+                    {comida.nota && (
+                      <p className="text-[11px] text-primary/70 mt-1 flex items-center gap-1 italic font-medium">
+                        <span className="material-symbols-outlined text-[14px]">edit_note</span>
+                        {comida.nota}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[13px] text-slate-600 font-medium truncate">
-                  {comida.alimento_principal || historyMessages.noDescription}
-                </p>
-                {comida.nota && (
-                  <p className="text-[11px] text-primary/70 mt-1 flex items-center gap-1 italic font-medium">
-                    <span className="material-symbols-outlined text-[14px]">edit_note</span>
-                    {comida.nota}
-                  </p>
-                )}
-              </div>
+                <div className="flex flex-wrap items-center content-center self-center justify-center gap-2 shrink-0 md:ml-2 md:flex-col md:flex-nowrap">
+                  {comida.foto_url && (
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedImage(comida.foto_url as string);
+                      }}
+                      className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all border border-blue-100 flex items-center justify-center shadow-sm active:scale-90 group/photo shrink-0"
+                      title={historyMessages.viewMealPhoto}
+                    >
+                      <span className="material-symbols-outlined text-[24px] md:text-[28px] group-hover/photo:scale-110 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>
+                        image
+                      </span>
+                    </button>
+                  )}
 
-              {comida.foto_url && (
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setSelectedImage(comida.foto_url as string);
-                  }}
-                  className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all ml-2 border border-blue-100 flex items-center justify-center shadow-sm active:scale-90 group/photo shrink-0"
-                  title={historyMessages.viewMealPhoto}
-                >
-                  <span className="material-symbols-outlined text-[24px] md:text-[28px] group-hover/photo:scale-110 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>
-                    image
-                  </span>
-                </button>
-              )}
+                  <div
+                    className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                      isInadequate
+                        ? 'bg-rose-50 text-rose-600 border-rose-100'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                    }`}
+                  >
+                    {translateFoodClassification(comida.clasificacion_final, locale)}
+                  </div>
 
-              <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                <div
-                  className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
-                    isFoodClassificationInadequate(comida.clasificacion_final)
-                      ? 'bg-rose-50 text-rose-600 border-rose-100'
-                      : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                  }`}
-                >
-                  {translateFoodClassification(comida.clasificacion_final, locale)}
+                  <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[15px] font-black text-slate-800 tracking-tighter">
+                    <span>{comida.kcal_estimadas ?? '--'}</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-black">kcal</span>
+                  </div>
                 </div>
-                {comida.razon_inadecuada && (
-                  <p className="text-[10px] text-rose-600 max-w-[120px] text-right leading-tight">
-                    {comida.razon_inadecuada}
-                  </p>
-                )}
-                <span className="text-[15px] font-black text-slate-800 tracking-tighter">
-                  {comida.kcal_estimadas ?? '--'} <span className="text-[10px] text-slate-400 uppercase font-black">kcal</span>
-                </span>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="bg-slate-100/30 border-2 border-dashed border-slate-200 rounded-[2.5rem] py-16 flex flex-col items-center justify-center text-center px-6 transition-colors">
             <div className="bg-white p-6 rounded-full mb-4 shadow-sm border border-slate-100">

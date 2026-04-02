@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSessionPacienteId } from "@/actions/data";
 import { extractLabValuesFromImage } from "@/lib/ai/gemini";
+import { invalidateOnDataChange } from "@/lib/cache-invalidation";
 import {
   optionalLabMeasurementShape,
   optionalLabUploadShape,
@@ -176,6 +177,9 @@ export async function guardarLaboratorioAction(rawData: unknown) {
       resultados_detectados: data.resultados_detectados,
     },
   });
+
+  // Invalidar caché de sugerencias de IA
+  await invalidateOnDataChange(data.paciente_id, 'laboratorio');
 
   return { success: true, laboratorio_id: created.laboratorio_id } as const;
 }

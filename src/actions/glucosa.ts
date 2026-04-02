@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { invalidateOnDataChange } from "@/lib/cache-invalidation";
 import { z } from "zod";
 
 const glucosaSchema = z.object({
@@ -64,6 +65,9 @@ export async function createGlucosaAction(data: GlucosaInput) {
 
     revalidatePath("/");
     revalidatePath("/resumen");
+    
+    // Invalidar caché de sugerencias de IA
+    await invalidateOnDataChange(paciente_id, 'glucosa');
     
     return { success: true, data: nuevaGlucosa };
   } catch (error) {

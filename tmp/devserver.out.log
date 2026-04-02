@@ -1,0 +1,794 @@
+
+> lifemetric@0.1.0 dev C:\Trabajo\Construyendo\lifemetric
+> next dev --turbo --port 3003
+
+▲ Next.js 16.2.1 (Turbopack)
+- Local:         http://localhost:3003
+- Network:       http://192.168.100.149:3003
+- Environments: .env.local, .env
+✓ Ready in 706ms
+
+ POST /resumen 200 in 2.1s (next.js: 703ms, proxy.ts: 11ms, application-code: 1386ms)
+  └─ ƒ getResumenMealHistory() in 1344ms src/actions/comida.ts
+ GET /manifest.webmanifest 200 in 142ms (next.js: 99ms, proxy.ts: 10ms, application-code: 33ms)
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa en ayunas y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es fundamental. El aumento de peso requiere una evaluación más profunda para entender las causas y ajustar el plan.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Aumento de peso (de 60 kg a 75 kg)"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Aumentar la actividad física para mejorar el perfil lipídico y controlar el peso.",
+    "Monitorear la evolución del peso y ajustar el plan según sea necesario.",
+    "Considerar el uso de suplementos para apoyar el metabolismo lipídico (si es apropiado y bajo supervisión médica)."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y grasas trans.",
+    "Aumentar el consumo de fibra soluble (avena, legumbres, frutas).",
+    "Priorizar fuentes de proteína magra (pescado blanco, pollo sin piel, legumbres).",
+    "Limitar el consumo de carbohidratos refinados (pan blanco, arroz blanco, pasta blanca).",
+    "Incorporar grasas saludables (aguacate, nueces, aceite de oliva).",
+    "Controlar el tamaño de las porciones."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia y duración del ejercicio físico (al menos 150 minutos de actividad moderada por semana).",
+    "Priorizar el sueño de calidad (7-8 horas por noche).",
+    "Manejar el estrés a través de técnicas de relajación (meditación, yoga).",
+    "Mantener una hidratación adecuada (8 vasos de agua al día)."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico completo (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses.",
+    "Considerar un perfil de ácidos grasos si la dieta no mejora el perfil lipídico."
+  ],
+  "productsGuidance": [
+    "Considera ThermoRush como apoyo neuro-metabólico para ayudar a controlar el apetito y mejorar el metabolismo de grasas y glucosa. Tomar antes del desayuno y el almuerzo. Recuerda que ThermoRush es un apoyo y no reemplaza las terapias médicas ni la evaluación profesional. Si usas GLP-1, consulta a tu médico antes de combinarlo. No promete resultados garantizados; prioriza un enfoque de apoyo, seguridad y seguimiento clínico."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Estabilización o reducción del peso.",
+    "Mejora en los niveles de energía.",
+    "Mayor sensación de saciedad después de las comidas."
+  ],
+  "patientMessage": "Hola Kevin, ¡tus niveles de glucosa y HbA1c están muy bien! Sin embargo, vamos a enfocarnos en mejorar tus triglicéridos y LDL. He notado que has consumido pescado frito y hamburguesas con papas fritas, que pueden contribuir a estos niveles elevados. Te sugiero cambiar el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios hacen una gran diferencia! Además, el aumento de peso requiere atención. Vamos a trabajar juntos en un plan de alimentación y ejercicio para ayudarte a alcanzar tus objetivos. Recuerda que estoy aquí para apoyarte en cada paso del camino.",
+  "evolutionMessage": "¡Excelente que mantienes tus niveles de glucosa estables! La constancia con Renewal Therapi y una alimentación consciente te acercarán a mejorar tu perfil lipídico y controlar tu peso. ¡Sigue así!",
+  "suggestions": [
+    "Reemplaza las bebidas azucaradas por agua o infusiones sin azúcar.",
+    "Planifica tus comidas con anticipación para evitar decisiones impulsivas.",
+    "Busca recetas saludables y deliciosas para variar tu alimentación.",
+    "Incorpora ejercicios de fuerza para aumentar tu masa muscular.",
+    "Considera consultar a un nutricionista para un plan de alimentación personalizado.",
+    "Lleva un registro de tus comidas y actividades para identificar patrones y áreas de mejora."
+  ]
+}
+ GET /resumen 200 in 12.2s (next.js: 461ms, proxy.ts: 286ms, application-code: 11.4s)
+ POST /resumen 200 in 1563ms (next.js: 4ms, proxy.ts: 4ms, application-code: 1555ms)
+  └─ ƒ getResumenMealHistory() in 1545ms src/actions/comida.ts
+✓ Compiled in 336ms
+ GET /resumen 500 in 1408ms (next.js: 1204ms, proxy.ts: 44ms, application-code: 159ms)
+ GET /resumen 500 in 33ms (next.js: 11ms, proxy.ts: 6ms, application-code: 16ms)
+ GET /resumen 500 in 44ms (next.js: 14ms, proxy.ts: 10ms, application-code: 20ms)
+ GET /resumen 500 in 50ms (next.js: 28ms, proxy.ts: 13ms, application-code: 10ms)
+ GET /resumen 500 in 32ms (next.js: 9ms, proxy.ts: 6ms, application-code: 16ms)
+ GET /resumen 500 in 274ms (next.js: 87ms, proxy.ts: 100ms, application-code: 88ms)
+ GET /resumen 500 in 274ms (next.js: 100ms, proxy.ts: 98ms, application-code: 76ms)
+ GET /resumen 500 in 272ms (next.js: 114ms, proxy.ts: 96ms, application-code: 62ms)
+ GET /resumen 500 in 271ms (next.js: 126ms, proxy.ts: 94ms, application-code: 50ms)
+ GET /resumen 500 in 270ms (next.js: 142ms, proxy.ts: 93ms, application-code: 35ms)
+ GET /resumen 500 in 268ms (next.js: 158ms, proxy.ts: 91ms, application-code: 20ms)
+ GET /resumen 500 in 115ms (next.js: 37ms, proxy.ts: 27ms, application-code: 51ms)
+ GET /resumen 500 in 122ms (next.js: 49ms, proxy.ts: 26ms, application-code: 47ms)
+ GET /resumen 500 in 120ms (next.js: 61ms, proxy.ts: 24ms, application-code: 35ms)
+ GET /resumen 500 in 119ms (next.js: 72ms, proxy.ts: 23ms, application-code: 23ms)
+✓ Compiled in 225ms
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa en ayunas y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación. El aumento de peso requiere una evaluación más profunda para entender las causas y ajustar el plan.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Aumento de peso (de 60 kg a 75 kg)"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Aumentar la actividad física para mejorar el perfil lipídico y controlar el peso.",
+    "Evaluar las causas del aumento de peso y ajustar el plan de tratamiento."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y alimentos fritos.",
+    "Aumentar el consumo de fibra soluble (avena, legumbres, frutas) para ayudar a reducir el LDL.",
+    "Priorizar fuentes de grasas saludables como aguacate, nueces y aceite de oliva.",
+    "Controlar el consumo de carbohidratos refinados y azúcares añadidos."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia del ejercicio a al menos 3-4 días por semana, combinando cardio y entrenamiento de fuerza.",
+    "Mantener un buen patrón de sueño (8 horas promedio).",
+    "Continuar con una adecuada hidratación (8 vasos de agua al día).",
+    "Gestionar el estrés a través de técnicas de relajación como meditación o yoga."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico completo (colesterol total, HDL, LDL, triglicéridos) en 3 meses para evaluar la respuesta a los cambios en la dieta y el estilo de vida.",
+    "Glucosa en ayunas y HbA1c en 6 meses para monitorear el control glucémico a largo plazo.",
+    "Función hepática (ALT, AST) en 6 meses para evaluar la salud del hígado."
+  ],
+  "productsGuidance": [
+    "Considera ThermoRush (gotas de soporte neuro-metabólico) antes del desayuno y el almuerzo. Su objetivo es apoyar la señalización de saciedad, el apetito relacionado con el estrés y el metabolismo de energía, glucosa, triglicéridos y colesterol. Contiene extracto de té verde, L-carnitina, taurina, rodiola, capsaicinoides y cromo. Recuerda que es un apoyo al estilo de vida y no reemplaza terapias médicas ni evaluación profesional. Si usas GLP-1, consulta a tu médico antes de combinar."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Estabilización o pérdida de peso.",
+    "Mejora en los niveles de energía y bienestar general."
+  ],
+  "patientMessage": "Kevin, ¡tus niveles de glucosa y HbA1c son excelentes! Sin embargo, vamos a trabajar juntos para mejorar tus niveles de triglicéridos y LDL. He notado que has consumido pescado frito y hamburguesas con papas fritas esta semana. Te sugiero cambiar el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios en tu dieta pueden hacer una gran diferencia! Continúa con tus buenos hábitos de sueño y ejercicio. Recuerda que estoy aquí para apoyarte en cada paso del camino.",
+  "evolutionMessage": "¡Kevin, mantienes tu HbA1c estable en 5.5%! La constancia con Renewal Therapi y una alimentación consciente te acercarán a tus metas metabólicas. ¡Sigue así!",
+  "suggestions": [
+    "Lleva un registro detallado de tus comidas para identificar patrones y áreas de mejora.",
+    "Consulta con un nutricionista para un plan de alimentación personalizado.",
+    "Considera un programa de entrenamiento físico supervisado.",
+    "Aprende técnicas de cocina saludable para preparar comidas deliciosas y nutritivas.",
+    "Busca apoyo en grupos de personas con objetivos similares.",
+    "Realiza chequeos médicos regulares para monitorear tu progreso."
+  ]
+}
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa en ayunas y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es fundamental. El análisis de tus comidas revela algunas elecciones inadecuadas que impactan tus lípidos. ¡Sigue así con el Renewal Therapi y los buenos hábitos!",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Algunas elecciones alimentarias inadecuadas (pescado frito, hamburguesa con papas fritas)"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Continuar con el Renewal Therapi y la adherencia a la medicación.",
+    "Monitorear los niveles de lípidos en el próximo control."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y alimentos fritos.",
+    "Aumentar el consumo de fibra soluble (avena, legumbres, frutas).",
+    "Priorizar fuentes de grasas saludables (aguacate, nueces, aceite de oliva).",
+    "Limitar el consumo de carbohidratos refinados (pan blanco, arroz blanco).",
+    "Incluir pescado graso (salmón, atún) en la dieta 2-3 veces por semana."
+  ],
+  "lifestyleFocus": [
+    "Mantener la actividad física regular (al menos 150 minutos de ejercicio moderado por semana).",
+    "Continuar con 8 horas de sueño por noche.",
+    "Manejar el estrés a través de técnicas de relajación (meditación, yoga).",
+    "Asegurar una hidratación adecuada (8 vasos de agua al día)."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses."
+  ],
+  "productsGuidance": [
+    "Continuar con Renewal Therapi según las indicaciones.",
+    "Considerar ThermoRush como apoyo neuro-metabólico para ayudar con el control del apetito y el metabolismo de glucosa y lípidos. Tomar antes del desayuno y el almuerzo. Si usas GLP-1, consulta a tu médico antes de combinarlo. ThermoRush es un apoyo en el estilo de vida y no reemplaza terapias médicas ni evaluación profesional."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Mantenimiento de niveles de glucosa en rango normal.",
+    "Mejora en la composición corporal (reducción de grasa, aumento de masa muscular).",
+    "Mayor sensación de saciedad y control del apetito."
+  ],
+  "patientMessage": "Kevin, ¡tus niveles de glucosa y HbA1c están muy bien! Sin embargo, para optimizar tu salud metabólica, es importante abordar los triglicéridos y el LDL ligeramente elevados. Esto se puede lograr con cambios en la dieta. Por ejemplo, en lugar de pescado frito, opta por pescado a la plancha o al horno. En lugar de hamburguesa con papas fritas, elige una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios hacen una gran diferencia! Continúa con tus buenos hábitos de sueño y actividad física, y sigue tomando Renewal Therapi. Considera ThermoRush como apoyo adicional para el control del apetito y el metabolismo. Recuerda que la constancia es clave para lograr tus objetivos.",
+  "evolutionMessage": "¡Excelente trabajo manteniendo tus niveles de glucosa! La constancia con Renewal Therapi y tus hábitos saludables te están protegiendo contra picos de glucosa. ¡Sigue así para ver aún más mejoras en tu perfil lipídico!",
+  "suggestions": [
+    "Consultar a un nutricionista para un plan de alimentación personalizado.",
+    "Aumentar el consumo de alimentos ricos en omega-3 (salmón, chía, linaza).",
+    "Incorporar entrenamiento de fuerza a tu rutina de ejercicios.",
+    "Practicar mindfulness para reducir el estrés y mejorar el control del apetito.",
+    "Monitorear regularmente tus niveles de glucosa en sangre (si es aplicable).",
+    "Revisar las etiquetas de los alimentos para identificar fuentes ocultas de grasas saturadas."
+  ]
+}
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa y HbA1c están dentro de rangos saludables, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación. Identificamos algunas comidas inadecuadas que podrían estar contribuyendo a los niveles elevados de triglicéridos y LDL.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL).",
+    "LDL ligeramente elevado (122 mg/dL).",
+    "Consumo de comidas con alto contenido de grasas saturadas y carbohidratos refinados."
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Continuar con el ejercicio regular y el buen descanso.",
+    "Monitorear los niveles de lípidos en el próximo control."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas (frituras, alimentos procesados).",
+    "Aumentar el consumo de fibra (vegetales, frutas, granos integrales).",
+    "Priorizar fuentes de proteína magra (pescado a la plancha, pollo sin piel).",
+    "Controlar el consumo de carbohidratos refinados (pan blanco, arroz blanco).",
+    "Incorporar grasas saludables (aguacate, nueces, aceite de oliva)."
+  ],
+  "lifestyleFocus": [
+    "Mantener al menos 1 día de ejercicio por semana y aumentar gradualmente la frecuencia.",
+    "Continuar con un promedio de 8 horas de sueño por noche.",
+    "Asegurar una hidratación adecuada (8 vasos de agua al día).",
+    "Gestionar el estrés a través de técnicas de relajación o mindfulness."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses."
+  ],
+  "productsGuidance": [
+    "Considera el uso de ThermoRush como apoyo neuro-metabólico. Tomar antes del desayuno y el almuerzo. ThermoRush puede ayudar a controlar el apetito, reducir la alimentación relacionada con el estrés y apoyar el metabolismo de la energía, la glucosa, los triglicéridos y el colesterol. Contiene extracto de té verde, L-carnitina, taurina, rodiola, capsaicinoides y cromo. Recuerda que ThermoRush es un apoyo en el estilo de vida y no reemplaza las terapias médicas ni la evaluación profesional. Si estás usando GLP-1, consulta a tu médico antes de combinarlo. Evita esperar resultados garantizados; prioriza la seguridad y el seguimiento clínico."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Mantenimiento de niveles saludables de glucosa y HbA1c.",
+    "Mejora en la composición corporal (reducción de grasa, aumento de masa muscular).",
+    "Aumento de la energía y vitalidad."
+  ],
+  "patientMessage": "¡Hola, Kevin! Tus niveles de glucosa y HbA1c son excelentes, ¡felicidades! Sin embargo, tus triglicéridos y LDL están un poco altos. Esto puede mejorar con algunos ajustes en tu dieta. Por ejemplo, noté que consumiste pescado frito y hamburguesa con papas fritas. El pescado frito aumenta las grasas saturadas, y las papas fritas elevan los triglicéridos. En lugar de pescado frito, prueba pescado a la plancha o al horno. Para la hamburguesa, opta por una versión casera en pan integral con ensalada en lugar de papas fritas. ¡Pequeños cambios hacen una gran diferencia! Continúa con tu buen hábito de sueño y ejercicio. Considera ThermoRush para ayudarte a controlar el apetito y apoyar tu metabolismo. Recuerda tomarlo antes del desayuno y el almuerzo. ¡Estoy aquí para apoyarte en cada paso!",
+  "evolutionMessage": "Kevin, ¡mantener tu HbA1c y glucosa estables es un gran logro! La constancia con Renewal Therapi y tus hábitos saludables están dando frutos. ¡Sigue así!",
+  "suggestions": [
+    "Reemplaza las frituras por opciones al horno o a la plancha.",
+    "Aumenta el consumo de vegetales de hoja verde.",
+    "Elige granos integrales en lugar de refinados.",
+    "Incorpora fuentes de grasas saludables como aguacate y nueces.",
+    "Planifica tus comidas para evitar opciones poco saludables.",
+    "Consulta con un nutricionista para un plan de alimentación personalizado."
+  ]
+}
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que indica la necesidad de ajustar la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es fundamental. El aumento de peso requiere atención, ya que podría estar contribuyendo a los niveles de lípidos.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Aumento de peso (de 60kg a 75kg)"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Incorporar más actividad física para ayudar con el control de peso y mejorar el perfil lipídico.",
+    "Monitorear la glucosa y los lípidos en el seguimiento."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y alimentos fritos.",
+    "Aumentar la ingesta de fibra soluble (avena, legumbres, frutas) para ayudar a reducir el colesterol LDL.",
+    "Priorizar fuentes de grasas saludables como aguacate, nueces y aceite de oliva.",
+    "Controlar el consumo de carbohidratos refinados."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia del ejercicio a al menos 3-4 días por semana, combinando cardio y entrenamiento de fuerza.",
+    "Mantener un buen patrón de sueño (8 horas promedio) para apoyar el metabolismo.",
+    "Continuar con la ingesta adecuada de agua (8 vasos al día)."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses."
+  ],
+  "productsGuidance": [
+    "Considera el uso de ThermoRush como apoyo para el control del apetito y el metabolismo de grasas y glucosa. La dosis recomendada es antes del desayuno y el almuerzo. Recuerda que ThermoRush es un apoyo y no reemplaza las terapias médicas ni la evaluación profesional. Si usas GLP-1, consulta a tu médico antes de combinarlo.",
+    "Continúa con Renewal Therapi según lo indicado."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL a rangos óptimos.",
+    "Estabilización o reducción del peso.",
+    "Mantenimiento de niveles de glucosa y HbA1c dentro de rangos normales.",
+    "Mejora en los niveles de energía y bienestar general."
+  ],
+  "patientMessage": "Kevin, ¡tus niveles de glucosa y HbA1c están muy bien! Sin embargo, vamos a enfocarnos en mejorar tus niveles de triglicéridos y LDL. He notado que has consumido pescado frito y hamburguesas con papas fritas, que pueden contribuir a estos niveles elevados. Te sugiero cambiar el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios en tu dieta pueden hacer una gran diferencia! Continúa con tus buenos hábitos de sueño y adherencia a la medicación. Considera ThermoRush antes del desayuno y almuerzo para apoyar tu metabolismo. ¡Sigamos trabajando juntos para alcanzar tus metas!",
+  "evolutionMessage": "¡Kevin, has mantenido tu glucosa estable desde el inicio! La constancia con Renewal Therapi y tus hábitos te acercarán a mejorar tus niveles de lípidos y alcanzar un peso saludable. ¡Sigue así!",
+  "suggestions": [
+    "Consulta con un nutricionista para un plan de alimentación personalizado.",
+    "Considera un programa de ejercicios supervisado por un profesional.",
+    "Monitorea tus niveles de glucosa en casa para identificar patrones.",
+    "Lleva un registro de alimentos para identificar posibles desencadenantes de elevaciones de triglicéridos y LDL.",
+    "Prioriza alimentos ricos en omega-3 como salmón, chía y linaza.",
+    "Reduce el consumo de alcohol y bebidas azucaradas."
+  ]
+}
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa en ayunas y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es fundamental. El aumento de peso requiere una revisión de la ingesta calórica y el gasto energético.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Aumento de peso (de 60 kg a 75 kg)"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Aumentar la actividad física para mejorar el perfil lipídico y controlar el peso.",
+    "Monitorear la glucosa postprandial para identificar alimentos que causan picos.",
+    "Considerar el uso de suplementos para apoyar el metabolismo lipídico y energético."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y alimentos fritos.",
+    "Aumentar la ingesta de fibra soluble (avena, legumbres, frutas).",
+    "Priorizar fuentes de proteína magra (pescado a la plancha, pollo sin piel, legumbres).",
+    "Limitar el consumo de carbohidratos refinados (pan blanco, arroz blanco, azúcares añadidos)."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia y duración del ejercicio físico (al menos 3-4 veces por semana).",
+    "Mantener un buen patrón de sueño (7-8 horas por noche).",
+    "Gestionar el estrés a través de técnicas de relajación (meditación, yoga).",
+    "Asegurar una hidratación adecuada (8 vasos de agua al día)."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico completo (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses."
+  ],
+  "productsGuidance": [
+    "Considera el uso de ThermoRush (gotas de soporte neuro-metabólico) antes del desayuno y el almuerzo. Este producto puede ayudar a controlar el apetito, reducir la alimentación relacionada con el estrés y apoyar el metabolismo de la energía, la glucosa, los triglicéridos y el colesterol. Contiene extracto de té verde, L-carnitina, taurina, rodiola, capsaicinoides y cromo. Recuerda que ThermoRush es un apoyo en el estilo de vida y no reemplaza terapias médicas ni evaluación profesional. Si usas GLP-1, consulta a tu médico antes de combinar."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Control del peso y mejora de la composición corporal.",
+    "Estabilización de los niveles de glucosa postprandial.",
+    "Aumento de la energía y vitalidad."
+  ],
+  "patientMessage": "Kevin, ¡tus niveles de glucosa y HbA1c están muy bien! Sin embargo, para mejorar tus triglicéridos y LDL, es importante ajustar tu dieta. Evita el pescado frito y las hamburguesas con papas fritas, ya que estos alimentos elevan los triglicéridos y el LDL. Opta por pescado a la plancha o al horno con vegetales al vapor, y hamburguesas caseras en pan integral con ensalada mixta en lugar de papas fritas. Continúa con tus buenos hábitos de sueño y adherencia a la medicación. Considera incorporar ThermoRush para apoyar tu metabolismo y controlar el apetito. ¡Sigamos trabajando juntos para alcanzar tus metas de salud!",
+  "evolutionMessage": "¡Excelente que mantienes tu glucosa estable! La constancia con Renewal Therapi y una alimentación consciente te ayudarán a ver cambios positivos en tu perfil lipídico y control de peso. ¡Sigue así!",
+  "suggestions": [
+    "Lleva un registro de alimentos para identificar patrones alimentarios.",
+    "Consulta a un nutricionista para un plan de alimentación personalizado.",
+    "Considera un programa de ejercicios supervisado por un profesional.",
+    "Realiza ejercicios de mindfulness para reducir el estrés.",
+    "Prioriza el consumo de alimentos ricos en omega-3 (salmón, nueces, semillas de chía).",
+    "Aumenta el consumo de vegetales de hoja verde."
+  ]
+}
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu reciente control metabólico muestra resultados estables y positivos. Tu HbA1c se mantiene en 5.5%, lo cual indica un buen control glucémico a largo plazo. La glucosa en ayunas está dentro del rango normal, aunque ligeramente elevada (92 mg/dL). Los triglicéridos están un poco altos (145 mg/dL), mientras que el LDL también está ligeramente elevado (122 mg/dL). Es importante seguir trabajando en mejorar estos valores a través de la alimentación y el ejercicio. Has mantenido buenos hábitos de sueño y adherencia a la medicación.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Glucosa en ayunas en el límite superior del rango normal (92 mg/dL)",
+    "Peso actual elevado (75kg) en comparación con el peso inicial (60kg)"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Aumentar la actividad física para mejorar el perfil lipídico y el control glucémico.",
+    "Monitorear la glucosa en ayunas y postprandial para identificar patrones y ajustar la dieta.",
+    "Evaluar la necesidad de ajustar la medicación si los cambios en el estilo de vida no son suficientes."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y grasas trans.",
+    "Aumentar el consumo de fibra soluble e insoluble.",
+    "Priorizar carbohidratos complejos sobre carbohidratos refinados.",
+    "Controlar el tamaño de las porciones.",
+    "Evitar alimentos fritos y procesados."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia y duración del ejercicio físico (actualmente 1 día a la semana).",
+    "Mantener un buen patrón de sueño (8 horas).",
+    "Gestionar el estrés a través de técnicas de relajación o mindfulness.",
+    "Asegurar una hidratación adecuada (8 vasos de agua al día)."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses.",
+    "Considerar un perfil de insulina en ayunas y postprandial si la glucosa en ayunas sigue elevada."
+  ],
+  "productsGuidance": [
+    "Continuar con Renewal Therapi según lo indicado.",
+    "Considerar ThermoRush (gotas de soporte neuro-metabólico) antes del desayuno y el almuerzo. ThermoRush puede ayudar a mejorar la señalización de saciedad y apetito, apoyar el metabolismo de la energía, la glucosa y los triglicéridos/colesterol. Contiene extracto de té verde, L-carnitina, taurina, rodiola, capsaicinoides y cromo. Recuerda que ThermoRush es un apoyo en el estilo de vida y no reemplaza terapias médicas ni evaluación profesional. Si usas GLP-1, consulta a tu médico antes de combinar. Evita esperar resultados garantizados; prioriza la seguridad y el seguimiento clínico."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Mejora del control glucémico.",
+    "Pérdida de peso gradual y sostenible.",
+    "Aumento de la energía y vitalidad."
+  ],
+  "patientMessage": "¡Hola Kevin! Tus niveles están en rango, ¡excelente! Sin embargo, hay áreas donde podemos mejorar. He notado que has tenido algunas comidas inadecuadas, como el pescado frito y la hamburguesa con papas fritas. El pescado frito aumenta las grasas saturadas, y las papas fritas elevan los triglicéridos. Intenta sustituir el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios hacen una gran diferencia! Sigue manteniendo tus buenos hábitos de sueño y adherencia a la medicación. Considera agregar ThermoRush antes del desayuno y almuerzo para apoyar tu metabolismo y control del apetito. Recuerda que es un apoyo, no un reemplazo de tus terapias. ¡Sigamos trabajando juntos para alcanzar tus metas!",
+  "evolutionMessage": "¡Kevin, has mantenido tu HbA1c estable en 5.5%! Esto demuestra tu compromiso con el control metabólico. La constancia con Renewal Therapi y una alimentación consciente te ayudarán a seguir viendo resultados positivos.",
+  "suggestions": [
+    "Reemplaza las bebidas azucaradas por agua o infusiones sin azúcar.",
+    "Incorpora más vegetales de hoja verde en tu dieta.",
+    "Realiza caminatas diarias de al menos 30 minutos.",
+    "Planifica tus comidas con anticipación para evitar opciones poco saludables.",
+    "Busca recetas saludables y deliciosas para variar tu alimentación.",
+    "Considera consultar a un nutricionista para un plan de alimentación personalizado."
+  ]
+}
+ GET /resumen 200 in 20.0s (next.js: 431ms, proxy.ts: 98ms, application-code: 19.5s)
+ GET /resumen 200 in 20.1s (next.js: 468ms, proxy.ts: 97ms, application-code: 19.6s)
+ GET /resumen 200 in 20.3s (next.js: 505ms, proxy.ts: 96ms, application-code: 19.7s)
+ GET /resumen 200 in 20.3s (next.js: 688ms, proxy.ts: 86ms, application-code: 19.6s)
+ GET /resumen 200 in 20.4s (next.js: 291ms, proxy.ts: 98ms, application-code: 20.0s)
+ GET /resumen 200 in 20.4s (next.js: 716ms, proxy.ts: 85ms, application-code: 19.6s)
+ GET /manifest.webmanifest 200 in 140ms (next.js: 76ms, proxy.ts: 28ms, application-code: 36ms)
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que indica la necesidad de ajustar la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es fundamental. El aumento de peso requiere atención, y la elección de alimentos inadecuados impacta directamente en tus niveles de lípidos.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Aumento de peso (de 60 kg a 75 kg)",
+    "Consumo de comidas inadecuadas con alto contenido de grasas saturadas y carbohidratos refinados"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Implementar un plan de ejercicios regular para ayudar a controlar el peso y mejorar el perfil lipídico.",
+    "Monitorear la glucosa en relación con las comidas para identificar alimentos que causan picos.",
+    "Considerar el uso de suplementos que apoyen el metabolismo de lípidos y glucosa, siempre bajo supervisión médica."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y carbohidratos refinados.",
+    "Aumentar la ingesta de fibra, frutas, verduras y proteínas magras.",
+    "Sustituir métodos de cocción como freír por opciones más saludables como hornear, asar o cocinar al vapor.",
+    "Controlar el tamaño de las porciones."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia del ejercicio a al menos 3-4 días por semana, combinando cardio y entrenamiento de fuerza.",
+    "Mantener un horario de sueño regular de 7-8 horas por noche.",
+    "Continuar con la ingesta adecuada de agua (8 vasos al día).",
+    "Gestionar el estrés a través de técnicas de relajación como la meditación o el yoga."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico completo (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses.",
+    "Considerar un perfil de insulina en ayunas para evaluar la resistencia a la insulina si el médico lo considera necesario."
+  ],
+  "productsGuidance": [
+    "Considera ThermoRush (gotas de soporte neuro-metabólico) antes del desayuno y el almuerzo. Su objetivo es apoyar la señalización de saciedad, el apetito relacionado con el estrés y el metabolismo de energía, glucosa, triglicéridos y colesterol. Contiene extracto de té verde, L-carnitina, taurina, rodiola, capsaicinoides y cromo. Recuerda, es un apoyo al estilo de vida y no reemplaza terapias médicas. Consulta a tu médico si usas GLP-1. Evita esperar resultados garantizados; prioriza la seguridad y el seguimiento clínico."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Pérdida de peso gradual y sostenible.",
+    "Mejora en los niveles de energía y bienestar general.",
+    "Mayor control de la glucosa después de las comidas."
+  ],
+  "patientMessage": "Kevin, ¡tus niveles de glucosa y HbA1c están muy bien! Sin embargo, para mejorar tus triglicéridos y LDL, es crucial evitar alimentos fritos como el pescado frito y las papas fritas. Opta por pescado a la plancha o al horno y hamburguesas caseras en pan integral con ensalada en lugar de papas fritas. ¡Recuerda que cada pequeña elección cuenta! Continúa con tus buenos hábitos de sueño y adherencia a la medicación. ¡Estamos aquí para apoyarte en cada paso del camino!",
+  "evolutionMessage": "¡Excelente que mantienes tus niveles de glucosa estables! La constancia con Renewal Therapi y una alimentación más consciente te ayudarán a alcanzar tus metas de control de peso y mejora del perfil lipídico. ¡Sigue adelante!",
+  "suggestions": [
+    "Planifica tus comidas con anticipación para evitar decisiones impulsivas.",
+    "Lleva un registro de alimentos para identificar patrones y áreas de mejora.",
+    "Busca recetas saludables y deliciosas para mantener la motivación.",
+    "Involucra a un amigo o familiar para que te apoye en tu camino.",
+    "Consulta a un nutricionista para obtener un plan de alimentación personalizado.",
+    "Celebra tus logros, ¡por pequeños que sean!"
+  ]
+}
+ GET /resumen 200 in 13.5s (next.js: 163ms, proxy.ts: 231ms, application-code: 13.1s)
+ POST /resumen 200 in 1231ms (next.js: 4ms, proxy.ts: 6ms, application-code: 1221ms)
+  └─ ƒ getResumenMealHistory() in 1192ms src/actions/comida.ts
+✓ Compiled in 174ms
+ POST /resumen 200 in 1506ms (next.js: 12ms, proxy.ts: 9ms, application-code: 1485ms)
+  └─ ƒ getResumenMealHistory() in 1472ms src/actions/comida.ts
+ GET /manifest.webmanifest 200 in 22ms (next.js: 4ms, proxy.ts: 8ms, application-code: 9ms)
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico está en buen camino. Los últimos laboratorios muestran glucosa y HbA1c dentro de rangos saludables. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la alimentación. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es excelente. Identificamos algunas comidas inadecuadas que podrían estar contribuyendo a los niveles de lípidos.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Consumo de alimentos altos en grasas saturadas y carbohidratos refinados"
+  ],
+  "priorityPlan": [
+    "Optimizar la alimentación para reducir triglicéridos y LDL.",
+    "Mantener la adherencia a la medicación y hábitos saludables.",
+    "Monitorear los niveles de glucosa y lípidos a través de laboratorios de seguimiento."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas (frituras, alimentos procesados).",
+    "Aumentar el consumo de fibra (vegetales, frutas, granos integrales).",
+    "Priorizar fuentes de proteína magra (pescado a la plancha, pollo sin piel, legumbres).",
+    "Controlar el tamaño de las porciones de carbohidratos, prefiriendo opciones integrales."
+  ],
+  "lifestyleFocus": [
+    "Continuar con la actividad física regular (al menos 150 minutos de ejercicio moderado por semana).",
+    "Mantener un buen patrón de sueño (7-8 horas por noche).",
+    "Gestionar el estrés a través de técnicas de relajación o mindfulness."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses."
+  ],
+  "productsGuidance": [
+    "Continúa con Renewal Therapi según las indicaciones de tu médico.",
+    "Considera ThermoRush como apoyo para el control del apetito y el metabolismo. Toma unas gotas antes del desayuno y el almuerzo. Recuerda que ThermoRush es un apoyo y no reemplaza tu medicación ni una alimentación saludable. Si usas GLP-1, consulta a tu médico antes de combinarlo. No esperes resultados garantizados, pero sí un apoyo en tu estilo de vida."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Mantenimiento de niveles saludables de glucosa.",
+    "Mejora en la composición corporal (reducción de grasa, aumento de masa muscular).",
+    "Mayor sensación de energía y bienestar general."
+  ],
+  "patientMessage": "¡Hola, Kevin! Tus niveles de glucosa y HbA1c están muy bien, ¡felicidades! Sin embargo, debemos prestar atención a los triglicéridos y el LDL. Vi que has consumido pescado frito y hamburguesa con papas fritas. El pescado frito aumenta las grasas saturadas, y las papas fritas elevan los triglicéridos. Prueba cambiar el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios hacen una gran diferencia! Sigue durmiendo bien y tomando tu medicación. Considera ThermoRush como un apoyo adicional para controlar el apetito y el metabolismo, pero siempre consulta a tu médico si tienes dudas.",
+  "evolutionMessage": "¡Excelente trabajo, Kevin! Mantener tu glucosa estable desde el inicio es un gran logro. La constancia con Renewal Therapi y tus buenos hábitos alimenticios te ayudarán a seguir mejorando tu salud metabólica.",
+  "suggestions": [
+    "Lleva un registro de alimentos para identificar patrones y áreas de mejora.",
+    "Consulta a un nutricionista para un plan de alimentación personalizado.",
+    "Experimenta con nuevas recetas saludables y sabrosas.",
+    "Busca apoyo en amigos, familiares o grupos de apoyo para mantener la motivación.",
+    "Aumenta gradualmente la intensidad y duración de tus entrenamientos.",
+    "Prioriza el descanso y la relajación para reducir el estrés."
+  ]
+}
+ GET /resumen 200 in 13.8s (next.js: 4ms, proxy.ts: 5ms, application-code: 13.8s)
+ POST /resumen 200 in 1234ms (next.js: 5ms, proxy.ts: 7ms, application-code: 1222ms)
+  └─ ƒ getResumenMealHistory() in 1214ms src/actions/comida.ts
+ GET /manifest.webmanifest 200 in 26ms (next.js: 9ms, proxy.ts: 9ms, application-code: 8ms)
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la dieta. Has mantenido un buen promedio de sueño y adherencia a la medicación, lo cual es fundamental. El aumento de peso desde el inicio del programa requiere una revisión de la ingesta calórica y el gasto energético.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Aumento de peso desde el inicio del programa (de 60 kg a 75 kg)",
+    "Consumo de comidas inadecuadas con alto contenido de grasas saturadas y carbohidratos refinados"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Aumentar la actividad física para favorecer la pérdida de peso y mejorar el perfil lipídico.",
+    "Monitorear la glucosa postprandial para identificar alimentos que causan picos.",
+    "Considerar el uso de suplementos para apoyar el metabolismo de grasas y carbohidratos."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas (frituras, alimentos procesados).",
+    "Aumentar el consumo de fibra (verduras, frutas, granos integrales).",
+    "Priorizar proteínas magras (pescado a la plancha, pollo sin piel, legumbres).",
+    "Limitar el consumo de carbohidratos refinados (pan blanco, arroz blanco, azúcares añadidos).",
+    "Incorporar grasas saludables (aguacate, nueces, aceite de oliva)."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia del ejercicio a al menos 3-4 veces por semana.",
+    "Continuar manteniendo un buen promedio de sueño (8 horas).",
+    "Asegurar una adecuada hidratación (8 vasos de agua al día).",
+    "Gestionar el estrés a través de técnicas de relajación (meditación, yoga)."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses.",
+    "Considerar un perfil de ácidos grasos si la dieta no mejora el perfil lipídico."
+  ],
+  "productsGuidance": [
+    "Considera ThermoRush como apoyo neuro-metabólico. Tomar antes del desayuno y almuerzo. Su objetivo es apoyar la señalización de saciedad, el apetito relacionado con el estrés y el metabolismo de energía, glucosa, triglicéridos y colesterol. Contiene extracto de té verde, L-carnitina, taurina, rodiola, capsaicinoides y cromo. Recuerda que es un apoyo al estilo de vida y no reemplaza terapias médicas. Consulta a tu médico si usas GLP-1."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Pérdida de peso gradual y sostenible.",
+    "Mejora de la sensibilidad a la insulina.",
+    "Mayor sensación de energía y bienestar."
+  ],
+  "patientMessage": "Hola Kevin, ¡tus niveles de glucosa y HbA1c están muy bien! Sin embargo, podemos optimizar tu perfil lipídico. Veo que has consumido pescado frito y hamburguesa con papas fritas, que pueden elevar los triglicéridos y el LDL. Intenta reemplazar el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios hacen una gran diferencia! Continúa con tu buen hábito de sueño y mantente activo. Considera ThermoRush para apoyar tu metabolismo y control del apetito. Recuerda que es un apoyo y no reemplaza una dieta saludable y ejercicio.",
+  "evolutionMessage": "¡Excelente que mantienes tu glucosa estable! La constancia con Renewal Therapi y una alimentación consciente te ayudarán a lograr tus metas de control de peso y mejora del perfil lipídico. ¡Sigue así!",
+  "suggestions": [
+    "Reemplazar las bebidas azucaradas por agua o infusiones sin azúcar.",
+    "Planificar las comidas con anticipación para evitar opciones poco saludables.",
+    "Aumentar el consumo de vegetales de hoja verde.",
+    "Practicar ejercicio de fuerza para aumentar la masa muscular.",
+    "Consultar con un nutricionista para un plan de alimentación personalizado.",
+    "Monitorear el progreso con un diario de alimentos y actividad física."
+  ]
+}
+ GET /resumen 200 in 13.1s (next.js: 3ms, proxy.ts: 4ms, application-code: 13.1s)
+ POST /resumen 200 in 1110ms (next.js: 4ms, proxy.ts: 7ms, application-code: 1100ms)
+  └─ ƒ getResumenMealHistory() in 1089ms src/actions/comida.ts
+ POST /resumen 200 in 1368ms (next.js: 3ms, proxy.ts: 5ms, application-code: 1360ms)
+  └─ ƒ getResumenMealHistory() in 1351ms src/actions/comida.ts
+ POST /resumen 200 in 1657ms (next.js: 34ms, proxy.ts: 51ms, application-code: 1573ms)
+  └─ ƒ getResumenMealHistory() in 1523ms src/actions/comida.ts
+ POST /resumen 200 in 1263ms (next.js: 3ms, proxy.ts: 5ms, application-code: 1256ms)
+  └─ ƒ getResumenMealHistory() in 1243ms src/actions/comida.ts
+ POST /resumen 200 in 1320ms (next.js: 3ms, proxy.ts: 5ms, application-code: 1313ms)
+  └─ ƒ getResumenMealHistory() in 1299ms src/actions/comida.ts
+ POST /resumen 200 in 1272ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1265ms)
+  └─ ƒ getResumenMealHistory() in 1256ms src/actions/comida.ts
+ POST /resumen 200 in 1374ms (next.js: 4ms, proxy.ts: 6ms, application-code: 1364ms)
+  └─ ƒ getResumenMealHistory() in 1355ms src/actions/comida.ts
+✓ Compiled in 216ms
+ POST /resumen 200 in 969ms (next.js: 3ms, proxy.ts: 4ms, application-code: 961ms)
+  └─ ƒ getResumenMealHistory() in 953ms src/actions/comida.ts
+ POST /resumen 200 in 1252ms (next.js: 6ms, proxy.ts: 5ms, application-code: 1241ms)
+  └─ ƒ getResumenMealHistory() in 1224ms src/actions/comida.ts
+ POST /resumen 200 in 1179ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1171ms)
+  └─ ƒ getResumenMealHistory() in 1164ms src/actions/comida.ts
+ POST /resumen 200 in 1391ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1384ms)
+  └─ ƒ getResumenMealHistory() in 1375ms src/actions/comida.ts
+ POST /resumen 200 in 1284ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1277ms)
+  └─ ƒ getResumenMealHistory() in 1267ms src/actions/comida.ts
+ POST /resumen 200 in 1251ms (next.js: 3ms, proxy.ts: 5ms, application-code: 1243ms)
+  └─ ƒ getResumenMealHistory() in 1232ms src/actions/comida.ts
+ POST /resumen 200 in 1475ms (next.js: 35ms, proxy.ts: 50ms, application-code: 1391ms)
+  └─ ƒ getResumenMealHistory() in 1295ms src/actions/comida.ts
+ POST /resumen 200 in 1315ms (next.js: 3ms, proxy.ts: 6ms, application-code: 1306ms)
+  └─ ƒ getResumenMealHistory() in 1298ms src/actions/comida.ts
+ POST /resumen 200 in 1307ms (next.js: 6ms, proxy.ts: 6ms, application-code: 1295ms)
+  └─ ƒ getResumenMealHistory() in 1281ms src/actions/comida.ts
+ POST /resumen 200 in 1255ms (next.js: 4ms, proxy.ts: 5ms, application-code: 1246ms)
+  └─ ƒ getResumenMealHistory() in 1237ms src/actions/comida.ts
+ POST /resumen 200 in 1497ms (next.js: 46ms, proxy.ts: 52ms, application-code: 1400ms)
+  └─ ƒ getResumenMealHistory() in 1305ms src/actions/comida.ts
+ POST /resumen 200 in 1416ms (next.js: 5ms, proxy.ts: 9ms, application-code: 1402ms)
+  └─ ƒ getResumenMealHistory() in 1391ms src/actions/comida.ts
+ POST /resumen 200 in 1210ms (next.js: 4ms, proxy.ts: 5ms, application-code: 1201ms)
+  └─ ƒ getResumenMealHistory() in 1193ms src/actions/comida.ts
+ POST /resumen 200 in 1229ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1222ms)
+  └─ ƒ getResumenMealHistory() in 1212ms src/actions/comida.ts
+ POST /resumen 200 in 1508ms (next.js: 45ms, proxy.ts: 61ms, application-code: 1401ms)
+  └─ ƒ getResumenMealHistory() in 1292ms src/actions/comida.ts
+ POST /resumen 200 in 1454ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1447ms)
+  └─ ƒ getResumenMealHistory() in 1438ms src/actions/comida.ts
+ POST /resumen 200 in 1422ms (next.js: 3ms, proxy.ts: 6ms, application-code: 1412ms)
+  └─ ƒ getResumenMealHistory() in 1402ms src/actions/comida.ts
+ POST /resumen 200 in 1222ms (next.js: 4ms, proxy.ts: 5ms, application-code: 1213ms)
+  └─ ƒ getResumenMealHistory() in 1204ms src/actions/comida.ts
+✓ Compiled in 1740ms
+ POST /resumen 200 in 2.1s (next.js: 264ms, proxy.ts: 111ms, application-code: 1733ms)
+  └─ ƒ getResumenMealHistory() in 1613ms src/actions/comida.ts
+ GET /manifest.webmanifest 200 in 25ms (next.js: 6ms, proxy.ts: 11ms, application-code: 8ms)
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa en ayunas y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que indica la necesidad de ajustar la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es fundamental. El análisis de tus comidas revela algunas elecciones inadecuadas que impactan tus niveles de lípidos.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Elecciones alimentarias inadecuadas que contribuyen a los niveles elevados de lípidos"
+  ],
+  "priorityPlan": [
+    "Modificación de la dieta para reducir grasas saturadas y carbohidratos refinados.",
+    "Aumento de la actividad física para mejorar el perfil lipídico.",
+    "Monitoreo continuo de los niveles de lípidos y glucosa."
+  ],
+  "nutritionFocus": [
+    "Priorizar alimentos bajos en grasas saturadas y colesterol.",
+    "Aumentar el consumo de fibra soluble para ayudar a reducir el LDL.",
+    "Controlar el tamaño de las porciones de carbohidratos, especialmente los refinados.",
+    "Incorporar fuentes de grasas saludables como aguacate, nueces y aceite de oliva."
+  ],
+  "lifestyleFocus": [
+    "Mantener un horario de sueño regular (8 horas promedio).",
+    "Continuar con la ingesta adecuada de agua (8 vasos al día).",
+    "Aumentar la frecuencia del ejercicio a al menos 3 días por semana, combinando cardio y entrenamiento de fuerza."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico (colesterol total, HDL, LDL, triglicéridos) en 3 meses para evaluar la respuesta a los cambios en la dieta y el estilo de vida.",
+    "Glucosa en ayunas y HbA1c en 6 meses para monitorear el control glucémico a largo plazo."
+  ],
+  "productsGuidance": [
+    "Considera el uso de ThermoRush como apoyo para el control del apetito y el metabolismo de grasas y glucosa. La dosis recomendada es antes del desayuno y el almuerzo. Recuerda que ThermoRush es un apoyo y no reemplaza las terapias médicas ni la evaluación profesional. Si usas GLP-1, consulta a tu médico antes de combinarlo.",
+    "Renewal Therapi: Continúa con el uso según las indicaciones. Este producto ha sido parte de tu plan y ha contribuido a tu bienestar general."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL a rangos óptimos.",
+    "Mantenimiento de los niveles de glucosa en ayunas y HbA1c dentro de rangos normales.",
+    "Mejora de la composición corporal a través de la dieta y el ejercicio."
+  ],
+  "patientMessage": "Kevin, ¡tus niveles de glucosa y HbA1c están muy bien! Sin embargo, para optimizar tu salud metabólica, es crucial abordar los triglicéridos y el LDL ligeramente elevados. Hemos notado que has consumido pescado frito y hamburguesas con papas fritas, que pueden contribuir a estos niveles. Te sugiero cambiar el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. ¡Pequeños cambios hacen una gran diferencia! Continúa con tus buenos hábitos de sueño y adherencia a la medicación. Considera ThermoRush como un apoyo para controlar el apetito y mejorar tu metabolismo, tomándolo antes del desayuno y el almuerzo. Recuerda que es un complemento a tu estilo de vida y no reemplaza la consulta médica.",
+  "evolutionMessage": "¡Felicidades, Kevin! Mantener tu glucosa estable es un gran logro. La constancia con Renewal Therapi y una alimentación consciente te acercarán aún más a tus metas metabólicas.",
+  "suggestions": [
+    "Planifica tus comidas con anticipación para evitar elecciones poco saludables.",
+    "Aprende a leer las etiquetas nutricionales para identificar alimentos altos en grasas saturadas y carbohidratos refinados.",
+    "Busca recetas saludables y deliciosas que se ajusten a tus necesidades nutricionales.",
+    "Considera trabajar con un nutricionista para crear un plan de alimentación personalizado.",
+    "Realiza actividad física que disfrutes para mantenerte motivado.",
+    "Lleva un registro de tus comidas y niveles de glucosa para identificar patrones y ajustar tu plan según sea necesario."
+  ]
+}
+ GET /resumen 200 in 13.1s (next.js: 45ms, proxy.ts: 93ms, application-code: 13.0s)
+ POST /resumen 200 in 1245ms (next.js: 7ms, proxy.ts: 7ms, application-code: 1231ms)
+  └─ ƒ getResumenMealHistory() in 1217ms src/actions/comida.ts
+ POST /resumen 200 in 1365ms (next.js: 9ms, proxy.ts: 5ms, application-code: 1351ms)
+  └─ ƒ getResumenMealHistory() in 1342ms src/actions/comida.ts
+ POST /resumen 200 in 1661ms (next.js: 49ms, proxy.ts: 64ms, application-code: 1547ms)
+  └─ ƒ getResumenMealHistory() in 1452ms src/actions/comida.ts
+✓ Compiled in 858ms
+ POST /resumen 200 in 1266ms (next.js: 5ms, proxy.ts: 5ms, application-code: 1256ms)
+  └─ ƒ getResumenMealHistory() in 1244ms src/actions/comida.ts
+ POST /resumen 200 in 1325ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1318ms)
+  └─ ƒ getResumenMealHistory() in 1309ms src/actions/comida.ts
+ POST /resumen 200 in 1000ms (next.js: 4ms, proxy.ts: 5ms, application-code: 992ms)
+  └─ ƒ getResumenMealHistory() in 984ms src/actions/comida.ts
+ POST /resumen 200 in 1411ms (next.js: 38ms, proxy.ts: 51ms, application-code: 1322ms)
+  └─ ƒ getResumenMealHistory() in 1231ms src/actions/comida.ts
+ POST /resumen 200 in 1274ms (next.js: 4ms, proxy.ts: 4ms, application-code: 1266ms)
+  └─ ƒ getResumenMealHistory() in 1258ms src/actions/comida.ts
+ POST /resumen 200 in 1537ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1530ms)
+  └─ ƒ getResumenMealHistory() in 1518ms src/actions/comida.ts
+ POST /resumen 200 in 1180ms (next.js: 3ms, proxy.ts: 6ms, application-code: 1171ms)
+  └─ ƒ getResumenMealHistory() in 1161ms src/actions/comida.ts
+ POST /resumen 200 in 1394ms (next.js: 36ms, proxy.ts: 52ms, application-code: 1306ms)
+  └─ ƒ getResumenMealHistory() in 1259ms src/actions/comida.ts
+ POST /resumen 200 in 1188ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1180ms)
+  └─ ƒ getResumenMealHistory() in 1169ms src/actions/comida.ts
+ POST /resumen 200 in 1237ms (next.js: 5ms, proxy.ts: 4ms, application-code: 1227ms)
+  └─ ƒ getResumenMealHistory() in 1218ms src/actions/comida.ts
+ POST /resumen 200 in 1456ms (next.js: 39ms, proxy.ts: 61ms, application-code: 1357ms)
+  └─ ƒ getResumenMealHistory() in 1261ms src/actions/comida.ts
+ POST /resumen 200 in 1336ms (next.js: 4ms, proxy.ts: 6ms, application-code: 1326ms)
+  └─ ƒ getResumenMealHistory() in 1318ms src/actions/comida.ts
+ POST /resumen 200 in 1287ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1280ms)
+  └─ ƒ getResumenMealHistory() in 1270ms src/actions/comida.ts
+ POST /resumen 200 in 1539ms (next.js: 43ms, proxy.ts: 42ms, application-code: 1453ms)
+  └─ ƒ getResumenMealHistory() in 1365ms src/actions/comida.ts
+ POST /resumen 200 in 1290ms (next.js: 4ms, proxy.ts: 4ms, application-code: 1282ms)
+  └─ ƒ getResumenMealHistory() in 1273ms src/actions/comida.ts
+ POST /resumen 200 in 1211ms (next.js: 3ms, proxy.ts: 5ms, application-code: 1203ms)
+  └─ ƒ getResumenMealHistory() in 1193ms src/actions/comida.ts
+ POST /resumen 200 in 1473ms (next.js: 77ms, proxy.ts: 118ms, application-code: 1278ms)
+  └─ ƒ getResumenMealHistory() in 1142ms src/actions/comida.ts
+ POST /resumen 200 in 1013ms (next.js: 4ms, proxy.ts: 6ms, application-code: 1003ms)
+  └─ ƒ getResumenMealHistory() in 995ms src/actions/comida.ts
+ POST /resumen 200 in 1519ms (next.js: 4ms, proxy.ts: 5ms, application-code: 1510ms)
+  └─ ƒ getResumenMealHistory() in 1501ms src/actions/comida.ts
+ POST /resumen 200 in 1541ms (next.js: 42ms, proxy.ts: 60ms, application-code: 1439ms)
+  └─ ƒ getResumenMealHistory() in 1356ms src/actions/comida.ts
+ POST /resumen 200 in 984ms (next.js: 4ms, proxy.ts: 4ms, application-code: 975ms)
+  └─ ƒ getResumenMealHistory() in 964ms src/actions/comida.ts
+✓ Compiled in 218ms
+ POST /resumen 200 in 1376ms (next.js: 6ms, proxy.ts: 5ms, application-code: 1366ms)
+  └─ ƒ getResumenMealHistory() in 1356ms src/actions/comida.ts
+ POST /resumen 200 in 1833ms (next.js: 52ms, proxy.ts: 160ms, application-code: 1621ms)
+  └─ ƒ getResumenMealHistory() in 1415ms src/actions/comida.ts
+ GET /manifest.webmanifest 200 in 958ms (next.js: 659ms, proxy.ts: 201ms, application-code: 98ms)
+[buildClinicalSuggestions] Raw AI response: {
+  "summary": "Kevin, tu control metabólico muestra áreas de oportunidad. Los niveles de glucosa y HbA1c están dentro de rangos normales, lo cual es excelente. Sin embargo, los triglicéridos y el LDL están ligeramente elevados, lo que requiere atención en la dieta. Has mantenido buenos hábitos de sueño y adherencia a la medicación, lo cual es fundamental. El aumento de peso requiere una evaluación más profunda para entender las causas y ajustar el plan.",
+  "centralProblems": [
+    "Triglicéridos ligeramente elevados (145 mg/dL)",
+    "LDL ligeramente elevado (122 mg/dL)",
+    "Aumento de peso (de 60 kg a 75 kg)"
+  ],
+  "priorityPlan": [
+    "Optimizar la dieta para reducir triglicéridos y LDL.",
+    "Aumentar la actividad física para mejorar el perfil lipídico y controlar el peso.",
+    "Monitorear el peso y la circunferencia de la cintura regularmente.",
+    "Evaluar las causas del aumento de peso (dieta, actividad física, otros factores).",
+    "Considerar el uso de suplementos para apoyar el metabolismo lipídico, siempre bajo supervisión médica."
+  ],
+  "nutritionFocus": [
+    "Reducir el consumo de grasas saturadas y trans.",
+    "Aumentar el consumo de fibra soluble (avena, legumbres, frutas).",
+    "Priorizar grasas saludables (aguacate, aceite de oliva, nueces).",
+    "Limitar el consumo de carbohidratos refinados (pan blanco, arroz blanco, pasta).",
+    "Aumentar el consumo de pescado azul rico en omega-3 (salmón, atún, sardinas).",
+    "Evitar alimentos fritos y procesados."
+  ],
+  "lifestyleFocus": [
+    "Aumentar la frecuencia y duración del ejercicio físico (al menos 150 minutos de actividad moderada por semana).",
+    "Incorporar entrenamiento de fuerza para aumentar la masa muscular y mejorar el metabolismo.",
+    "Mantener un buen patrón de sueño (7-8 horas por noche).",
+    "Gestionar el estrés a través de técnicas de relajación (meditación, yoga).",
+    "Asegurar una hidratación adecuada (8 vasos de agua al día)."
+  ],
+  "recommendedLabs": [
+    "Perfil lipídico completo (colesterol total, HDL, LDL, triglicéridos) en 3 meses.",
+    "Glucosa en ayunas y HbA1c en 3 meses.",
+    "Función hepática (ALT, AST) en 6 meses.",
+    "TSH en 6 meses.",
+    "Considerar un panel de lípidos avanzado para una evaluación más detallada."
+  ],
+  "productsGuidance": [
+    "Considera ThermoRush como apoyo para el control del apetito y el metabolismo de grasas y glucosa. La dosis recomendada es antes del desayuno y el almuerzo. ThermoRush contiene extracto de té verde, L-carnitina, taurina, rodiola, capsaicinoides y cromo, que pueden ayudar a mejorar la saciedad, reducir la alimentación relacionada con el estrés y apoyar el metabolismo energético. Recuerda que ThermoRush es un apoyo al estilo de vida y no reemplaza terapias médicas ni evaluación profesional. Si usas GLP-1, consulta a tu médico antes de combinar."
+  ],
+  "expectedProgress": [
+    "Reducción de los niveles de triglicéridos y LDL.",
+    "Mejora del control del peso.",
+    "Aumento de la energía y vitalidad.",
+    "Mejora de la composición corporal (reducción de grasa, aumento de masa muscular).",
+    "Mantenimiento de niveles de glucosa y HbA1c dentro de rangos normales."
+  ],
+  "patientMessage": "Kevin, ¡tus niveles de glucosa y HbA1c se mantienen estables, lo cual es un gran logro! Sin embargo, para optimizar tu salud metabólica, es importante abordar los triglicéridos y el LDL ligeramente elevados. Observo que has consumido pescado frito y hamburguesas con papas fritas, que pueden contribuir a estos niveles. Te sugiero reemplazar el pescado frito por pescado a la plancha o al horno, y la hamburguesa con papas fritas por una hamburguesa casera en pan integral con ensalada. Recuerda que Renewal Therapi te está ayudando a mantener la glucosa estable, ¡sigue así! Considera ThermoRush para ayudarte con el apetito y el metabolismo, tomándolo antes del desayuno y el almuerzo. ¡Juntos podemos lograr tus objetivos!",
+  "evolutionMessage": "¡Excelente trabajo manteniendo la glucosa estable! Aunque el peso ha aumentado, la constancia con Renewal Therapi y una alimentación más saludable te ayudarán a ver cambios positivos pronto. ¡Sigue adelante!",
+  "suggestions": [
+    "Consulta con un nutricionista para un plan de alimentación personalizado.",
+    "Considera un programa de entrenamiento físico supervisado.",
+    "Realiza un seguimiento regular con tu médico para evaluar el progreso.",
+    "Aprende técnicas de manejo del estrés.",
+    "Prioriza el sueño de calidad.",
+    "Mantén un diario de alimentos para identificar patrones y áreas de mejora."
+  ]
+}
+ GET /resumen 200 in 18.9s (next.js: 92ms, proxy.ts: 138ms, application-code: 18.7s)
+ POST /resumen 200 in 970ms (next.js: 4ms, proxy.ts: 5ms, application-code: 961ms)
+  └─ ƒ getResumenMealHistory() in 950ms src/actions/comida.ts
+ POST /resumen 200 in 1100ms (next.js: 5ms, proxy.ts: 6ms, application-code: 1089ms)
+  └─ ƒ getResumenMealHistory() in 1078ms src/actions/comida.ts
+ POST /resumen 200 in 1590ms (next.js: 30ms, proxy.ts: 43ms, application-code: 1517ms)
+  └─ ƒ getResumenMealHistory() in 1438ms src/actions/comida.ts
+ POST /resumen 200 in 1029ms (next.js: 5ms, proxy.ts: 6ms, application-code: 1019ms)
+  └─ ƒ getResumenMealHistory() in 1010ms src/actions/comida.ts
+✓ Compiled in 207ms
+ POST /resumen 200 in 1099ms (next.js: 12ms, proxy.ts: 7ms, application-code: 1080ms)
+  └─ ƒ getResumenMealHistory() in 1066ms src/actions/comida.ts
+ POST /resumen 200 in 1552ms (next.js: 34ms, proxy.ts: 48ms, application-code: 1470ms)
+  └─ ƒ getResumenMealHistory() in 1379ms src/actions/comida.ts
+ POST /resumen 200 in 1118ms (next.js: 5ms, proxy.ts: 5ms, application-code: 1108ms)
+  └─ ƒ getResumenMealHistory() in 1097ms src/actions/comida.ts
+ POST /resumen 200 in 1276ms (next.js: 4ms, proxy.ts: 6ms, application-code: 1266ms)
+  └─ ƒ getResumenMealHistory() in 1256ms src/actions/comida.ts

@@ -51,11 +51,13 @@ function LoginPanel({
   concurrentSessionError,
 }: Readonly<LoginPanelProps>) {
   return (
-    <div className={compact ? 'space-y-6' : 'space-y-8'}>
-      <div className={compact ? 'text-center' : 'text-center md:text-left'}>
-        <h2 className={compact ? 'text-4xl font-black text-[var(--color-on-surface)] mb-2' : 'text-3xl font-bold text-[var(--color-on-surface)] mb-2'}>{loginMessages.title}</h2>
-        <p className="text-[var(--color-on-surface-variant)] text-base">{loginMessages.subtitle}</p>
-      </div>
+    <div className={compact ? 'space-y-5' : 'space-y-8'}>
+      {!compact && (
+        <div className="text-center md:text-left">
+          <h2 className="text-3xl font-bold text-[var(--color-on-surface)] mb-2">{loginMessages.title}</h2>
+          <p className="text-[var(--color-on-surface-variant)] text-base">{loginMessages.subtitle}</p>
+        </div>
+      )}
 
       {state?.error && (
         <div className="p-4 rounded-2xl bg-[var(--color-error-container)] text-[var(--color-on-error-container)] flex items-center gap-2 text-sm font-semibold">
@@ -78,45 +80,45 @@ function LoginPanel({
         </div>
       )}
 
-      <form action={action} className={compact ? 'space-y-5' : 'space-y-6'}>
+      <form action={action} className={compact ? 'space-y-4' : 'space-y-6'}>
         <input type="hidden" name="captchaToken" value={captchaToken} />
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="captchaProvider" value={captchaProvider} />
         <input type="hidden" name="clientTimeZone" value={clientTimeZone} />
 
-        <div className="space-y-2 group">
-          <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-semibold text-[var(--color-on-surface)] block">
             {loginMessages.email}
           </label>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-outline)]">mail</span>
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)] text-xl">mail</span>
             <input
               id="email"
               type="email"
               name="email"
-              className="w-full min-h-12 pl-12 pr-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-2xl outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all font-body text-[var(--color-on-surface)]"
+              className="w-full h-14 pl-12 pr-4 bg-[var(--color-surface-container)] border-2 border-[var(--color-outline-variant)] rounded-2xl outline-none focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] transition-all font-body text-[var(--color-on-surface)] text-base"
               placeholder={locale === 'es' ? 'tu@email.com' : 'you@email.com'}
               required
             />
           </div>
         </div>
 
-        <div className="space-y-2 group">
-          <div className="flex justify-between items-center text-sm gap-2">
-            <label htmlFor="password" className="font-semibold text-[var(--color-on-surface-variant)] group-focus-within:text-[var(--color-primary)] transition-colors">
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <label htmlFor="password" className="text-sm font-semibold text-[var(--color-on-surface)]">
               {loginMessages.password}
             </label>
-            <Link href="/recuperar" className="font-medium text-[var(--color-primary)] hover:text-[var(--color-on-primary-fixed-variant)] transition-colors">
+            <Link href="/recuperar" className="text-sm font-semibold text-[var(--color-primary)] hover:underline">
               {loginMessages.forgotPassword}
             </Link>
           </div>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-outline)]">lock</span>
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)] text-xl">lock</span>
             <input
               id="password"
               type="password"
               name="password"
-              className="w-full min-h-12 pl-12 pr-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-2xl outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all font-body text-[var(--color-on-surface)]"
+              className="w-full h-14 pl-12 pr-4 bg-[var(--color-surface-container)] border-2 border-[var(--color-outline-variant)] rounded-2xl outline-none focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] transition-all font-body text-[var(--color-on-surface)] text-base"
               placeholder="••••••••"
               required
             />
@@ -132,37 +134,48 @@ function LoginPanel({
         <button
           type="submit"
           disabled={isPending || (isCaptchaRequired && !captchaToken)}
-          className="w-full min-h-12 py-3.5 px-4 bg-[var(--color-primary)] hover:bg-[var(--color-on-primary-fixed-variant)] text-white font-semibold rounded-2xl transition-all shadow-lg shadow-[var(--color-primary)]/30 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full h-14 bg-[var(--color-primary)] hover:shadow-lg text-white font-bold rounded-2xl transition-all shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
         >
           {isPending ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              {' '}{loginMessages.submitting}
+              {loginMessages.submitting}
             </>
           ) : (
             <>
               {loginMessages.submit}
-              {' '}<span className="material-symbols-outlined">arrow_forward</span>
+              <span className="material-symbols-outlined">arrow_forward</span>
             </>
           )}
         </button>
       </form>
 
-      <div className="pt-4 border-t border-[var(--color-outline-variant)] text-center">
-        <p className="text-[var(--color-on-surface-variant)] mb-2">{loginMessages.noAccount}</p>
+      <div className="pt-5 border-t border-[var(--color-outline-variant)]">
+        <p className="text-center text-[var(--color-on-surface-variant)] text-sm mb-3">
+          {loginMessages.noAccount}
+        </p>
         <Link
           href="/registro"
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-[var(--color-primary)] text-[var(--color-primary)] font-semibold hover:bg-[var(--color-primary)] hover:text-white transition-all active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold hover:bg-[var(--color-primary-container)] transition-all active:scale-[0.98]"
         >
           <span className="material-symbols-outlined text-xl">person_add</span>
           {loginMessages.registerLink}
         </Link>
       </div>
 
-      <div className="flex flex-col items-center gap-3 text-center">
-        <LanguageSwitcher className="justify-center" />
-        <p className="max-w-xs text-xs text-[var(--color-on-surface-variant)]">{languageHelper}</p>
-      </div>
+      {compact && (
+        <div className="flex flex-col items-center gap-3 pt-2">
+          <LanguageSwitcher className="justify-center" />
+          <p className="text-xs text-center text-[var(--color-on-surface-variant)] max-w-xs">{languageHelper}</p>
+        </div>
+      )}
+      
+      {!compact && (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <LanguageSwitcher className="justify-center" />
+          <p className="max-w-xs text-xs text-[var(--color-on-surface-variant)]">{languageHelper}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -197,54 +210,75 @@ export default function LoginPage() {
       <div className="absolute bottom-[-20%] left-[20%] w-[60%] h-[60%] bg-[var(--color-secondary-container)] rounded-full mix-blend-multiply filter blur-[150px] opacity-40 animate-blob animation-delay-4000"></div>
 
       <main className="relative z-10">
-        <section className="md:hidden min-h-screen flex flex-col bg-gradient-to-b from-[#0c5fae] via-[#0a4f93] to-[#083f78]">
-          <div className="px-5 pt-8 pb-24 text-white">
+        <section className="md:hidden min-h-screen flex flex-col bg-gradient-to-br from-[#10b981] via-[#14b8a6] to-[#06b6d4]">
+          <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
             {showInstallHint && (
-              <div className="mb-5 rounded-2xl border border-cyan-100/35 bg-[#04264f]/55 px-4 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.22)]">
-                <p className="text-sm font-semibold text-cyan-100">
-                  {locale === 'es'
-                    ? 'Instala esta app para acceso rápido desde tu pantalla de inicio.'
-                    : 'Install this app for quick access from your home screen.'}
-                </p>
-                <p className="mt-1 text-xs text-cyan-100/90">
-                  {locale === 'es'
-                    ? 'En iOS: Compartir → "Añadir a pantalla de inicio". En Android: usa el menú del navegador.'
-                    : 'On iOS: Share → "Add to Home Screen". On Android: use your browser menu.'}
-                </p>
+              <div className="mb-4 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md px-4 py-3 shadow-lg">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-white text-xl mt-0.5">download</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {locale === 'es'
+                        ? 'Instala la app en tu dispositivo'
+                        : 'Install the app on your device'}
+                    </p>
+                    <p className="mt-1 text-xs text-white/80">
+                      {locale === 'es'
+                        ? 'Accede más rápido desde tu pantalla de inicio'
+                        : 'Access faster from your home screen'}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
-            <span className="inline-flex items-center rounded-full border border-cyan-100/30 bg-[#04264f]/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100/90 mb-5">
-              {locale === 'es' ? 'Plataforma clínica segura' : 'Secure clinical platform'}
-            </span>
-            <div className="rounded-3xl border border-cyan-100/25 bg-[#082f5b]/50 backdrop-blur-sm p-4 shadow-[0_12px_36px_rgba(4,18,43,0.35)]">
-              {appBrandLogoUrl ? (
-                <Image
-                  src={appBrandLogoUrl}
-                  alt={appName}
-                  width={560}
-                  height={220}
-                  unoptimized
-                  className="w-full h-auto max-h-28 object-contain"
-                />
-              ) : (
-                <div className="flex items-center justify-center gap-3 py-3">
-                  {appIconUrl ? (
-                    <Image src={appIconUrl} alt={appName} width={48} height={48} unoptimized className="w-12 h-12 rounded-2xl object-cover" />
-                  ) : (
-                    <span className="material-symbols-outlined text-5xl">vital_signs</span>
-                  )}
-                  <h1 className="text-3xl font-black tracking-tight">{appName}</h1>
+
+            <div className="flex-1 flex flex-col justify-center py-4">
+              <div className="text-center">
+                {appBrandLogoUrl ? (
+                  <div className="mb-8 px-4">
+                    <Image
+                      src={appBrandLogoUrl}
+                      alt={appName}
+                      width={640}
+                      height={240}
+                      unoptimized
+                      className="w-full h-auto object-contain drop-shadow-[0_8px_24px_rgba(255,255,255,0.4)]"
+                      style={{ maxHeight: '120px' }}
+                    />
+                  </div>
+                ) : (
+                  <div className="mb-8 flex items-center justify-center gap-3">
+                    {appIconUrl ? (
+                      <Image 
+                        src={appIconUrl} 
+                        alt={appName} 
+                        width={64} 
+                        height={64} 
+                        unoptimized 
+                        className="w-16 h-16 rounded-2xl object-cover shadow-xl" 
+                      />
+                    ) : (
+                      <span className="material-symbols-outlined text-7xl text-white drop-shadow-lg">vital_signs</span>
+                    )}
+                    <h1 className="text-5xl font-black tracking-tight text-white drop-shadow-lg">{appName}</h1>
+                  </div>
+                )}
+                
+                <div className="space-y-4 px-4 mb-8">
+                  <h2 className="text-4xl font-black text-gray-900 drop-shadow-[0_2px_4px_rgba(255,255,255,0.3)]">
+                    {locale === 'es' ? 'Bienvenido' : 'Welcome'}
+                  </h2>
+                  <div className="bg-white/90 backdrop-blur-sm rounded-2xl px-5 py-3 inline-block mx-auto shadow-lg border border-white/50">
+                    <p className="text-gray-800 text-base font-semibold leading-relaxed">
+                      {messages.common.appDescription}
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
-            <p className="mt-6 text-xl leading-relaxed font-semibold text-blue-50 max-w-[22ch]">
-              {messages.common.appDescription}
-              <br />
-              {messages.common.appDescriptionDetail}
-            </p>
           </div>
 
-          <div className="-mt-14 flex-1 rounded-t-[2.2rem] bg-[var(--color-surface-container-lowest)] px-5 pt-8 pb-8 shadow-[0_-12px_40px_rgba(0,0,0,0.22)]">
+          <div className="rounded-t-[2rem] bg-[var(--color-surface-container-lowest)] px-6 pt-8 pb-8 shadow-[0_-8px_32px_rgba(0,0,0,0.15)] min-h-[60vh]">
             <LoginPanel
               action={action}
               isPending={isPending}

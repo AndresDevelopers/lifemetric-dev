@@ -1,0 +1,1674 @@
+[browser] Uncaught Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <Suspense name="resumen/" fallback={<Fragment>}>
+      <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+        <RedirectBoundary>
+          <RedirectErrorBoundary router={{...}}>
+            <InnerLayoutRouter url="/resumen" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+              <SegmentViewNode type="page" pagePath="resumen/pa...">
+                <SegmentTrieNode>
+                <ResumenSemanal>
+                  <div className="min-h-scre...">
+                    <SummaryHeader>
+                    <div className="p-6 md:p-1...">
+                      <div>
+                      <div>
+                      <h3>
+                      <div>
+                      <section>
+                      <Suspense>
+                      <section>
+                      <div className="pt-8 borde...">
+                        <HistorialComidas initialComidas={[...]}>
+                          <section className="space-y-6 ...">
+                            <div>
+                            <div className="grid gap-4">
+                              <div
++                               className="bg-white rounded-3xl p-5 flex items-center gap-4 shadow-sm border border-sl..."
+-                               className="bg-white rounded-3xl p-5 flex flex-col gap-4 shadow-sm border border-slate-..."
+                                style={{animationDelay:"0ms"}}
+                              >
+                                <div>
+                                <div
++                                 className="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 border bg..."
+-                                 className="flex items-start gap-4 min-w-0 flex-1"
+                                >
++                                 <span
++                                   className="material-symbols-outlined text-[24px]"
++                                   style={{fontVariationSettings:"'FILL' 1"}}
++                                 >
+-                                 <div
+-                                   className="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 border ..."
+-                                 >
+                                ...
+                              ...
+              ...
+            ...
+
+    at <unknown> (https://react.dev/link/hydration-mismatch)
+    at span (<anonymous>)
+    at <unknown> (src/components/resumen/HistorialComidas.tsx:481:18)
+    at Array.map (<anonymous>)
+    at HistorialComidas (src/components/resumen/HistorialComidas.tsx:470:27)
+    at ResumenSemanal (src\app\resumen\page.tsx:950:11)
+  479 |               <div className={`absolute left-0 top-0 bottom-0 w-1 ${getAccentClass(comida...
+  480 |
+> 481 |                 <div className="flex items-start gap-4 min-w-0 flex-1">
+      |                  ^
+  482 |                   <div className={`h-12 w-12 rounded-2xl flex items-center justify-center...
+  483 |                     <span className="material-symbols-outlined text-[24px]" style={{ font...
+  484 |                       {getIcon(comida.tipo_comida)}
+⨯ ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  [90m25 |[0m [36mimport[0m { getSummaryMealHistory } [36mfrom[0m [32m"@/lib/mealHistoryData"[0m;
+  [90m26 |[0m
+[31m[1m>[0m [90m27 |[0m [36mconst[0m [33mHistorialComidas[0m = dynamic(() => [36mimport[0m([32m"@/components/resumen/HistorialComidas"[0m), {
+  [90m   |[0m                          [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m28 |[0m   ssr: [36mfalse[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m29 |[0m   loading: () => (
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m30 |[0m     <section className=[32m"space-y-6 pb-12"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m31 |[0m       <div className=[32m"space-y-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m32 |[0m         <div className=[32m"flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...[0m
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m33 |[0m           <div className=[32m"space-y-2"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m34 |[0m             <div className=[32m"h-8 w-48 rounded-full bg-slate-200/70"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m35 |[0m             <div className=[32m"h-4 w-64 rounded-full bg-slate-100"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m36 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m37 |[0m           <div className=[32m"flex gap-3"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m38 |[0m             <div className=[32m"h-11 w-32 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m39 |[0m             <div className=[32m"h-11 w-24 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m40 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m41 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m42 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m43 |[0m
+  [90m   |[0m [31m[1m^[0m
+[31m[1m>[0m [90m44 |[0m       <div className=[32m"grid gap-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m45 |[0m         <div className=[32m"rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m46 |[0m           <div className=[32m"h-20 rounded-2xl bg-slate-100/80"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m47 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m48 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m49 |[0m     </section>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m50 |[0m   ),
+  [90m   |[0m [31m[1m^^^^[0m
+[31m[1m>[0m [90m51 |[0m });
+  [90m   |[0m [31m[1m^^[0m
+  [90m52 |[0m
+  [90m53 |[0m [90m// Revalidar cada 5 minutos para mejorar el rendimiento[0m
+  [90m54 |[0m [36mexport[0m [36mconst[0m revalidate = [35m300[0m;
+
+Ecmascript file had an error
+
+
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+⨯ ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  [90m25 |[0m [36mimport[0m { getSummaryMealHistory } [36mfrom[0m [32m"@/lib/mealHistoryData"[0m;
+  [90m26 |[0m
+[31m[1m>[0m [90m27 |[0m [36mconst[0m [33mHistorialComidas[0m = dynamic(() => [36mimport[0m([32m"@/components/resumen/HistorialComidas"[0m), {
+  [90m   |[0m                          [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m28 |[0m   ssr: [36mfalse[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m29 |[0m   loading: () => (
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m30 |[0m     <section className=[32m"space-y-6 pb-12"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m31 |[0m       <div className=[32m"space-y-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m32 |[0m         <div className=[32m"flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...[0m
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m33 |[0m           <div className=[32m"space-y-2"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m34 |[0m             <div className=[32m"h-8 w-48 rounded-full bg-slate-200/70"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m35 |[0m             <div className=[32m"h-4 w-64 rounded-full bg-slate-100"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m36 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m37 |[0m           <div className=[32m"flex gap-3"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m38 |[0m             <div className=[32m"h-11 w-32 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m39 |[0m             <div className=[32m"h-11 w-24 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m40 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m41 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m42 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m43 |[0m
+  [90m   |[0m [31m[1m^[0m
+[31m[1m>[0m [90m44 |[0m       <div className=[32m"grid gap-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m45 |[0m         <div className=[32m"rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m46 |[0m           <div className=[32m"h-20 rounded-2xl bg-slate-100/80"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m47 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m48 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m49 |[0m     </section>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m50 |[0m   ),
+  [90m   |[0m [31m[1m^^^^[0m
+[31m[1m>[0m [90m51 |[0m });
+  [90m   |[0m [31m[1m^^[0m
+  [90m52 |[0m
+  [90m53 |[0m [90m// Revalidar cada 5 minutos para mejorar el rendimiento[0m
+  [90m54 |[0m [36mexport[0m [36mconst[0m revalidate = [35m300[0m;
+
+Ecmascript file had an error
+
+
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+⨯ ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  [90m25 |[0m [36mimport[0m { getSummaryMealHistory } [36mfrom[0m [32m"@/lib/mealHistoryData"[0m;
+  [90m26 |[0m
+[31m[1m>[0m [90m27 |[0m [36mconst[0m [33mHistorialComidas[0m = dynamic(() => [36mimport[0m([32m"@/components/resumen/HistorialComidas"[0m), {
+  [90m   |[0m                          [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m28 |[0m   ssr: [36mfalse[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m29 |[0m   loading: () => (
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m30 |[0m     <section className=[32m"space-y-6 pb-12"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m31 |[0m       <div className=[32m"space-y-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m32 |[0m         <div className=[32m"flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...[0m
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m33 |[0m           <div className=[32m"space-y-2"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m34 |[0m             <div className=[32m"h-8 w-48 rounded-full bg-slate-200/70"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m35 |[0m             <div className=[32m"h-4 w-64 rounded-full bg-slate-100"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m36 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m37 |[0m           <div className=[32m"flex gap-3"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m38 |[0m             <div className=[32m"h-11 w-32 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m39 |[0m             <div className=[32m"h-11 w-24 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m40 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m41 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m42 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m43 |[0m
+  [90m   |[0m [31m[1m^[0m
+[31m[1m>[0m [90m44 |[0m       <div className=[32m"grid gap-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m45 |[0m         <div className=[32m"rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m46 |[0m           <div className=[32m"h-20 rounded-2xl bg-slate-100/80"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m47 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m48 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m49 |[0m     </section>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m50 |[0m   ),
+  [90m   |[0m [31m[1m^^^^[0m
+[31m[1m>[0m [90m51 |[0m });
+  [90m   |[0m [31m[1m^^[0m
+  [90m52 |[0m
+  [90m53 |[0m [90m// Revalidar cada 5 minutos para mejorar el rendimiento[0m
+  [90m54 |[0m [36mexport[0m [36mconst[0m revalidate = [35m300[0m;
+
+Ecmascript file had an error
+
+
+⨯ ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  [90m25 |[0m [36mimport[0m { getSummaryMealHistory } [36mfrom[0m [32m"@/lib/mealHistoryData"[0m;
+  [90m26 |[0m
+[31m[1m>[0m [90m27 |[0m [36mconst[0m [33mHistorialComidas[0m = dynamic(() => [36mimport[0m([32m"@/components/resumen/HistorialComidas"[0m), {
+  [90m   |[0m                          [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m28 |[0m   ssr: [36mfalse[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m29 |[0m   loading: () => (
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m30 |[0m     <section className=[32m"space-y-6 pb-12"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m31 |[0m       <div className=[32m"space-y-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m32 |[0m         <div className=[32m"flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...[0m
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m33 |[0m           <div className=[32m"space-y-2"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m34 |[0m             <div className=[32m"h-8 w-48 rounded-full bg-slate-200/70"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m35 |[0m             <div className=[32m"h-4 w-64 rounded-full bg-slate-100"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m36 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m37 |[0m           <div className=[32m"flex gap-3"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m38 |[0m             <div className=[32m"h-11 w-32 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m39 |[0m             <div className=[32m"h-11 w-24 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m40 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m41 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m42 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m43 |[0m
+  [90m   |[0m [31m[1m^[0m
+[31m[1m>[0m [90m44 |[0m       <div className=[32m"grid gap-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m45 |[0m         <div className=[32m"rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m46 |[0m           <div className=[32m"h-20 rounded-2xl bg-slate-100/80"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m47 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m48 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m49 |[0m     </section>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m50 |[0m   ),
+  [90m   |[0m [31m[1m^^^^[0m
+[31m[1m>[0m [90m51 |[0m });
+  [90m   |[0m [31m[1m^^[0m
+  [90m52 |[0m
+  [90m53 |[0m [90m// Revalidar cada 5 minutos para mejorar el rendimiento[0m
+  [90m54 |[0m [36mexport[0m [36mconst[0m revalidate = [35m300[0m;
+
+Ecmascript file had an error
+
+
+⨯ ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  [90m25 |[0m [36mimport[0m { getSummaryMealHistory } [36mfrom[0m [32m"@/lib/mealHistoryData"[0m;
+  [90m26 |[0m
+[31m[1m>[0m [90m27 |[0m [36mconst[0m [33mHistorialComidas[0m = dynamic(() => [36mimport[0m([32m"@/components/resumen/HistorialComidas"[0m), {
+  [90m   |[0m                          [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m28 |[0m   ssr: [36mfalse[0m,
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m29 |[0m   loading: () => (
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m30 |[0m     <section className=[32m"space-y-6 pb-12"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m31 |[0m       <div className=[32m"space-y-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m32 |[0m         <div className=[32m"flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...[0m
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m33 |[0m           <div className=[32m"space-y-2"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m34 |[0m             <div className=[32m"h-8 w-48 rounded-full bg-slate-200/70"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m35 |[0m             <div className=[32m"h-4 w-64 rounded-full bg-slate-100"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m36 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m37 |[0m           <div className=[32m"flex gap-3"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m38 |[0m             <div className=[32m"h-11 w-32 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m39 |[0m             <div className=[32m"h-11 w-24 rounded-2xl bg-white shadow-sm"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m40 |[0m           </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m41 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m42 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m43 |[0m
+  [90m   |[0m [31m[1m^[0m
+[31m[1m>[0m [90m44 |[0m       <div className=[32m"grid gap-4"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m45 |[0m         <div className=[32m"rounded-3xl border border-slate-100 bg-white p-5 shadow-sm"[0m>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m46 |[0m           <div className=[32m"h-20 rounded-2xl bg-slate-100/80"[0m />
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m47 |[0m         </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m48 |[0m       </div>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m49 |[0m     </section>
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^[0m
+[31m[1m>[0m [90m50 |[0m   ),
+  [90m   |[0m [31m[1m^^^^[0m
+[31m[1m>[0m [90m51 |[0m });
+  [90m   |[0m [31m[1m^^[0m
+  [90m52 |[0m
+  [90m53 |[0m [90m// Revalidar cada 5 minutos para mejorar el rendimiento[0m
+  [90m54 |[0m [36mexport[0m [36mconst[0m revalidate = [35m300[0m;
+
+Ecmascript file had an error
+
+
+[browser] Uncaught Error: ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error
+
+
+    at <unknown> (Error: ./src/app/resumen/page.tsx:27:26)
+    at <unknown> (Error: (./src/app/resumen/page.tsx:27:26)
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+[browser] ./src/app/resumen/page.tsx:27:26
+`ssr: false` is not allowed with `next/dynamic` in Server Components. Please move it into a Client Component.
+  25 | import { getSummaryMealHistory } from "@/lib/mealHistoryData";
+  26 |
+> 27 | const HistorialComidas = dynamic(() => import("@/components/resumen/HistorialComidas"), {
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |   ssr: false,
+     | ^^^^^^^^^^^^^
+> 29 |   loading: () => (
+     | ^^^^^^^^^^^^^^^^^^
+> 30 |     <section className="space-y-6 pb-12">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |       <div className="space-y-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 ro...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |           <div className="space-y-2">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |             <div className="h-8 w-48 rounded-full bg-slate-200/70" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |             <div className="h-4 w-64 rounded-full bg-slate-100" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 37 |           <div className="flex gap-3">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             <div className="h-11 w-32 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |             <div className="h-11 w-24 rounded-2xl bg-white shadow-sm" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |           </div>
+     | ^^^^^^^^^^^^^^^^
+> 41 |         </div>
+     | ^^^^^^^^^^^^^^
+> 42 |       </div>
+     | ^^^^^^^^^^^^
+> 43 |
+     | ^
+> 44 |       <div className="grid gap-4">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |           <div className="h-20 rounded-2xl bg-slate-100/80" />
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 47 |         </div>
+     | ^^^^^^^^^^^^^^
+> 48 |       </div>
+     | ^^^^^^^^^^^^
+> 49 |     </section>
+     | ^^^^^^^^^^^^^^
+> 50 |   ),
+     | ^^^^
+> 51 | });
+     | ^^
+  52 |
+  53 | // Revalidar cada 5 minutos para mejorar el rendimiento
+  54 | export const revalidate = 300;
+
+Ecmascript file had an error 
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[browser] ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  3 | import { redirect } from "next/navigation";
+  4 | import { Suspense } from "react";
+> 5 | import HistorialComidas from "@/components/resumen/HistorialComidasClient";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import SummaryHeader from "@/components/resumen/SummaryHeader";
+  7 | import AiSuggestions from "@/components/resumen/AiSuggestions";
+  8 | import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+https://nextjs.org/docs/messages/module-not-found 
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[browser] ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  3 | import { redirect } from "next/navigation";
+  4 | import { Suspense } from "react";
+> 5 | import HistorialComidas from "@/components/resumen/HistorialComidasClient";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import SummaryHeader from "@/components/resumen/SummaryHeader";
+  7 | import AiSuggestions from "@/components/resumen/AiSuggestions";
+  8 | import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  3 | import { redirect } from "next/navigation";
+  4 | import { Suspense } from "react";
+> 5 | import HistorialComidas from "@/components/resumen/HistorialComidasClient";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import SummaryHeader from "@/components/resumen/SummaryHeader";
+  7 | import AiSuggestions from "@/components/resumen/AiSuggestions";
+  8 | import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+https://nextjs.org/docs/messages/module-not-found 
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  [90m3 |[0m [36mimport[0m { redirect } [36mfrom[0m [32m"next/navigation"[0m;
+  [90m4 |[0m [36mimport[0m { [33mSuspense[0m } [36mfrom[0m [32m"react"[0m;
+[31m[1m>[0m [90m5 |[0m [36mimport[0m [33mHistorialComidas[0m [36mfrom[0m [32m"@/components/resumen/HistorialComidasClient"[0m;
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m6 |[0m [36mimport[0m [33mSummaryHeader[0m [36mfrom[0m [32m"@/components/resumen/SummaryHeader"[0m;
+  [90m7 |[0m [36mimport[0m [33mAiSuggestions[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestions"[0m;
+  [90m8 |[0m [36mimport[0m [33mAiSuggestionsLoading[0m [36mfrom[0m [32m"@/components/resumen/AiSuggestionsLoading"[0m;
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[browser] ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  3 | import { redirect } from "next/navigation";
+  4 | import { Suspense } from "react";
+> 5 | import HistorialComidas from "@/components/resumen/HistorialComidasClient";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import SummaryHeader from "@/components/resumen/SummaryHeader";
+  7 | import AiSuggestions from "@/components/resumen/AiSuggestions";
+  8 | import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] Uncaught Error: ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  3 | import { redirect } from "next/navigation";
+  4 | import { Suspense } from "react";
+> 5 | import HistorialComidas from "@/components/resumen/HistorialComidasClient";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import SummaryHeader from "@/components/resumen/SummaryHeader";
+  7 | import AiSuggestions from "@/components/resumen/AiSuggestions";
+  8 | import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (Error: ./src/app/resumen/page.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (Error: (./src/app/resumen/page.tsx:5:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+[browser] ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  3 | import { redirect } from "next/navigation";
+  4 | import { Suspense } from "react";
+> 5 | import HistorialComidas from "@/components/resumen/HistorialComidasClient";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import SummaryHeader from "@/components/resumen/SummaryHeader";
+  7 | import AiSuggestions from "@/components/resumen/AiSuggestions";
+  8 | import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] ./src/app/resumen/page.tsx:5:1
+Module not found: Can't resolve '@/components/resumen/HistorialComidasClient'
+  3 | import { redirect } from "next/navigation";
+  4 | import { Suspense } from "react";
+> 5 | import HistorialComidas from "@/components/resumen/HistorialComidasClient";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  6 | import SummaryHeader from "@/components/resumen/SummaryHeader";
+  7 | import AiSuggestions from "@/components/resumen/AiSuggestions";
+  8 | import AiSuggestionsLoading from "@/components/resumen/AiSuggestionsLoading";
+
+Import map: aliased to relative './src/components/resumen/HistorialComidasClient' inside of [project]/
+
+https://nextjs.org/docs/messages/module-not-found 
+^C

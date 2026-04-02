@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { estimateMealFromImage, type PacienteContexto } from "@/lib/ai/gemini";
 import { getSummaryMealHistory } from "@/lib/mealHistoryData";
 import { checkRateLimit } from "@/lib/redis";
+import { invalidateOnDataChange } from "@/lib/cache-invalidation";
 import { z } from "zod";
 
 interface ComidaInput {
@@ -257,6 +258,10 @@ export async function clasificarYGuardarComida(data: ComidaInput) {
     });
 
     revalidatePath("/resumen");
+    
+    // Invalidar caché de sugerencias de IA cuando se agregan nuevos datos
+    await invalidateOnDataChange(finalData.paciente_id, 'comida');
+    
     return { success: true, comida: nuevaComida, clasificacion: class_final };
   } catch (error) {
     console.error("Error guardando comida:", error);

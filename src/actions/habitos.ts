@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getSessionPacienteId } from '@/actions/data';
+import { invalidateOnDataChange } from '@/lib/cache-invalidation';
 
 const guardarHabitoSchema = z.object({
   paciente_id: z.string().uuid(),
@@ -42,6 +43,9 @@ export async function guardarHabitoAction(input: z.infer<typeof guardarHabitoSch
         peso_kg: data.peso_kg ?? null,
       },
     });
+
+    // Invalidar caché de sugerencias de IA
+    await invalidateOnDataChange(data.paciente_id, 'habito');
 
     return { success: true };
   } catch {
