@@ -16,6 +16,17 @@ const getSessionSecret = () => {
     return configuredSecret;
   }
 
+  const stableInfrastructureSecret = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.DATABASE_URL;
+  if (stableInfrastructureSecret) {
+    return stableInfrastructureSecret;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Missing AUTH_SECRET (or SESSION_SECRET/NEXTAUTH_SECRET). Configure a stable session secret to avoid invalidating sessions after restarts.'
+    );
+  }
+
   const globalWithSecret = globalThis as typeof globalThis & {
     __lifemetricSessionSecret?: string;
   };
@@ -122,4 +133,3 @@ export async function deleteSession() {
 
   cookieStore.delete('lifemetric_session');
 }
-
