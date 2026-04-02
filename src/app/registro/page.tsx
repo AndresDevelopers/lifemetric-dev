@@ -7,6 +7,7 @@ import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { translateTemplate } from '@/lib/i18n';
 import { PROMO_FOCUS_PRODUCTS, REGISTER_DIAGNOSIS_OPTIONS } from '@/lib/productCatalog';
+import { useClientTimeZone } from '@/hooks/useClientTimeZone';
 
 export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const { locale, messages } = useLocale();
+  const clientTimeZone = useClientTimeZone();
   const registerMessages = messages.auth.register;
   const diagnosisOptions = REGISTER_DIAGNOSIS_OPTIONS[locale];
 
@@ -66,6 +68,7 @@ export default function RegisterPage() {
             <input type="hidden" name="captchaToken" value={captchaToken} />
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="captchaProvider" value={captchaProvider} />
+            <input type="hidden" name="clientTimeZone" value={clientTimeZone} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="space-y-1">
@@ -127,14 +130,6 @@ export default function RegisterPage() {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="doctorAsignado" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.attendingDoctor}</label>
-              <select id="doctorAsignado" name="doctorAsignado" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]">
-                <option value="">{messages.common.select}</option>
-                <option value="Renato">Renato</option>
-                <option value="Ulysses">Ulysses</option>
-              </select>
-            </div>
 
             <div className="rounded-xl border border-[var(--color-outline-variant)] bg-[var(--color-surface)] px-4 py-3">
               <label htmlFor="newsletterSubscribed" className="flex items-start gap-3 cursor-pointer">

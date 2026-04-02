@@ -7,6 +7,12 @@ import {
   inferLocaleFromRequest,
   isExplicitLocaleSelection,
 } from '@/lib/i18n';
+import {
+  resolveRuntimeGeo,
+  RUNTIME_CITY_COOKIE_NAME,
+  RUNTIME_COUNTRY_COOKIE_NAME,
+  RUNTIME_TIMEZONE_COOKIE_NAME,
+} from '@/lib/runtimeGeo';
 
 const publicPaths = ['/login', '/registro', '/recuperar'];
 
@@ -18,15 +24,45 @@ function applyLocaleCookie(request: NextRequest, response: NextResponse) {
     return response;
   }
 
+  const runtimeGeo = resolveRuntimeGeo({
+    headerCountry: request.headers.get('x-vercel-ip-country') ?? request.headers.get('cf-ipcountry'),
+    headerCity: request.headers.get('x-vercel-ip-city') ?? request.headers.get('cf-ipcity'),
+    headerTimeZone: request.headers.get('x-vercel-ip-timezone') ?? request.headers.get('cf-timezone'),
+    cookieCountry: request.cookies.get(RUNTIME_COUNTRY_COOKIE_NAME)?.value,
+    cookieCity: request.cookies.get(RUNTIME_CITY_COOKIE_NAME)?.value,
+    cookieTimeZone: request.cookies.get(RUNTIME_TIMEZONE_COOKIE_NAME)?.value,
+  });
+
   const locale = inferLocaleFromRequest({
     cookieLocale,
     explicitCookie,
     acceptLanguage: request.headers.get('accept-language'),
-    country: request.headers.get('x-vercel-ip-country') ?? request.headers.get('cf-ipcountry'),
-    city: request.headers.get('x-vercel-ip-city') ?? request.headers.get('cf-ipcity'),
+    country: runtimeGeo.country,
+    city: runtimeGeo.city,
   });
 
   response.cookies.set(LOCALE_COOKIE_NAME, locale, {
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  response.cookies.set(RUNTIME_COUNTRY_COOKIE_NAME, runtimeGeo.country ?? '', {
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  response.cookies.set(RUNTIME_CITY_COOKIE_NAME, runtimeGeo.city ?? '', {
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  response.cookies.set(RUNTIME_TIMEZONE_COOKIE_NAME, runtimeGeo.timeZone, {
     path: '/',
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

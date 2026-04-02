@@ -20,6 +20,7 @@ const labPagePath = path.join(process.cwd(), 'src', 'app', 'laboratorios', 'nuev
 const storageRetentionLibPath = path.join(process.cwd(), 'src', 'lib', 'storageRetention.ts');
 const readmePath = path.join(process.cwd(), 'README.md');
 const packageJsonPath = path.join(process.cwd(), 'package.json');
+const geminiPath = path.join(process.cwd(), 'src', 'lib', 'ai', 'gemini.ts');
 
 const layout = fs.readFileSync(layoutPath, 'utf8');
 const redis = fs.readFileSync(redisPath, 'utf8');
@@ -38,10 +39,18 @@ const labPage = fs.readFileSync(labPagePath, 'utf8');
 const storageRetentionLib = fs.readFileSync(storageRetentionLibPath, 'utf8');
 const readme = fs.readFileSync(readmePath, 'utf8');
 const packageJson = fs.readFileSync(packageJsonPath, 'utf8');
+const gemini = fs.readFileSync(geminiPath, 'utf8');
 const envExample = fs.readFileSync(path.join(process.cwd(), '.env.example'), 'utf8');
 
 test('layout avoids hard dependency on @vercel/analytics/react', () => {
   assert.doesNotMatch(layout, /@vercel\/analytics\/react/);
+});
+
+
+test('gemini PDF parser is lazy-loaded to avoid DOM globals at auth runtime', () => {
+  assert.doesNotMatch(gemini, /import \{ PDFParse \} from "pdf-parse"/);
+  assert.match(gemini, /await import\("pdf-parse"\)/);
+  assert.match(gemini, /getPdfParseConstructor/);
 });
 
 test('redis rate limit uses native redis commands without @upstash/ratelimit package', () => {
@@ -65,10 +74,13 @@ test('login bootstraps paciente row when supabase auth user exists but profile r
 
 test('auth actions support botid provider fallback and login sends captchaProvider', () => {
   assert.match(auth, /captchaProvider:\s*z\.enum\(\['turnstile',\s*'botid'\]\)\.optional\(\)/);
+  assert.match(auth, /clientTimeZone:\s*z\.string\(\)\.optional\(\)/);
   assert.match(auth, /data\.captchaProvider !== 'botid'/);
   assert.match(auth, /x-vercel-botid/);
   assert.match(auth, /isBotIdBlocked/);
+  assert.match(auth, /persistRuntimeGeoCookies\(data\.clientTimeZone\)/);
   assert.match(login, /name=\"captchaProvider\" value=\{captchaProvider\}/);
+  assert.match(login, /name=\"clientTimeZone\" value=\{clientTimeZone\}/);
   assert.match(login, /accountDeleted/);
 });
 
@@ -90,7 +102,8 @@ test('register page does not auto-redirect when registration requires email veri
   assert.match(register, /name="fechaNacimiento"/);
   assert.match(register, /name="diagnostico"/);
   assert.match(register, /name="productoPermitido"/);
-  assert.match(register, /name="doctorAsignado"/);
+  assert.match(register, /name="clientTimeZone"/);
+  assert.doesNotMatch(register, /name="doctorAsignado"/);
   assert.match(register, /diagnosisOptions\.map/);
 });
 

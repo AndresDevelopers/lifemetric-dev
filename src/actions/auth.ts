@@ -4,7 +4,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { createSupabaseServerClient } from '@/lib/supabase';
@@ -21,6 +21,12 @@ import {
   findLifecyclePacienteByEmail,
   permanentlyDeletePacienteAccount,
 } from '@/lib/accountLifecycle';
+import {
+  resolveRuntimeGeo,
+  RUNTIME_CITY_COOKIE_NAME,
+  RUNTIME_COUNTRY_COOKIE_NAME,
+  RUNTIME_TIMEZONE_COOKIE_NAME,
+} from '@/lib/runtimeGeo';
 
 export type AuthActionState = {
   error?: string;
@@ -33,6 +39,7 @@ const loginSchema = z.object({
   password: z.string().min(6),
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
+  clientTimeZone: z.string().optional(),
   locale: z.string().optional(),
 });
 
@@ -49,6 +56,7 @@ const registerSchema = z.object({
   doctorAsignado: z.enum(['Renato', 'Ulysses']).optional(),
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
+  clientTimeZone: z.string().optional(),
   locale: z.string().optional(),
   newsletterSubscribed: z.coerce.boolean().optional(),
 });
@@ -211,6 +219,28 @@ async function isBotIdBlocked(): Promise<boolean> {
   return botSignal.includes('bot');
 }
 
+async function persistRuntimeGeoCookies(clientTimeZone?: string | null) {
+  const headerStore = await headers();
+  const runtimeGeo = resolveRuntimeGeo({
+    headerCountry: headerStore.get('x-vercel-ip-country') ?? headerStore.get('cf-ipcountry'),
+    headerCity: headerStore.get('x-vercel-ip-city') ?? headerStore.get('cf-ipcity'),
+    headerTimeZone: headerStore.get('x-vercel-ip-timezone') ?? headerStore.get('cf-timezone'),
+    clientTimeZone,
+  });
+
+  const cookieStore = await cookies();
+  const options = {
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365,
+  };
+
+  cookieStore.set(RUNTIME_COUNTRY_COOKIE_NAME, runtimeGeo.country ?? '', options);
+  cookieStore.set(RUNTIME_CITY_COOKIE_NAME, runtimeGeo.city ?? '', options);
+  cookieStore.set(RUNTIME_TIMEZONE_COOKIE_NAME, runtimeGeo.timeZone, options);
+}
+
 function calculateAgeFromBirthDate(fechaNacimiento: string): number {
   const birth = new Date(fechaNacimiento);
   if (Number.isNaN(birth.getTime())) {
@@ -298,6 +328,7 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
 
     await touchPacienteLastLogin(paciente.paciente_id);
     await setSession(paciente.paciente_id);
+    await persistRuntimeGeoCookies(data.clientTimeZone);
 
     const headerStore = await headers();
     await sendLoginAccessEmail({
@@ -427,6 +458,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     if (signUpData.session) {
       await touchPacienteLastLogin(paciente.paciente_id);
       await setSession(paciente.paciente_id);
+      await persistRuntimeGeoCookies(data.clientTimeZone);
       redirectTo = '/';
     }
 
@@ -438,6 +470,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       if (autoSignInData.user) {
         await touchPacienteLastLogin(paciente.paciente_id);
         await setSession(paciente.paciente_id);
+        await persistRuntimeGeoCookies(data.clientTimeZone);
         redirectTo = '/';
       }
     }
