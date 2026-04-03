@@ -11,6 +11,7 @@ import { autofillLaboratorioFromDocumentAction, guardarLaboratorioAction } from 
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
 import { optionalLabMeasurementShape, optionalLabUploadShape } from "@/lib/laboratorioSchema";
 import { supabase } from "@/lib/supabase";
+import { LAB_UPLOAD_ACCEPT_ATTR, isAllowedUploadFile, resolveUploadFileMetadata } from "@/lib/uploadFileTypes";
 
 const labSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -72,16 +73,15 @@ export default function SubirLaboratorios() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-    if (!validTypes.includes(file.type)) {
-      alert("Solo se permiten archivos JPG, PNG o PDF");
+    if (!isAllowedUploadFile(file, 'lab')) {
+      alert("Solo se permiten archivos JPEG, JPG, PNG, HEIC, HEIF, RAW, DNG o PDF");
       event.target.value = "";
       return;
     }
 
-    const maxSize = 10 * 1024 * 1024;
+    const maxSize = 20 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert("El archivo no debe exceder 10MB");
+      alert("El archivo no debe exceder 20MB");
       event.target.value = "";
       return;
     }
@@ -110,11 +110,15 @@ export default function SubirLaboratorios() {
     setUploadProgress('uploading');
 
     try {
-      const fileExt = file.name.split(".").pop()?.toLowerCase();
-      const filePath = `laboratorios/${crypto.randomUUID()}.${fileExt}`;
+      const uploadMetadata = resolveUploadFileMetadata(file, 'lab');
+      if (!uploadMetadata) {
+        throw new Error("Unsupported laboratory file type");
+      }
+
+      const filePath = `laboratorios/${crypto.randomUUID()}.${uploadMetadata.extension}`;
       
       const { error: uploadError } = await supabase.storage.from("laboratorios").upload(filePath, file, {
-        contentType: file.type,
+        contentType: uploadMetadata.contentType,
       });
       
       if (uploadError) {
@@ -274,6 +278,10 @@ export default function SubirLaboratorios() {
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">JPG</span>
                     <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">PNG</span>
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">HEIC</span>
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">HEIF</span>
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">RAW</span>
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">DNG</span>
                     <span className="px-3 py-1 bg-teal-100 text-teal-700 text-xs font-semibold rounded-full">PDF</span>
                   </div>
                 </div>
@@ -281,10 +289,10 @@ export default function SubirLaboratorios() {
                   id="archivo_input" 
                   type="file" 
                   className="hidden" 
-                  accept=".pdf,image/jpeg,image/png,application/pdf" 
+                  accept={LAB_UPLOAD_ACCEPT_ATTR}
                   onChange={onSelectFile}
                   aria-label="Subir archivo de laboratorio"
-                  title="Seleccionar archivo PDF, JPG o PNG"
+                  title="Seleccionar archivo PDF, JPG, PNG, HEIC, HEIF, RAW o DNG"
                 />
               </div>
             )}

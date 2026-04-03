@@ -14,6 +14,8 @@ import { useLocale } from '@/components/providers/LocaleProvider';
 import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
 import { type Locale } from '@/lib/i18n';
 import { PROMO_FOCUS_PRODUCTS, REGISTER_DIAGNOSIS_OPTIONS } from '@/lib/productCatalog';
+import { supabase } from '@/lib/supabase';
+import { IMAGE_UPLOAD_ACCEPT_ATTR, resolveUploadFileMetadata } from '@/lib/uploadFileTypes';
 
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
 
@@ -32,6 +34,8 @@ export default function AjustesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [user, setUser] = useState<SettingsUser>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [motivoRegistro, setMotivoRegistro] = useState('');
   const [productoPermitidoRegistro, setProductoPermitidoRegistro] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
@@ -81,9 +85,39 @@ export default function AjustesPage() {
     fileInputRef.current?.click();
   };
 
+  const uploadAvatar = async (file: File) => {
+    const uploadMetadata = resolveUploadFileMetadata(file, 'image');
+    if (!uploadMetadata) {
+      throw new Error(
+        locale === 'es'
+          ? 'Solo se permiten archivos JPEG, JPG, PNG, HEIC, HEIF, RAW o DNG para el avatar.'
+          : 'Only JPEG, JPG, PNG, HEIC, HEIF, RAW or DNG files are allowed for the avatar.'
+      );
+    }
+
+    const filePath = `avatars/${crypto.randomUUID()}.${uploadMetadata.extension}`;
+    const { error } = await supabase.storage.from('avatars').upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: uploadMetadata.contentType,
+    });
+
+    if (error) {
+      throw new Error(
+        locale === 'es'
+          ? 'No se pudo subir el avatar. Intenta nuevamente.'
+          : 'The avatar could not be uploaded. Please try again.'
+      );
+    }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setAvatarError(null);
       const canProceed = await guardFileUploadWithVirusTotal(file, locale, {
         scanning: messages.settings.virusScanning,
         blockedPrefix: messages.settings.virusBlocked,
@@ -96,11 +130,22 @@ export default function AjustesPage() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        setAvatarUploading(true);
+        const uploadedAvatarUrl = await uploadAvatar(file);
+        setAvatarPreview(uploadedAvatarUrl);
+      } catch (error) {
+        setAvatarError(
+          error instanceof Error
+            ? error.message
+            : locale === 'es'
+              ? 'No se pudo subir el avatar.'
+              : 'The avatar could not be uploaded.'
+        );
+      } finally {
+        setAvatarUploading(false);
+        e.target.value = '';
+      }
     }
   };
 
@@ -159,10 +204,16 @@ export default function AjustesPage() {
                   type="file" 
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept="image/*"
+                  accept={IMAGE_UPLOAD_ACCEPT_ATTR}
                   className="hidden"
                 />
                 <p className="mt-2 text-xs text-slate-500 font-medium">{messages.settings.fields.avatar}</p>
+                {avatarUploading && (
+                  <p className="mt-2 text-xs text-slate-500 font-medium">{messages.settings.virusScanning}</p>
+                )}
+                {avatarError && (
+                  <p className="mt-2 text-xs text-red-500 font-medium">{avatarError}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

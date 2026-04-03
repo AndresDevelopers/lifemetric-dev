@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
-import { getPublicAppFaviconUrl, getPublicAppName } from "@/lib/appBranding";
+import { getPublicAppIconUrl, getPublicAppName } from "@/lib/appBranding";
 
 export default function manifest(): MetadataRoute.Manifest {
   const appName = getPublicAppName();
-  const appFaviconUrl = getPublicAppFaviconUrl();
+  const appIconUrl = getPublicAppIconUrl();
 
   return {
     name: appName,
@@ -16,13 +16,13 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es",
     icons: [
       {
-        src: appFaviconUrl,
+        src: appIconUrl,
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: appFaviconUrl,
+        src: appIconUrl,
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

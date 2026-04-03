@@ -97,6 +97,58 @@ BEGIN
   END IF;
 END $$;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'pacientes_edad_chk'
+  ) THEN
+    ALTER TABLE pacientes
+      ADD CONSTRAINT pacientes_edad_chk
+      CHECK (edad BETWEEN 1 AND 130);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'pacientes_altura_cm_chk'
+  ) THEN
+    ALTER TABLE pacientes
+      ADD CONSTRAINT pacientes_altura_cm_chk
+      CHECK (altura_cm IS NULL OR altura_cm BETWEEN 80 AND 272);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'pacientes_peso_inicial_kg_chk'
+  ) THEN
+    ALTER TABLE pacientes
+      ADD CONSTRAINT pacientes_peso_inicial_kg_chk
+      CHECK (peso_inicial_kg IS NULL OR (peso_inicial_kg > 0 AND peso_inicial_kg <= 500));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'pacientes_cintura_inicial_cm_chk'
+  ) THEN
+    ALTER TABLE pacientes
+      ADD CONSTRAINT pacientes_cintura_inicial_cm_chk
+      CHECK (cintura_inicial_cm IS NULL OR (cintura_inicial_cm > 0 AND cintura_inicial_cm <= 300));
+  END IF;
+END $$;
+
 COMMENT ON COLUMN pacientes.peso_inicial_kg IS
   'Peso inicial del paciente al momento del registro o inicio de tratamiento';
 COMMENT ON COLUMN pacientes.cintura_inicial_cm IS
@@ -128,6 +180,38 @@ CREATE TABLE IF NOT EXISTS comidas (
 ALTER TABLE comidas
   ADD COLUMN IF NOT EXISTS razon_inadecuada TEXT,
   ADD COLUMN IF NOT EXISTS alternativa_saludable TEXT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'comidas_tipo_comida_chk'
+  ) THEN
+    ALTER TABLE comidas
+      ADD CONSTRAINT comidas_tipo_comida_chk
+      CHECK (tipo_comida IN ('Desayuno', 'Comida', 'Cena', 'Colacion'));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'comidas_macros_non_negative_chk'
+  ) THEN
+    ALTER TABLE comidas
+      ADD CONSTRAINT comidas_macros_non_negative_chk
+      CHECK (
+        (kcal_estimadas IS NULL OR kcal_estimadas >= 0)
+        AND (proteina_g IS NULL OR proteina_g >= 0)
+        AND (carbohidratos_g IS NULL OR carbohidratos_g >= 0)
+        AND (grasa_g IS NULL OR grasa_g >= 0)
+        AND (fibra_g IS NULL OR fibra_g >= 0)
+      );
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS habitos (
   habito_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -165,6 +249,32 @@ CREATE TABLE IF NOT EXISTS glucosa (
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'glucosa_tipo_glucosa_chk'
+  ) THEN
+    ALTER TABLE glucosa
+      ADD CONSTRAINT glucosa_tipo_glucosa_chk
+      CHECK (tipo_glucosa IN ('ayuno', 'antes_comer', 'antes_cena', '1h_post'));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'glucosa_valor_glucosa_chk'
+  ) THEN
+    ALTER TABLE glucosa
+      ADD CONSTRAINT glucosa_valor_glucosa_chk
+      CHECK (valor_glucosa BETWEEN 20 AND 600);
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS medicacion (
   registro_medicacion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   paciente_id UUID NOT NULL REFERENCES pacientes(paciente_id) ON DELETE CASCADE,
@@ -180,6 +290,19 @@ CREATE TABLE IF NOT EXISTS medicacion (
 
 ALTER TABLE medicacion
   ADD COLUMN IF NOT EXISTS foto_url TEXT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'medicacion_estado_toma_chk'
+  ) THEN
+    ALTER TABLE medicacion
+      ADD CONSTRAINT medicacion_estado_toma_chk
+      CHECK (estado_toma IN ('tomada', 'olvidada', 'omitida_por_efecto', 'retrasada'));
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS laboratorios (
   laboratorio_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -212,6 +335,32 @@ ALTER TABLE laboratorios
   ADD COLUMN IF NOT EXISTS pcr_us NUMERIC(5, 2),
   ADD COLUMN IF NOT EXISTS resultados_detectados JSONB;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'laboratorios_non_negative_values_chk'
+  ) THEN
+    ALTER TABLE laboratorios
+      ADD CONSTRAINT laboratorios_non_negative_values_chk
+      CHECK (
+        (hba1c IS NULL OR hba1c >= 0)
+        AND (glucosa_ayuno IS NULL OR glucosa_ayuno >= 0)
+        AND (insulina IS NULL OR insulina >= 0)
+        AND (trigliceridos IS NULL OR trigliceridos >= 0)
+        AND (hdl IS NULL OR hdl >= 0)
+        AND (ldl IS NULL OR ldl >= 0)
+        AND (alt IS NULL OR alt >= 0)
+        AND (ast IS NULL OR ast >= 0)
+        AND (tsh IS NULL OR tsh >= 0)
+        AND (pcr_us IS NULL OR pcr_us >= 0)
+        AND (creatinina IS NULL OR creatinina >= 0)
+        AND (acido_urico IS NULL OR acido_urico >= 0)
+      );
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS summary_ai_cache (
   cache_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   paciente_id UUID NOT NULL REFERENCES pacientes(paciente_id) ON DELETE CASCADE,
@@ -224,6 +373,19 @@ CREATE TABLE IF NOT EXISTS summary_ai_cache (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (paciente_id, locale, range_from, range_to)
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'summary_ai_cache_range_chk'
+  ) THEN
+    ALTER TABLE summary_ai_cache
+      ADD CONSTRAINT summary_ai_cache_range_chk
+      CHECK (range_from <= range_to);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS feedback_entries (
   feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

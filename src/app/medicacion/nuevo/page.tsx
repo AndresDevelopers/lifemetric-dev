@@ -13,6 +13,7 @@ import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
 import { getMedicationCatalogDescription } from "@/lib/medicationCatalog";
 import { supabase } from "@/lib/supabase";
 import { useRuntimeDateTimeDefaults } from "@/hooks/useRuntimeDateTimeDefaults";
+import { IMAGE_UPLOAD_ACCEPT_ATTR, isAllowedUploadFile, resolveUploadFileMetadata } from "@/lib/uploadFileTypes";
 
 const medicacionSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -111,11 +112,17 @@ export default function NuevaMedicacion() {
   };
 
   const uploadImage = async (file: File) => {
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const uploadMetadata = resolveUploadFileMetadata(file, "image");
+    if (!uploadMetadata) {
+      throw new Error("Unsupported image type");
+    }
+
+    const fileName = `${crypto.randomUUID()}.${uploadMetadata.extension}`;
     const filePath = `medicacion/${fileName}`;
 
-    const { error } = await supabase.storage.from("medicina").upload(filePath, file);
+    const { error } = await supabase.storage.from("medicina").upload(filePath, file, {
+      contentType: uploadMetadata.contentType,
+    });
     if (error) {
       throw error;
     }
@@ -125,7 +132,7 @@ export default function NuevaMedicacion() {
   };
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
+    if (!isAllowedUploadFile(file, "image")) {
       alert(medicationMessages.imageOnly);
       return;
     }
@@ -303,7 +310,7 @@ export default function NuevaMedicacion() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={IMAGE_UPLOAD_ACCEPT_ATTR}
                     className="hidden"
                     onChange={handleChange}
                   />

@@ -15,7 +15,7 @@ La app de desarrollo corre en [http://localhost:3003](http://localhost:3003).
 
 La app ya expone capacidades de Progressive Web App (PWA):
 
-- Manifest web en `src/app/manifest.ts` con modo `standalone`, `start_url` raíz e iconos, usando `NEXT_PUBLIC_APP_NAME` y `NEXT_PUBLIC_APP_FAVICON_URL`.
+- Manifest web en `src/app/manifest.ts` con modo `standalone`, `start_url` raíz e iconos, usando `NEXT_PUBLIC_APP_NAME` y `NEXT_PUBLIC_APP_ICON_URL`.
 - Registro de Service Worker cliente en `src/components/PwaRegistrar.tsx`.
 - Service Worker en `public/sw.js` con cache de app-shell y estrategias diferenciadas de fetch para navegación y assets estáticos.
 - El Service Worker aplica **network-first en navegación HTML** y **cache-first solo para assets estáticos** (`/_next/static`, scripts, estilos, fuentes, imágenes) para evitar pantallas en blanco al reabrir la PWA instalada con bundles antiguos en caché.

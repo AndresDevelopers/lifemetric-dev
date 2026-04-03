@@ -12,6 +12,7 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { supabase } from "@/lib/supabase";
 import { guardFileUploadWithVirusTotal } from "@/lib/fileScan";
 import { useRuntimeDateTimeDefaults } from "@/hooks/useRuntimeDateTimeDefaults";
+import { IMAGE_UPLOAD_ACCEPT_ATTR, isAllowedUploadFile, resolveUploadFileMetadata } from "@/lib/uploadFileTypes";
 
 const comidaSchema = z.object({
   paciente_id: z.string().min(1, "Paciente es requerido"),
@@ -197,7 +198,7 @@ export default function NuevaComida() {
   };
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
+    if (!isAllowedUploadFile(file, "image")) {
       alert(foodMessages.imageOnly);
       return;
     }
@@ -231,13 +232,19 @@ export default function NuevaComida() {
   };
 
   const uploadImage = async (file: File) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
+    const uploadMetadata = resolveUploadFileMetadata(file, "image");
+    if (!uploadMetadata) {
+      throw new Error("Unsupported image type");
+    }
+
+    const fileName = `${crypto.randomUUID()}.${uploadMetadata.extension}`;
     const filePath = `comidas/${fileName}`;
 
     const { error } = await supabase.storage
       .from('comidas')
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        contentType: uploadMetadata.contentType,
+      });
 
     if (error) {
       console.error('Error subiendo imagen: ', error);
@@ -385,7 +392,7 @@ export default function NuevaComida() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept={IMAGE_UPLOAD_ACCEPT_ATTR}
                     className="hidden"
                     onChange={handleChange}
                   />
