@@ -260,7 +260,63 @@ async function findOrCreatePacienteByEmail(input: {
 async function isBotIdBlocked(): Promise<boolean> {
   const headerStore = await headers();
   const botSignal = headerStore.get('x-vercel-botid')?.toLowerCase() ?? '';
-  return botSignal.includes('bot');
+  if (!botSignal) {
+    return false;
+  }
+
+  const userAgent = headerStore.get('user-agent')?.toLowerCase() ?? '';
+  const clientHints = headerStore.get('sec-ch-ua')?.toLowerCase() ?? '';
+  const acceptLanguage = headerStore.get('accept-language')?.toLowerCase() ?? '';
+  const looksLikeKnownBrowser =
+    userAgent.includes('mozilla') &&
+    /(brave|chrome|safari|firefox|edg)/.test(userAgent) &&
+    (clientHints.includes('chrom') || clientHints.includes('safari') || clientHints.includes('firefox') || Boolean(acceptLanguage));
+
+  const botLikeSignal = /(bot|crawler|spider|scraper|headless)/.test(botSignal);
+  if (!botLikeSignal) {
+    return false;
+  }
+
+  // Last filter is BotID, but avoid blocking likely human browsers (e.g. Brave false positives).
+  return !looksLikeKnownBrowser;
+}
+
+async function verifyCaptchaWithFallback(params: {
+  captchaProvider?: 'turnstile' | 'botid';
+  captchaToken?: string;
+  invalidCaptchaMessage: string;
+}): Promise<{ error?: string }> {
+  const evaluateBotId = async () => {
+    if (await isBotIdBlocked()) {
+      return { error: params.invalidCaptchaMessage };
+    }
+    return {};
+  };
+
+  if (params.captchaProvider === 'botid') {
+    return evaluateBotId();
+  }
+
+  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+  const hasTurnstileSecret = Boolean(turnstileSecret && turnstileSecret !== '1x00000000000000000000AA');
+  if (!hasTurnstileSecret || !params.captchaToken) {
+    return evaluateBotId();
+  }
+
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: `secret=${turnstileSecret}&response=${params.captchaToken}`,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    const outcome = await res.json();
+    if (outcome.success) {
+      return {};
+    }
+    return evaluateBotId();
+  } catch {
+    return evaluateBotId();
+  }
 }
 
 async function persistRuntimeGeoCookies(clientTimeZone?: string | null) {
@@ -310,25 +366,13 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
 
     const isAllowed = await checkRateLimit(`login:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
-      return { error: authMessages.invalidCaptcha };
-    }
-
-    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
-       try {
-         const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-           method: 'POST',
-           body: `secret=${turnstileSecret}&response=${data.captchaToken}`,
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         const outcome = await res.json();
-         if (!outcome.success) {
-           console.warn('Turnstile verification failed, but allowing login due to resilience bypass rule.');
-         }
-       } catch (error) {
-         console.warn('Error connecting to Turnstile siteverify, bypassing check:', error);
-       }
+    const captchaResult = await verifyCaptchaWithFallback({
+      captchaProvider: data.captchaProvider,
+      captchaToken: data.captchaToken,
+      invalidCaptchaMessage: authMessages.invalidCaptcha,
+    });
+    if (captchaResult.error) {
+      return { error: captchaResult.error };
     }
 
     const supabase = createSupabaseServerClient({ useServiceRole: false });
@@ -428,25 +472,13 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`register:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
-      return { error: authMessages.invalidCaptcha };
-    }
-
-    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
-       try {
-         const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-           method: 'POST',
-           body: `secret=${turnstileSecret}&response=${data.captchaToken}`,
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         const outcome = await res.json();
-         if (!outcome.success) {
-           console.warn('Turnstile verification failed, but allowing workflow due to resilience bypass rule.');
-         }
-       } catch (error) {
-         console.warn('Error connecting to Turnstile siteverify, bypassing check:', error);
-       }
+    const captchaResult = await verifyCaptchaWithFallback({
+      captchaProvider: data.captchaProvider,
+      captchaToken: data.captchaToken,
+      invalidCaptchaMessage: authMessages.invalidCaptcha,
+    });
+    if (captchaResult.error) {
+      return { error: captchaResult.error };
     }
 
     const supabase = createSupabaseServerClient({ useServiceRole: false });
@@ -563,25 +595,13 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`recovery:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
-      return { error: authMessages.invalidCaptcha };
-    }
-
-    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
-       try {
-         const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-           method: 'POST',
-           body: `secret=${turnstileSecret}&response=${data.captchaToken}`,
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         const outcome = await res.json();
-         if (!outcome.success) {
-           console.warn('Turnstile verification failed, but allowing workflow due to resilience bypass rule.');
-         }
-       } catch (error) {
-         console.warn('Error connecting to Turnstile siteverify, bypassing check:', error);
-       }
+    const captchaResult = await verifyCaptchaWithFallback({
+      captchaProvider: data.captchaProvider,
+      captchaToken: data.captchaToken,
+      invalidCaptchaMessage: authMessages.invalidCaptcha,
+    });
+    if (captchaResult.error) {
+      return { error: captchaResult.error };
     }
 
     const appUrl = resolveAppBaseUrl(process.env.NEXT_PUBLIC_BASE_URL).toString();
