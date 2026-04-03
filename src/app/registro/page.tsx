@@ -3,6 +3,7 @@
 import React, { useState, useActionState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { registerAction } from '@/actions/auth';
+import { PasswordStrengthRules } from '@/components/auth/PasswordStrengthRules';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { formatPasswordMinLengthPlaceholder } from '@/lib/auth/passwordPolicy';
@@ -31,6 +32,7 @@ export default function RegisterPage() {
   };
   const diagnosisOptions = REGISTER_DIAGNOSIS_OPTIONS[locale];
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  const effectivePasswordMinLength = passwordMinLength ?? 6;
   const passwordPlaceholder = passwordMinLength == null
     ? (locale === 'es' ? 'Mínimo configurado en Auth' : 'Minimum configured in Auth')
     : formatPasswordMinLengthPlaceholder(locale, passwordMinLength);
@@ -130,6 +132,11 @@ export default function RegisterPage() {
                  <div className="space-y-1">
                    <label htmlFor="password" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.password}</label>
                     <input ref={passwordInputRef} id="password" type="password" name="password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={initialPasswordPlaceholder} required />
+                    <PasswordStrengthRules
+                      locale={locale}
+                      password={password}
+                      minLength={effectivePasswordMinLength}
+                    />
                  </div>
                  <div className="space-y-1">
                    <label htmlFor="confirmPassword" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{confirmPasswordLabel}</label>

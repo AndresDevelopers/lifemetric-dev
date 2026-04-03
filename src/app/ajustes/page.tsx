@@ -10,6 +10,7 @@ import {
   updateLanguageAction,
 } from '@/actions/auth';
 import { getSessionPaciente } from '@/actions/data';
+import { PasswordStrengthRules } from '@/components/auth/PasswordStrengthRules';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { formatPasswordMinLengthPlaceholder } from '@/lib/auth/passwordPolicy';
 import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
@@ -65,6 +66,7 @@ export default function AjustesPage() {
     : formatPasswordMinLengthPlaceholder(locale, passwordMinLength);
   const effectivePasswordPlaceholder = isHydrated ? newPasswordPlaceholder : (locale === 'es' ? 'Mínimo configurado en Auth' : 'Minimum configured in Auth');
   const effectivePasswordMinLength = isHydrated ? (passwordMinLength ?? undefined) : undefined;
+  const passwordPolicyMinLength = effectivePasswordMinLength ?? 6;
   const newPasswordMismatch = confirmNewPassword.length > 0 && newPassword !== confirmNewPassword;
   const newPasswordMismatchMessage = locale === 'es' ? 'Las contraseñas nuevas no coinciden.' : 'New passwords do not match.';
 
@@ -472,6 +474,7 @@ export default function AjustesPage() {
                   className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
                   placeholder="••••••••"
                 />
+                <PasswordStrengthRules locale={locale} password={newPassword} minLength={passwordPolicyMinLength} />
               </div>
 
               <div className="space-y-2">

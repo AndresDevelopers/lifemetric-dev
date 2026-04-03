@@ -27,7 +27,12 @@ import {
   RUNTIME_COUNTRY_COOKIE_NAME,
   RUNTIME_TIMEZONE_COOKIE_NAME,
 } from '@/lib/runtimeGeo';
-import { authPasswordSchema, getAuthPasswordSchema, isSupabaseWeakPasswordError } from '@/lib/auth/passwordPolicy';
+import {
+  authPasswordSchema,
+  formatPasswordMinLengthValidationMessage,
+  getAuthPasswordSchema,
+  isSupabaseWeakPasswordError,
+} from '@/lib/auth/passwordPolicy';
 import { getSupabaseAuthPasswordMinLength } from '@/lib/auth/passwordPolicy.server';
 
 export type AuthActionState = {
@@ -416,7 +421,8 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
     const locale = normalizeLocale((parsedData.locale as string | undefined) ?? formData.get('locale')?.toString());
-    const registerSchema = createRegisterSchema(await getSupabaseAuthPasswordMinLength());
+    const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+    const registerSchema = createRegisterSchema(passwordMinLength);
     const data = registerSchema.parse(parsedData);
     const authMessages = getMessages(locale).auth.messages;
 
@@ -460,7 +466,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         error: isDuplicate
           ? authMessages.registerEmailUnavailable
           : isWeakPassword
-            ? authMessages.registerWeakPassword
+            ? formatPasswordMinLengthValidationMessage(locale, passwordMinLength)
             : authMessages.registerError,
       };
     }
@@ -528,7 +534,10 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     if (error instanceof z.ZodError) {
       const firstIssuePath = error.issues[0]?.path?.[0];
       if (firstIssuePath === 'email') return { error: authMessages.registerInvalidEmail };
-      if (firstIssuePath === 'password') return { error: authMessages.registerWeakPassword };
+      if (firstIssuePath === 'password') {
+        const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+        return { error: formatPasswordMinLengthValidationMessage(locale, passwordMinLength) };
+      }
       if (firstIssuePath === 'confirmPassword') {
         return { error: locale === 'es' ? 'Las contraseñas no coinciden.' : 'Passwords do not match.' };
       }
@@ -615,7 +624,8 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
     if (!pacienteId) redirect('/login');
 
     const locale = normalizeLocale(formData.get('locale')?.toString());
-    const changePasswordSchema = createChangePasswordSchema(await getSupabaseAuthPasswordMinLength());
+    const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+    const changePasswordSchema = createChangePasswordSchema(passwordMinLength);
     const parsedData = changePasswordSchema.safeParse({
       locale: formData.get('locale')?.toString(),
       currentPassword: formData.get('currentPassword')?.toString(),
@@ -630,7 +640,7 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
         return { error: authMessages.invalidCredentials };
       }
       if (firstIssuePath === 'newPassword') {
-        return { error: authMessages.registerWeakPassword };
+        return { error: formatPasswordMinLengthValidationMessage(locale, passwordMinLength) };
       }
       if (firstIssuePath === 'confirmNewPassword') {
         return { error: locale === 'es' ? 'Las contraseñas nuevas no coinciden.' : 'New passwords do not match.' };
@@ -666,7 +676,7 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
     if (updatePasswordError) {
       return {
         error: isSupabaseWeakPasswordError(updatePasswordError.message)
-          ? authMessages.registerWeakPassword
+          ? formatPasswordMinLengthValidationMessage(locale, passwordMinLength)
           : authMessages.serverError,
       };
     }
@@ -695,10 +705,13 @@ export async function syncRecoveredPasswordAction(input: {
     return { success: true } satisfies Exclude<AuthActionState, undefined>;
   } catch (error) {
     const locale = normalizeLocale(input.locale);
-    const authMessages = getMessages(locale).auth.messages;
     if (error instanceof z.ZodError) {
-      return { error: authMessages.registerWeakPassword } satisfies Exclude<AuthActionState, undefined>;
+      const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+      return {
+        error: formatPasswordMinLengthValidationMessage(locale, passwordMinLength),
+      } satisfies Exclude<AuthActionState, undefined>;
     }
+    const authMessages = getMessages(locale).auth.messages;
     console.error(error);
     return { error: authMessages.recoveryError } satisfies Exclude<AuthActionState, undefined>;
   }
