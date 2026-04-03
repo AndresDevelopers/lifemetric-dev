@@ -1,24 +1,62 @@
 'use client';
 
-import React, { useState, useActionState } from 'react';
+import React, { useState, useActionState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { registerAction } from '@/actions/auth';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import { formatPasswordMinLengthPlaceholder } from '@/lib/auth/passwordPolicy';
 import { translateTemplate } from '@/lib/i18n';
 import { PROMO_FOCUS_PRODUCTS, REGISTER_DIAGNOSIS_OPTIONS } from '@/lib/productCatalog';
 import { useClientTimeZone } from '@/hooks/useClientTimeZone';
+import { useAuthPasswordMinLength } from '@/hooks/useAuthPasswordMinLength';
 
 export default function RegisterPage() {
   const [state, action, isPending] = useActionState(registerAction, undefined);
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [isCaptchaRequired, setIsCaptchaRequired] = useState<boolean>(true);
   const [captchaProvider, setCaptchaProvider] = useState<'turnstile' | 'botid'>('turnstile');
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Lifemetric';
   const { locale, messages } = useLocale();
   const clientTimeZone = useClientTimeZone();
+  const passwordMinLength = useAuthPasswordMinLength();
   const registerMessages = messages.auth.register;
+  const registerMessagesExtended = registerMessages as typeof registerMessages & {
+    confirmPassword?: string;
+    confirmPasswordPlaceholder?: string;
+  };
   const diagnosisOptions = REGISTER_DIAGNOSIS_OPTIONS[locale];
+  const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  const passwordPlaceholder = passwordMinLength == null
+    ? (locale === 'es' ? 'Mínimo configurado en Auth' : 'Minimum configured in Auth')
+    : formatPasswordMinLengthPlaceholder(locale, passwordMinLength);
+  const initialPasswordPlaceholder = locale === 'es' ? 'Mínimo configurado en Auth' : 'Minimum configured in Auth';
+  const confirmPasswordLabel = registerMessagesExtended.confirmPassword ?? (locale === 'es' ? 'Confirmar contraseña' : 'Confirm password');
+  const confirmPasswordPlaceholder = registerMessagesExtended.confirmPasswordPlaceholder ?? (locale === 'es' ? 'Repite tu contraseña' : 'Repeat your password');
+  const passwordMismatchMessage = locale === 'es' ? 'Las contraseñas no coinciden.' : 'Passwords do not match.';
+
+  useEffect(() => {
+    if (passwordInputRef.current) {
+      passwordInputRef.current.placeholder = passwordPlaceholder;
+      if (passwordMinLength != null) {
+        passwordInputRef.current.minLength = passwordMinLength;
+      } else {
+        passwordInputRef.current.removeAttribute('minlength');
+      }
+    }
+
+    if (confirmPasswordInputRef.current) {
+      if (passwordMinLength != null) {
+        confirmPasswordInputRef.current.minLength = passwordMinLength;
+      } else {
+        confirmPasswordInputRef.current.removeAttribute('minlength');
+      }
+    }
+  }, [passwordMinLength, passwordPlaceholder]);
 
   return (
     <div className="w-full py-12 px-4 sm:px-8 relative grid place-items-start md:place-items-center">
@@ -88,9 +126,28 @@ export default function RegisterPage() {
                  <input id="email" type="email" name="email" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" required />
                </div>
                
-               <div className="space-y-1">
-                 <label htmlFor="password" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.password}</label>
-                 <input id="password" type="password" name="password" className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={registerMessages.passwordPlaceholder} required />
+               <div className="space-y-3">
+                 <div className="space-y-1">
+                   <label htmlFor="password" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{registerMessages.password}</label>
+                    <input ref={passwordInputRef} id="password" type="password" name="password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]" placeholder={initialPasswordPlaceholder} required />
+                 </div>
+                 <div className="space-y-1">
+                   <label htmlFor="confirmPassword" className="text-sm font-semibold text-[var(--color-on-surface-variant)]">{confirmPasswordLabel}</label>
+                   <input
+                     id="confirmPassword"
+                     type="password"
+                     name="confirmPassword"
+                     ref={confirmPasswordInputRef}
+                     value={confirmPassword}
+                     onChange={(event) => setConfirmPassword(event.target.value)}
+                     className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-tertiary)] focus:ring-2 focus:ring-[var(--color-tertiary)]/20 transition-all font-body text-sm text-[var(--color-on-surface)]"
+                     placeholder={confirmPasswordPlaceholder}
+                     required
+                   />
+                   {passwordMismatch && (
+                     <p className="text-sm font-medium text-[var(--color-error)]">{passwordMismatchMessage}</p>
+                   )}
+                 </div>
                </div>
             </div>
 
@@ -152,7 +209,7 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              disabled={isPending || (isCaptchaRequired && !captchaToken)}
+              disabled={isPending || passwordMismatch || (isCaptchaRequired && !captchaToken)}
               className="w-full py-3.5 px-4 bg-[var(--color-tertiary)] hover:bg-[var(--color-on-tertiary-fixed-variant)] text-white font-semibold rounded-xl transition-all shadow-lg shadow-[var(--color-tertiary)]/30 hover:shadow-[var(--color-tertiary)]/50 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isPending ? (

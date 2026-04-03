@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createSupabaseServerClient } from "@/lib/supabase";
+import { createSupabaseServerClient, findSupabaseAuthUserByEmail } from "@/lib/supabase";
 import { getStoragePathFromPublicUrl } from "@/lib/storageRetention";
 import { sendAccountDeactivatedEmail } from "@/lib/email";
 import { defaultLocale, normalizeLocale, type Locale } from "@/lib/i18n";
@@ -143,8 +143,7 @@ async function deleteStoragePaths(bucket: string, paths: string[]) {
 async function deleteAuthUserByEmail(email: string) {
   if (isDeletedPlaceholderEmail(email)) return;
   const supabase = createSupabaseServerClient({ useServiceRole: true });
-  const { data: usersPage } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const authUser = usersPage.users.find((item) => item.email?.toLowerCase() === email.toLowerCase());
+  const authUser = await findSupabaseAuthUserByEmail(email);
   if (authUser?.id) {
     await supabase.auth.admin.deleteUser(authUser.id);
   }

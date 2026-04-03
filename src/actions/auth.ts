@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { createSupabaseServerClient } from '@/lib/supabase';
+import { createSupabaseServerClient, findSupabaseAuthUserByEmail } from '@/lib/supabase';
 import { getMessages, normalizeLocale } from '@/lib/i18n';
 import { resolveAppBaseUrl } from '@/lib/url';
 import { deleteSession, setSession } from '@/lib/session';
@@ -27,6 +27,8 @@ import {
   RUNTIME_COUNTRY_COOKIE_NAME,
   RUNTIME_TIMEZONE_COOKIE_NAME,
 } from '@/lib/runtimeGeo';
+import { authPasswordSchema, getAuthPasswordSchema, isSupabaseWeakPasswordError } from '@/lib/auth/passwordPolicy';
+import { getSupabaseAuthPasswordMinLength } from '@/lib/auth/passwordPolicy.server';
 
 export type AuthActionState = {
   error?: string;
@@ -36,30 +38,38 @@ export type AuthActionState = {
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: authPasswordSchema,
   captchaToken: z.string().optional(),
   captchaProvider: z.enum(['turnstile', 'botid']).optional(),
   clientTimeZone: z.string().optional(),
   locale: z.string().optional(),
 });
 
-const registerSchema = z.object({
-  nombre: z.string().min(2),
-  apellido: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  fechaNacimiento: z.string().min(1),
-  alturaCm: z.coerce.number().positive().max(272).optional(),
-  sexo: z.string().min(1),
-  diagnostico: z.string().min(1),
-  productoPermitido: z.enum(PROMO_FOCUS_PRODUCTS),
-  doctorAsignado: z.enum(['Renato', 'Ulysses']).optional(),
-  captchaToken: z.string().optional(),
-  captchaProvider: z.enum(['turnstile', 'botid']).optional(),
-  clientTimeZone: z.string().optional(),
-  locale: z.string().optional(),
-  newsletterSubscribed: z.coerce.boolean().optional(),
-});
+function createRegisterSchema(minLength: number) {
+  const passwordSchema = getAuthPasswordSchema(minLength);
+
+  return z.object({
+    nombre: z.string().min(2),
+    apellido: z.string().min(2),
+    email: z.string().email(),
+    password: passwordSchema,
+    confirmPassword: passwordSchema,
+    fechaNacimiento: z.string().min(1),
+    alturaCm: z.coerce.number().positive().max(272).optional(),
+    sexo: z.string().min(1),
+    diagnostico: z.string().min(1),
+    productoPermitido: z.enum(PROMO_FOCUS_PRODUCTS),
+    doctorAsignado: z.enum(['Renato', 'Ulysses']).optional(),
+    captchaToken: z.string().optional(),
+    captchaProvider: z.enum(['turnstile', 'botid']).optional(),
+    clientTimeZone: z.string().optional(),
+    locale: z.string().optional(),
+    newsletterSubscribed: z.coerce.boolean().optional(),
+  }).refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Passwords must match',
+  });
+}
 
 const recoverSchema = z.object({
   email: z.string().email(),
@@ -70,7 +80,27 @@ const recoverSchema = z.object({
 
 const deleteAccountSchema = z.object({
   locale: z.string().optional(),
-  confirmPassword: z.string().min(6),
+  confirmPassword: authPasswordSchema,
+});
+
+function createChangePasswordSchema(minLength: number) {
+  const passwordSchema = getAuthPasswordSchema(minLength);
+
+  return z.object({
+    locale: z.string().optional(),
+    currentPassword: z.string().min(1),
+    newPassword: passwordSchema,
+    confirmNewPassword: passwordSchema,
+  }).refine((data) => data.newPassword === data.confirmNewPassword, {
+    path: ['confirmNewPassword'],
+    message: 'Passwords must match',
+  });
+}
+
+const syncRecoveredPasswordSchema = z.object({
+  email: z.string().email(),
+  password: authPasswordSchema,
+  locale: z.string().optional(),
 });
 
 
@@ -112,6 +142,15 @@ async function touchPacienteLastLogin(pacienteId: string) {
   } catch (error) {
     console.warn('Failed to touch last_login_at:', error);
   }
+}
+
+async function syncPacientePasswordHashByEmail(email: string, password: string) {
+  await ensurePacienteAuthColumns();
+  const hashedPassword = await bcrypt.hash(password, 10);
+  await prisma.paciente.updateMany({
+    where: { email },
+    data: { password_hash: hashedPassword },
+  });
 }
 
 function getDefaultPacienteData(input: {
@@ -373,10 +412,12 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         ...rawData,
         fechaNacimiento: (rawData.fechaNacimiento as string | undefined) ?? '',
         alturaCm: rawData.alturaCm ? Number(rawData.alturaCm) : undefined,
+        locale: (rawData.locale as string | undefined) ?? formData.get('locale')?.toString(),
         newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
+    const locale = normalizeLocale((parsedData.locale as string | undefined) ?? formData.get('locale')?.toString());
+    const registerSchema = createRegisterSchema(await getSupabaseAuthPasswordMinLength());
     const data = registerSchema.parse(parsedData);
-    const locale = normalizeLocale(data.locale);
     const authMessages = getMessages(locale).auth.messages;
 
     const isAllowed = await checkRateLimit(`register:${data.email}`);
@@ -414,7 +455,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
 
     if (signUpError) {
       const isDuplicate = /already registered|already been registered|user already exists/i.test(signUpError.message);
-      const isWeakPassword = /password|6 characters|at least/i.test(signUpError.message);
+      const isWeakPassword = isSupabaseWeakPasswordError(signUpError.message);
       return {
         error: isDuplicate
           ? authMessages.registerEmailUnavailable
@@ -488,6 +529,9 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
       const firstIssuePath = error.issues[0]?.path?.[0];
       if (firstIssuePath === 'email') return { error: authMessages.registerInvalidEmail };
       if (firstIssuePath === 'password') return { error: authMessages.registerWeakPassword };
+      if (firstIssuePath === 'confirmPassword') {
+        return { error: locale === 'es' ? 'Las contraseñas no coinciden.' : 'Passwords do not match.' };
+      }
       return { error: authMessages.registerMissingRequired };
     }
     console.error(error);
@@ -571,14 +615,63 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
     if (!pacienteId) redirect('/login');
 
     const locale = normalizeLocale(formData.get('locale')?.toString());
+    const changePasswordSchema = createChangePasswordSchema(await getSupabaseAuthPasswordMinLength());
+    const parsedData = changePasswordSchema.safeParse({
+      locale: formData.get('locale')?.toString(),
+      currentPassword: formData.get('currentPassword')?.toString(),
+      newPassword: formData.get('newPassword')?.toString(),
+      confirmNewPassword: formData.get('confirmNewPassword')?.toString(),
+    });
+    const authMessages = getMessages(locale).auth.messages;
     const messages = getMessages(locale);
-    
-    const newPassword = formData.get('password')?.toString();
-    if (!newPassword || newPassword.length < 6) {
-      return { error: messages.auth.register.passwordPlaceholder };
+    if (!parsedData.success) {
+      const firstIssuePath = parsedData.error.issues[0]?.path?.[0];
+      if (firstIssuePath === 'currentPassword') {
+        return { error: authMessages.invalidCredentials };
+      }
+      if (firstIssuePath === 'newPassword') {
+        return { error: authMessages.registerWeakPassword };
+      }
+      if (firstIssuePath === 'confirmNewPassword') {
+        return { error: locale === 'es' ? 'Las contraseñas nuevas no coinciden.' : 'New passwords do not match.' };
+      }
+      return { error: authMessages.invalidData };
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const paciente = await prisma.paciente.findUnique({
+      where: { paciente_id: pacienteId },
+      select: { email: true, password_hash: true },
+    });
+    if (!paciente?.email) {
+      return { error: authMessages.accountNotFound };
+    }
+    if (!paciente.password_hash) {
+      return { error: authMessages.serverError };
+    }
+
+    const currentPasswordMatches = await bcrypt.compare(parsedData.data.currentPassword, paciente.password_hash);
+    if (!currentPasswordMatches) {
+      return { error: authMessages.wrongPassword };
+    }
+
+    const authUser = await findSupabaseAuthUserByEmail(paciente.email);
+    if (!authUser?.id) {
+      return { error: authMessages.accountNotFound };
+    }
+
+    const adminClient = createSupabaseServerClient({ useServiceRole: true });
+    const { error: updatePasswordError } = await adminClient.auth.admin.updateUserById(authUser.id, {
+      password: parsedData.data.newPassword,
+    });
+    if (updatePasswordError) {
+      return {
+        error: isSupabaseWeakPasswordError(updatePasswordError.message)
+          ? authMessages.registerWeakPassword
+          : authMessages.serverError,
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(parsedData.data.newPassword, 10);
     await prisma.paciente.update({
       where: { paciente_id: pacienteId },
       data: { password_hash: hashedPassword },
@@ -588,6 +681,26 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
   } catch (error) {
     console.error(error);
     return { error: 'Error' };
+  }
+}
+
+export async function syncRecoveredPasswordAction(input: {
+  email: string;
+  password: string;
+  locale?: string;
+}) {
+  try {
+    const parsed = syncRecoveredPasswordSchema.parse(input);
+    await syncPacientePasswordHashByEmail(parsed.email, parsed.password);
+    return { success: true } satisfies Exclude<AuthActionState, undefined>;
+  } catch (error) {
+    const locale = normalizeLocale(input.locale);
+    const authMessages = getMessages(locale).auth.messages;
+    if (error instanceof z.ZodError) {
+      return { error: authMessages.registerWeakPassword } satisfies Exclude<AuthActionState, undefined>;
+    }
+    console.error(error);
+    return { error: authMessages.recoveryError } satisfies Exclude<AuthActionState, undefined>;
   }
 }
 

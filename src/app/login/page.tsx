@@ -225,7 +225,7 @@ export default function LoginPage() {
                     <p className="mt-1 text-xs text-white/80">
                       {locale === 'es'
                         ? 'Accede más rápido desde tu pantalla de inicio'
-                        : 'Access faster from your home screen'}
+                        : 'Install this app for quick access from your home screen'}
                     </p>
                   </div>
                 </div>

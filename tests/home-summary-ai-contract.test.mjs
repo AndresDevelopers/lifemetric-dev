@@ -5,6 +5,7 @@ import path from 'node:path';
 
 const homePath = path.join(process.cwd(), 'src', 'app', 'page.tsx');
 const summaryPath = path.join(process.cwd(), 'src', 'app', 'resumen', 'page.tsx');
+const aiSuggestionsPath = path.join(process.cwd(), 'src', 'components', 'resumen', 'AiSuggestions.tsx');
 const aiPath = path.join(process.cwd(), 'src', 'lib', 'ai', 'gemini.ts');
 const inferencePath = path.join(process.cwd(), 'src', 'lib', 'glucoseInference.ts');
 const foodHistoryPath = path.join(process.cwd(), 'src', 'components', 'resumen', 'HistorialComidas.tsx');
@@ -24,6 +25,7 @@ const appNavigationPath = path.join(process.cwd(), 'src', 'lib', 'appNavigation.
 
 const home = fs.readFileSync(homePath, 'utf8');
 const summary = fs.readFileSync(summaryPath, 'utf8');
+const aiSuggestions = fs.readFileSync(aiSuggestionsPath, 'utf8');
 const ai = fs.readFileSync(aiPath, 'utf8');
 const inference = fs.readFileSync(inferencePath, 'utf8');
 const foodHistory = fs.readFileSync(foodHistoryPath, 'utf8');
@@ -56,13 +58,13 @@ test('summary payload includes inferred glucose fallback when user has no logs',
 });
 
 test('summary AI uses persistent DB cache and only regenerates when payload changes', () => {
-  assert.match(summary, /computePayloadHash/);
-  assert.match(summary, /prisma\.summaryAiCache\.findUnique/);
-  assert.match(summary, /payload_hash === summaryPayloadHash/);
-  assert.match(summary, /prisma\.summaryAiCache\.upsert/);
-  assert.match(summary, /buildClinicalSuggestions\(\{ locale, data: aiSuggestionPayload \}\)/);
-  assert.match(summary, /aiSuggestions = generatedSuggestions/);
-  assert.match(summary, /try \{\s*await prisma\.summaryAiCache\.upsert/s);
+  assert.match(summary, /<AiSuggestions/);
+  assert.match(aiSuggestions, /computePayloadHash/);
+  assert.match(aiSuggestions, /intelligentCache/);
+  assert.match(aiSuggestions, /registerCacheKey/);
+  assert.match(aiSuggestions, /buildClinicalSuggestions/);
+  assert.match(aiSuggestions, /payloadHash/);
+  assert.match(aiSuggestions, /aiSuggestions = await getCachedAiSuggestions/);
 });
 
 test('lab upload and summary preserve dynamic AI-detected lab fields', () => {

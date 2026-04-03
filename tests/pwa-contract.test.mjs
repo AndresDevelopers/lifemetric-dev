@@ -28,6 +28,8 @@ test('manifest declares standalone PWA metadata and icons', () => {
   assert.match(manifestSource, /theme_color:\s*"#5b67f1"/);
   assert.match(manifestSource, /icons:\s*\[/);
   assert.match(manifestSource, /getPublicAppFaviconUrl/);
+  assert.match(manifestSource, /getPublicAppIconUrl/);
+  assert.match(manifestSource, /src:\s*appIconUrl/);
   assert.match(manifestSource, /src:\s*appFaviconUrl/);
 });
 

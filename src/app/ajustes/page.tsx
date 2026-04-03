@@ -11,17 +11,20 @@ import {
 } from '@/actions/auth';
 import { getSessionPaciente } from '@/actions/data';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import { formatPasswordMinLengthPlaceholder } from '@/lib/auth/passwordPolicy';
 import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
 import { type Locale } from '@/lib/i18n';
 import { PROMO_FOCUS_PRODUCTS, REGISTER_DIAGNOSIS_OPTIONS } from '@/lib/productCatalog';
 import { supabase } from '@/lib/supabase';
 import { IMAGE_UPLOAD_ACCEPT_ATTR, resolveUploadFileMetadata } from '@/lib/uploadFileTypes';
+import { useAuthPasswordMinLength } from '@/hooks/useAuthPasswordMinLength';
 
 type SettingsUser = Awaited<ReturnType<typeof getSessionPaciente>>;
 
 export default function AjustesPage() {
   const { locale, setLocale: setAppLocale, messages } = useLocale();
   const diagnosisOptions = REGISTER_DIAGNOSIS_OPTIONS[locale] ?? REGISTER_DIAGNOSIS_OPTIONS.en;
+  const passwordMinLength = useAuthPasswordMinLength();
 
 
   
@@ -36,11 +39,38 @@ export default function AjustesPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isHydrated, setIsHydrated] = useState(false);
   const [motivoRegistro, setMotivoRegistro] = useState('');
   const [productoPermitidoRegistro, setProductoPermitidoRegistro] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [alturaCm, setAlturaCm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const newPasswordInputRef = useRef<HTMLInputElement>(null);
+  const confirmNewPasswordInputRef = useRef<HTMLInputElement>(null);
+  const settingsMessagesExtended = messages.settings as typeof messages.settings & {
+    currentPassword?: string;
+    currentPasswordPlaceholder?: string;
+    confirmNewPassword?: string;
+    confirmNewPasswordPlaceholder?: string;
+  };
+  const currentPasswordLabel = settingsMessagesExtended.currentPassword ?? (locale === 'es' ? 'Contraseña actual' : 'Current password');
+  const currentPasswordPlaceholder = settingsMessagesExtended.currentPasswordPlaceholder ?? '••••••••';
+  const confirmNewPasswordLabel = settingsMessagesExtended.confirmNewPassword ?? (locale === 'es' ? 'Confirmar nueva contraseña' : 'Confirm new password');
+  const confirmNewPasswordPlaceholder = settingsMessagesExtended.confirmNewPasswordPlaceholder ?? (locale === 'es' ? 'Repite la nueva contraseña' : 'Repeat the new password');
+  const newPasswordPlaceholder = passwordMinLength == null
+    ? (locale === 'es' ? 'Mínimo configurado en Auth' : 'Minimum configured in Auth')
+    : formatPasswordMinLengthPlaceholder(locale, passwordMinLength);
+  const effectivePasswordPlaceholder = isHydrated ? newPasswordPlaceholder : (locale === 'es' ? 'Mínimo configurado en Auth' : 'Minimum configured in Auth');
+  const effectivePasswordMinLength = isHydrated ? (passwordMinLength ?? undefined) : undefined;
+  const newPasswordMismatch = confirmNewPassword.length > 0 && newPassword !== confirmNewPassword;
+  const newPasswordMismatchMessage = locale === 'es' ? 'Las contraseñas nuevas no coinciden.' : 'New passwords do not match.';
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -57,6 +87,11 @@ export default function AjustesPage() {
     }
     loadUser();
   }, [setAppLocale]);
+
+  useEffect(() => {
+    newPasswordInputRef.current?.setAttribute('placeholder', effectivePasswordPlaceholder);
+    confirmNewPasswordInputRef.current?.setAttribute('placeholder', effectivePasswordPlaceholder);
+  }, [effectivePasswordPlaceholder]);
 
   const handleProfileSubmit = () => {
     const parsedBirthDate = fechaNacimiento ? new Date(`${fechaNacimiento}T00:00:00.000Z`) : null;
@@ -407,16 +442,57 @@ export default function AjustesPage() {
               <input type="hidden" name="locale" value={locale} />
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase ml-1">
-                  {messages.settings.newPassword}
+                  {currentPasswordLabel}
                 </label>
                 <input
                   type="password"
-                  name="password"
+                  name="currentPassword"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  minLength={1}
+                  required
+                  autoComplete="current-password"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
+                  placeholder={currentPasswordPlaceholder}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">
+                  {messages.settings.newPassword}
+                </label>
+                <input
+                  ref={newPasswordInputRef}
+                  type="password"
+                  name="newPassword"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  minLength={effectivePasswordMinLength}
                   required
                   autoComplete="new-password"
                   className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
                   placeholder="••••••••"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-1">
+                  {confirmNewPasswordLabel}
+                </label>
+                <input
+                  ref={confirmNewPasswordInputRef}
+                  type="password"
+                  name="confirmNewPassword"
+                  value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                  minLength={effectivePasswordMinLength}
+                  required
+                  autoComplete="new-password"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
+                  placeholder={confirmNewPasswordPlaceholder}
+                />
+                {newPasswordMismatch && (
+                  <p className="text-sm font-bold text-red-500 px-2">{newPasswordMismatchMessage}</p>
+                )}
               </div>
 
               {passwordState?.error && (
@@ -427,7 +503,7 @@ export default function AjustesPage() {
               )}
               <button
                 type="submit"
-                disabled={isPasswordPending}
+                disabled={isPasswordPending || newPasswordMismatch}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-4 rounded-2xl transition-all disabled:opacity-50 active:scale-[0.98] uppercase tracking-widest text-xs"
               >
                 {isPasswordPending ? messages.common.saving : messages.common.save}

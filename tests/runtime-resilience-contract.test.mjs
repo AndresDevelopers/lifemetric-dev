@@ -10,10 +10,12 @@ const authPath = path.join(process.cwd(), 'src', 'actions', 'auth.ts');
 const dataPath = path.join(process.cwd(), 'src', 'actions', 'data.ts');
 const loginPath = path.join(process.cwd(), 'src', 'app', 'login', 'page.tsx');
 const registerPath = path.join(process.cwd(), 'src', 'app', 'registro', 'page.tsx');
+const recoverPath = path.join(process.cwd(), 'src', 'app', 'recuperar', 'page.tsx');
 const sessionPath = path.join(process.cwd(), 'src', 'lib', 'session.ts');
 const prismaConfigPath = path.join(process.cwd(), 'prisma.config.ts');
 const prismaLibPath = path.join(process.cwd(), 'src', 'lib', 'prisma.ts');
 const supabaseLibPath = path.join(process.cwd(), 'src', 'lib', 'supabase.ts');
+const passwordPolicyPath = path.join(process.cwd(), 'src', 'lib', 'auth', 'passwordPolicy.ts');
 const emailPath = path.join(process.cwd(), 'src', 'lib', 'email.ts');
 const retentionRoutePath = path.join(process.cwd(), 'src', 'app', 'api', 'maintenance', 'storage-retention', 'route.ts');
 const labPagePath = path.join(process.cwd(), 'src', 'app', 'laboratorios', 'nuevo', 'page.tsx');
@@ -33,10 +35,12 @@ const auth = fs.readFileSync(authPath, 'utf8');
 const dataActions = fs.readFileSync(dataPath, 'utf8');
 const login = fs.readFileSync(loginPath, 'utf8');
 const register = fs.readFileSync(registerPath, 'utf8');
+const recover = fs.readFileSync(recoverPath, 'utf8');
 const session = fs.readFileSync(sessionPath, 'utf8');
 const prismaConfig = fs.readFileSync(prismaConfigPath, 'utf8');
 const prismaLib = fs.readFileSync(prismaLibPath, 'utf8');
 const supabaseLib = fs.readFileSync(supabaseLibPath, 'utf8');
+const passwordPolicy = fs.readFileSync(passwordPolicyPath, 'utf8');
 const email = fs.readFileSync(emailPath, 'utf8');
 const retentionRoute = fs.readFileSync(retentionRoutePath, 'utf8');
 const labPage = fs.readFileSync(labPagePath, 'utf8');
@@ -63,8 +67,15 @@ test('gemini PDF parser is lazy-loaded to avoid DOM globals at auth runtime', ()
 
 test('redis rate limit uses native redis commands without @upstash/ratelimit package', () => {
   assert.doesNotMatch(redis, /@upstash\/ratelimit/);
-  assert.match(redis, /redisClient\.incr\(key\)/);
-  assert.match(redis, /redisClient\.expire\(key,\s*RATE_LIMIT_WINDOW_SECONDS\)/);
+  assert.match(redis, /RATE_LIMIT_PROVIDER_CLOUDFLARE = 'cloudflare'/);
+  assert.match(redis, /RATE_LIMIT_PROVIDER_REDIS = 'redis'/);
+  assert.match(redis, /RATE_LIMIT_PROVIDER_NONE = 'none'/);
+  assert.match(redis, /getRateLimitProvider = \(\): RateLimitProvider =>/);
+  assert.match(redis, /process\.env\.CLOUDFLARE_RATE_LIMIT_ENABLED === 'true'/);
+  assert.match(redis, /activeRedisClient\.incr\(key\)/);
+  assert.match(redis, /activeRedisClient\.expire\(key,\s*RATE_LIMIT_WINDOW_SECONDS\)/);
+  assert.match(redis, /provider === RATE_LIMIT_PROVIDER_CLOUDFLARE/);
+  assert.match(redis, /provider === RATE_LIMIT_PROVIDER_NONE/);
 });
 
 test('turnstile fallback does not rely on hardcoded bypass token strings', () => {
@@ -97,11 +108,14 @@ test('auth actions use supabase auth for sign in, sign up and recovery', () => {
   assert.match(auth, /signInWithPassword/);
   assert.match(auth, /signUp/);
   assert.match(auth, /resetPasswordForEmail/);
+  assert.match(auth, /updateUserById/);
+  assert.match(auth, /syncRecoveredPasswordAction/);
   assert.match(auth, /autoSignInData/);
   assert.match(auth, /useServiceRole:\s*false/);
   assert.match(auth, /fechaNacimiento/);
   assert.match(auth, /calculateAgeFromBirthDate/);
   assert.match(supabaseLib, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(supabaseLib, /findSupabaseAuthUserByEmail/);
   assert.match(envExample, /SUPABASE_SERVICE_ROLE_KEY=/);
 });
 
@@ -111,8 +125,19 @@ test('register page does not auto-redirect when registration requires email veri
   assert.match(register, /name="diagnostico"/);
   assert.match(register, /name="productoPermitido"/);
   assert.match(register, /name="clientTimeZone"/);
+  assert.match(register, /minLength=\{passwordMinLength\}/);
   assert.doesNotMatch(register, /name="doctorAsignado"/);
   assert.match(register, /diagnosisOptions\.map/);
+});
+
+test('password policy is centralized across register, recovery and settings flows', () => {
+  assert.match(passwordPolicy, /AUTH_PASSWORD_MIN_LENGTH = 6/);
+  assert.match(passwordPolicy, /authPasswordSchema/);
+  assert.match(auth, /authPasswordSchema/);
+  assert.match(recover, /exchangeCodeForSession/);
+  assert.match(recover, /verifyOtp/);
+  assert.match(recover, /updateUser/);
+  assert.match(recover, /syncRecoveredPasswordAction/);
 });
 
 test('auth success navigation happens in server actions instead of client router pushes', () => {
