@@ -32,7 +32,6 @@ export default function RegisterPage() {
   };
   const diagnosisOptions = REGISTER_DIAGNOSIS_OPTIONS[locale];
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
-  const effectivePasswordMinLength = passwordMinLength ?? 6;
   const passwordPlaceholder = passwordMinLength == null
     ? (locale === 'es' ? 'Mínimo configurado en Auth' : 'Minimum configured in Auth')
     : formatPasswordMinLengthPlaceholder(locale, passwordMinLength);
@@ -135,7 +134,7 @@ export default function RegisterPage() {
                     <PasswordStrengthRules
                       locale={locale}
                       password={password}
-                      minLength={effectivePasswordMinLength}
+                      minLength={passwordMinLength}
                     />
                  </div>
                  <div className="space-y-1">

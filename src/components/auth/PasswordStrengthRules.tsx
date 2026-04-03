@@ -5,11 +5,13 @@ import { getPasswordStrengthScore } from '@/lib/auth/passwordPolicy';
 type Props = {
   locale: 'es' | 'en';
   password: string;
-  minLength: number;
+  minLength?: number | null;
 };
 
 export function PasswordStrengthRules({ locale, password, minLength }: Readonly<Props>) {
-  const score = getPasswordStrengthScore(password, minLength);
+  const hasConfiguredMinLength = typeof minLength === 'number' && Number.isFinite(minLength) && minLength >= 1;
+  const effectiveMinLength = hasConfiguredMinLength ? minLength : 6;
+  const score = getPasswordStrengthScore(password, effectiveMinLength);
   const labels = locale === 'es'
     ? ['Muy débil', 'Débil', 'Media', 'Fuerte', 'Muy fuerte']
     : ['Very weak', 'Weak', 'Medium', 'Strong', 'Very strong'];
@@ -20,8 +22,14 @@ export function PasswordStrengthRules({ locale, password, minLength }: Readonly<
 
   const rules = [
     {
-      ok: password.length >= minLength,
-      text: locale === 'es' ? `Mínimo ${minLength} caracteres (requerido por Auth)` : `Minimum ${minLength} characters (required by Auth)`,
+      ok: hasConfiguredMinLength ? password.length >= effectiveMinLength : null,
+      text: hasConfiguredMinLength
+        ? (locale === 'es'
+            ? `Mínimo ${effectiveMinLength} caracteres (requerido por Supabase Auth)`
+            : `Minimum ${effectiveMinLength} characters (required by Supabase Auth)`)
+        : (locale === 'es'
+            ? 'Mínimo definido por Supabase Auth (se valida al guardar)'
+            : 'Minimum defined by Supabase Auth (validated on submit)'),
     },
     {
       ok: hasUpperLower,
@@ -49,8 +57,10 @@ export function PasswordStrengthRules({ locale, password, minLength }: Readonly<
       <ul className="space-y-1 pt-1">
         {rules.map((rule) => (
           <li key={rule.text} className="flex items-start gap-2 text-[11px]">
-            <span className={`material-symbols-outlined text-sm leading-none ${rule.ok ? 'text-emerald-600' : 'text-slate-400'}`}>
-              {rule.ok ? 'check_circle' : 'radio_button_unchecked'}
+            <span className={`material-symbols-outlined text-sm leading-none ${
+              rule.ok == null ? 'text-amber-500' : (rule.ok ? 'text-emerald-600' : 'text-slate-400')
+            }`}>
+              {rule.ok == null ? 'info' : (rule.ok ? 'check_circle' : 'radio_button_unchecked')}
             </span>
             <span className={rule.ok ? 'text-emerald-700' : 'text-[var(--color-on-surface-variant)]'}>{rule.text}</span>
           </li>

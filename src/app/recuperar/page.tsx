@@ -7,7 +7,6 @@ import { PasswordStrengthRules } from '@/components/auth/PasswordStrengthRules';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import {
-  AUTH_PASSWORD_MIN_LENGTH,
   formatPasswordMinLengthPlaceholder,
   formatPasswordMinLengthValidationMessage,
   isSupabaseWeakPasswordError,
@@ -32,8 +31,14 @@ export default function RecoverPage() {
   const passwordMinLength = useAuthPasswordMinLength();
   const recoverMessages = messages.auth.recover;
   const authMessages = messages.auth.messages;
-  const effectivePasswordMinLength = passwordMinLength ?? AUTH_PASSWORD_MIN_LENGTH;
-  const passwordPlaceholder = formatPasswordMinLengthPlaceholder(locale, effectivePasswordMinLength);
+  const weakPasswordMessage = passwordMinLength == null
+    ? (locale === 'es'
+        ? 'La contraseña no cumple la política de Supabase Auth. Intenta con una contraseña más larga.'
+        : 'The password does not meet the Supabase Auth policy. Try a longer password.')
+    : formatPasswordMinLengthValidationMessage(locale, passwordMinLength);
+  const passwordPlaceholder = passwordMinLength == null
+    ? (locale === 'es' ? 'Mínimo configurado en Supabase Auth' : 'Minimum configured in Supabase Auth')
+    : formatPasswordMinLengthPlaceholder(locale, passwordMinLength);
 
   useEffect(() => {
     let isMounted = true;
@@ -117,8 +122,8 @@ export default function RecoverPage() {
     setResetError(null);
     setResetSuccess(null);
 
-    if (newPassword.length < effectivePasswordMinLength) {
-      setResetError(formatPasswordMinLengthValidationMessage(locale, effectivePasswordMinLength));
+    if (passwordMinLength != null && newPassword.length < passwordMinLength) {
+      setResetError(weakPasswordMessage);
       return;
     }
 
@@ -132,7 +137,7 @@ export default function RecoverPage() {
       if (error) {
         setResetError(
           isSupabaseWeakPasswordError(error.message)
-            ? formatPasswordMinLengthValidationMessage(locale, effectivePasswordMinLength)
+            ? weakPasswordMessage
             : authMessages.recoveryError
         );
         return;
@@ -220,7 +225,7 @@ export default function RecoverPage() {
                   <input
                     id="new-password"
                     type="password"
-                    minLength={effectivePasswordMinLength}
+                    minLength={passwordMinLength ?? undefined}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     autoComplete="new-password"
@@ -231,7 +236,7 @@ export default function RecoverPage() {
                   <PasswordStrengthRules
                     locale={locale}
                     password={newPassword}
-                    minLength={effectivePasswordMinLength}
+                    minLength={passwordMinLength}
                   />
                 </div>
 
@@ -242,7 +247,7 @@ export default function RecoverPage() {
                   <input
                     id="confirm-password"
                     type="password"
-                    minLength={effectivePasswordMinLength}
+                    minLength={passwordMinLength ?? undefined}
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     autoComplete="new-password"
