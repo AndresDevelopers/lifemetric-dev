@@ -3,10 +3,16 @@
 import React, { useActionState, useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { recoveryAction, syncRecoveredPasswordAction } from '@/actions/auth';
+import { PasswordStrengthRules } from '@/components/auth/PasswordStrengthRules';
 import { TurnstileWidget } from '@/components/auth/TurnstileWidget';
 import { useLocale } from '@/components/providers/LocaleProvider';
-import { AUTH_PASSWORD_MIN_LENGTH, isSupabaseWeakPasswordError } from '@/lib/auth/passwordPolicy';
+import {
+  formatPasswordMinLengthPlaceholder,
+  formatPasswordMinLengthValidationMessage,
+  isSupabaseWeakPasswordError,
+} from '@/lib/auth/passwordPolicy';
 import { supabase } from '@/lib/supabase';
+import { useAuthPasswordMinLength } from '@/hooks/useAuthPasswordMinLength';
 
 export default function RecoverPage() {
   const [state, action, isPending] = useActionState(recoveryAction, undefined);
@@ -22,8 +28,17 @@ export default function RecoverPage() {
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
   const [isResetPending, startResetTransition] = useTransition();
   const { locale, messages } = useLocale();
+  const passwordMinLength = useAuthPasswordMinLength();
   const recoverMessages = messages.auth.recover;
   const authMessages = messages.auth.messages;
+  const weakPasswordMessage = passwordMinLength == null
+    ? (locale === 'es'
+        ? 'La contraseña no cumple la política de Supabase Auth. Intenta con una contraseña más larga.'
+        : 'The password does not meet the Supabase Auth policy. Try a longer password.')
+    : formatPasswordMinLengthValidationMessage(locale, passwordMinLength);
+  const passwordPlaceholder = passwordMinLength == null
+    ? (locale === 'es' ? 'Mínimo configurado en Supabase Auth' : 'Minimum configured in Supabase Auth')
+    : formatPasswordMinLengthPlaceholder(locale, passwordMinLength);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,8 +122,8 @@ export default function RecoverPage() {
     setResetError(null);
     setResetSuccess(null);
 
-    if (newPassword.length < AUTH_PASSWORD_MIN_LENGTH) {
-      setResetError(authMessages.registerWeakPassword);
+    if (passwordMinLength != null && newPassword.length < passwordMinLength) {
+      setResetError(weakPasswordMessage);
       return;
     }
 
@@ -122,7 +137,7 @@ export default function RecoverPage() {
       if (error) {
         setResetError(
           isSupabaseWeakPasswordError(error.message)
-            ? authMessages.registerWeakPassword
+            ? weakPasswordMessage
             : authMessages.recoveryError
         );
         return;
@@ -210,13 +225,18 @@ export default function RecoverPage() {
                   <input
                     id="new-password"
                     type="password"
-                    minLength={AUTH_PASSWORD_MIN_LENGTH}
+                    minLength={passwordMinLength ?? undefined}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     autoComplete="new-password"
                     className="w-full px-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-secondary)] focus:ring-2 focus:ring-[var(--color-secondary)]/20 transition-all font-body text-[var(--color-on-surface)]"
-                    placeholder={messages.auth.register.passwordPlaceholder}
+                    placeholder={passwordPlaceholder}
                     required
+                  />
+                  <PasswordStrengthRules
+                    locale={locale}
+                    password={newPassword}
+                    minLength={passwordMinLength}
                   />
                 </div>
 
@@ -227,12 +247,12 @@ export default function RecoverPage() {
                   <input
                     id="confirm-password"
                     type="password"
-                    minLength={AUTH_PASSWORD_MIN_LENGTH}
+                    minLength={passwordMinLength ?? undefined}
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     autoComplete="new-password"
                     className="w-full px-4 py-3.5 bg-[var(--color-surface)] border border-[var(--color-outline-variant)] rounded-xl outline-none focus:border-[var(--color-secondary)] focus:ring-2 focus:ring-[var(--color-secondary)]/20 transition-all font-body text-[var(--color-on-surface)]"
-                    placeholder={messages.auth.register.passwordPlaceholder}
+                    placeholder={passwordPlaceholder}
                     required
                   />
                 </div>

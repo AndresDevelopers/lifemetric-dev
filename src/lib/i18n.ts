@@ -58,7 +58,7 @@ const messages = {
     auth: {
       login: {
         title: 'Bienvenido',
-        subtitle: 'Ingresa a tu portal de monitoreo',
+        subtitle: 'Tu cuerpo habla. Te ayudamos a entenderlo.',
         email: 'Correo electrónico',
         password: 'Contraseña',
         forgotPassword: '¿Olvidaste tu contraseña?',
@@ -559,7 +559,7 @@ const messages = {
     auth: {
       login: {
         title: 'Welcome back',
-        subtitle: 'Access your monitoring portal',
+        subtitle: 'Your body speaks. We help you understand.',
         email: 'Email address',
         password: 'Password',
         forgotPassword: 'Forgot your password?',

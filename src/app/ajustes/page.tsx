@@ -10,6 +10,7 @@ import {
   updateLanguageAction,
 } from '@/actions/auth';
 import { getSessionPaciente } from '@/actions/data';
+import { PasswordStrengthRules } from '@/components/auth/PasswordStrengthRules';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { formatPasswordMinLengthPlaceholder } from '@/lib/auth/passwordPolicy';
 import { guardFileUploadWithVirusTotal } from '@/lib/fileScan';
@@ -472,6 +473,7 @@ export default function AjustesPage() {
                   className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
                   placeholder="••••••••"
                 />
+                <PasswordStrengthRules locale={locale} password={newPassword} minLength={effectivePasswordMinLength} />
               </div>
 
               <div className="space-y-2">

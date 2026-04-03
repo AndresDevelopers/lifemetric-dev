@@ -27,7 +27,12 @@ import {
   RUNTIME_COUNTRY_COOKIE_NAME,
   RUNTIME_TIMEZONE_COOKIE_NAME,
 } from '@/lib/runtimeGeo';
-import { authPasswordSchema, getAuthPasswordSchema, isSupabaseWeakPasswordError } from '@/lib/auth/passwordPolicy';
+import {
+  authPasswordSchema,
+  formatPasswordMinLengthValidationMessage,
+  getAuthPasswordSchema,
+  isSupabaseWeakPasswordError,
+} from '@/lib/auth/passwordPolicy';
 import { getSupabaseAuthPasswordMinLength } from '@/lib/auth/passwordPolicy.server';
 
 export type AuthActionState = {
@@ -255,7 +260,63 @@ async function findOrCreatePacienteByEmail(input: {
 async function isBotIdBlocked(): Promise<boolean> {
   const headerStore = await headers();
   const botSignal = headerStore.get('x-vercel-botid')?.toLowerCase() ?? '';
-  return botSignal.includes('bot');
+  if (!botSignal) {
+    return false;
+  }
+
+  const userAgent = headerStore.get('user-agent')?.toLowerCase() ?? '';
+  const clientHints = headerStore.get('sec-ch-ua')?.toLowerCase() ?? '';
+  const acceptLanguage = headerStore.get('accept-language')?.toLowerCase() ?? '';
+  const looksLikeKnownBrowser =
+    userAgent.includes('mozilla') &&
+    /(brave|chrome|safari|firefox|edg)/.test(userAgent) &&
+    (clientHints.includes('chrom') || clientHints.includes('safari') || clientHints.includes('firefox') || Boolean(acceptLanguage));
+
+  const botLikeSignal = /(bot|crawler|spider|scraper|headless)/.test(botSignal);
+  if (!botLikeSignal) {
+    return false;
+  }
+
+  // Last filter is BotID, but avoid blocking likely human browsers (e.g. Brave false positives).
+  return !looksLikeKnownBrowser;
+}
+
+async function verifyCaptchaWithFallback(params: {
+  captchaProvider?: 'turnstile' | 'botid';
+  captchaToken?: string;
+  invalidCaptchaMessage: string;
+}): Promise<{ error?: string }> {
+  const evaluateBotId = async () => {
+    if (await isBotIdBlocked()) {
+      return { error: params.invalidCaptchaMessage };
+    }
+    return {};
+  };
+
+  if (params.captchaProvider === 'botid') {
+    return evaluateBotId();
+  }
+
+  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+  const hasTurnstileSecret = Boolean(turnstileSecret && turnstileSecret !== '1x00000000000000000000AA');
+  if (!hasTurnstileSecret || !params.captchaToken) {
+    return evaluateBotId();
+  }
+
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: `secret=${turnstileSecret}&response=${params.captchaToken}`,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    const outcome = await res.json();
+    if (outcome.success) {
+      return {};
+    }
+    return evaluateBotId();
+  } catch {
+    return evaluateBotId();
+  }
 }
 
 async function persistRuntimeGeoCookies(clientTimeZone?: string | null) {
@@ -305,25 +366,13 @@ export async function loginAction(prevState: AuthActionState, formData: FormData
 
     const isAllowed = await checkRateLimit(`login:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
-      return { error: authMessages.invalidCaptcha };
-    }
-
-    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA' && data.captchaToken) {
-       try {
-         const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-           method: 'POST',
-           body: `secret=${turnstileSecret}&response=${data.captchaToken}`,
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         const outcome = await res.json();
-         if (!outcome.success) {
-           console.warn('Turnstile verification failed, but allowing login due to resilience bypass rule.');
-         }
-       } catch (error) {
-         console.warn('Error connecting to Turnstile siteverify, bypassing check:', error);
-       }
+    const captchaResult = await verifyCaptchaWithFallback({
+      captchaProvider: data.captchaProvider,
+      captchaToken: data.captchaToken,
+      invalidCaptchaMessage: authMessages.invalidCaptcha,
+    });
+    if (captchaResult.error) {
+      return { error: captchaResult.error };
     }
 
     const supabase = createSupabaseServerClient({ useServiceRole: false });
@@ -416,31 +465,20 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         newsletterSubscribed: rawData.newsletterSubscribed === 'on' || rawData.newsletterSubscribed === 'true',
     };
     const locale = normalizeLocale((parsedData.locale as string | undefined) ?? formData.get('locale')?.toString());
-    const registerSchema = createRegisterSchema(await getSupabaseAuthPasswordMinLength());
+    const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+    const registerSchema = createRegisterSchema(passwordMinLength);
     const data = registerSchema.parse(parsedData);
     const authMessages = getMessages(locale).auth.messages;
 
     const isAllowed = await checkRateLimit(`register:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
-      return { error: authMessages.invalidCaptcha };
-    }
-
-    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
-       try {
-         const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-           method: 'POST',
-           body: `secret=${turnstileSecret}&response=${data.captchaToken}`,
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         const outcome = await res.json();
-         if (!outcome.success) {
-           console.warn('Turnstile verification failed, but allowing workflow due to resilience bypass rule.');
-         }
-       } catch (error) {
-         console.warn('Error connecting to Turnstile siteverify, bypassing check:', error);
-       }
+    const captchaResult = await verifyCaptchaWithFallback({
+      captchaProvider: data.captchaProvider,
+      captchaToken: data.captchaToken,
+      invalidCaptchaMessage: authMessages.invalidCaptcha,
+    });
+    if (captchaResult.error) {
+      return { error: captchaResult.error };
     }
 
     const supabase = createSupabaseServerClient({ useServiceRole: false });
@@ -460,7 +498,7 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
         error: isDuplicate
           ? authMessages.registerEmailUnavailable
           : isWeakPassword
-            ? authMessages.registerWeakPassword
+            ? formatPasswordMinLengthValidationMessage(locale, passwordMinLength)
             : authMessages.registerError,
       };
     }
@@ -528,7 +566,10 @@ export async function registerAction(prevState: AuthActionState, formData: FormD
     if (error instanceof z.ZodError) {
       const firstIssuePath = error.issues[0]?.path?.[0];
       if (firstIssuePath === 'email') return { error: authMessages.registerInvalidEmail };
-      if (firstIssuePath === 'password') return { error: authMessages.registerWeakPassword };
+      if (firstIssuePath === 'password') {
+        const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+        return { error: formatPasswordMinLengthValidationMessage(locale, passwordMinLength) };
+      }
       if (firstIssuePath === 'confirmPassword') {
         return { error: locale === 'es' ? 'Las contraseñas no coinciden.' : 'Passwords do not match.' };
       }
@@ -554,25 +595,13 @@ export async function recoveryAction(prevState: AuthActionState, formData: FormD
 
     const isAllowed = await checkRateLimit(`recovery:${data.email}`);
     if (!isAllowed) return { error: "Demasiados intentos. Por favor, intente más tarde." };
-    if (data.captchaProvider === 'botid' && await isBotIdBlocked()) {
-      return { error: authMessages.invalidCaptcha };
-    }
-
-    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-    if (data.captchaProvider !== 'botid' && turnstileSecret && turnstileSecret !== '1x00000000000000000000AA') {
-       try {
-         const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-           method: 'POST',
-           body: `secret=${turnstileSecret}&response=${data.captchaToken}`,
-           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-         });
-         const outcome = await res.json();
-         if (!outcome.success) {
-           console.warn('Turnstile verification failed, but allowing workflow due to resilience bypass rule.');
-         }
-       } catch (error) {
-         console.warn('Error connecting to Turnstile siteverify, bypassing check:', error);
-       }
+    const captchaResult = await verifyCaptchaWithFallback({
+      captchaProvider: data.captchaProvider,
+      captchaToken: data.captchaToken,
+      invalidCaptchaMessage: authMessages.invalidCaptcha,
+    });
+    if (captchaResult.error) {
+      return { error: captchaResult.error };
     }
 
     const appUrl = resolveAppBaseUrl(process.env.NEXT_PUBLIC_BASE_URL).toString();
@@ -615,7 +644,8 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
     if (!pacienteId) redirect('/login');
 
     const locale = normalizeLocale(formData.get('locale')?.toString());
-    const changePasswordSchema = createChangePasswordSchema(await getSupabaseAuthPasswordMinLength());
+    const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+    const changePasswordSchema = createChangePasswordSchema(passwordMinLength);
     const parsedData = changePasswordSchema.safeParse({
       locale: formData.get('locale')?.toString(),
       currentPassword: formData.get('currentPassword')?.toString(),
@@ -630,7 +660,7 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
         return { error: authMessages.invalidCredentials };
       }
       if (firstIssuePath === 'newPassword') {
-        return { error: authMessages.registerWeakPassword };
+        return { error: formatPasswordMinLengthValidationMessage(locale, passwordMinLength) };
       }
       if (firstIssuePath === 'confirmNewPassword') {
         return { error: locale === 'es' ? 'Las contraseñas nuevas no coinciden.' : 'New passwords do not match.' };
@@ -666,7 +696,7 @@ export async function changePasswordAction(prevState: AuthActionState, formData:
     if (updatePasswordError) {
       return {
         error: isSupabaseWeakPasswordError(updatePasswordError.message)
-          ? authMessages.registerWeakPassword
+          ? formatPasswordMinLengthValidationMessage(locale, passwordMinLength)
           : authMessages.serverError,
       };
     }
@@ -695,10 +725,13 @@ export async function syncRecoveredPasswordAction(input: {
     return { success: true } satisfies Exclude<AuthActionState, undefined>;
   } catch (error) {
     const locale = normalizeLocale(input.locale);
-    const authMessages = getMessages(locale).auth.messages;
     if (error instanceof z.ZodError) {
-      return { error: authMessages.registerWeakPassword } satisfies Exclude<AuthActionState, undefined>;
+      const passwordMinLength = await getSupabaseAuthPasswordMinLength();
+      return {
+        error: formatPasswordMinLengthValidationMessage(locale, passwordMinLength),
+      } satisfies Exclude<AuthActionState, undefined>;
     }
+    const authMessages = getMessages(locale).auth.messages;
     console.error(error);
     return { error: authMessages.recoveryError } satisfies Exclude<AuthActionState, undefined>;
   }
